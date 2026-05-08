@@ -122,21 +122,11 @@ export function ContainerSubView({
           background: isUpper
             ? 'linear-gradient(145deg, #0a1225 0%, #0d1a35 30%, #0f1d40 60%, #0a1225 100%)'
             : 'linear-gradient(145deg, #081210 0%, #0b1a14 30%, #0c1f17 60%, #081210 100%)',
-          boxShadow: `inset 0 4px 20px rgba(0,0,0,0.7), 0 0 30px ${config.glowColor}`,
+          boxShadow: `inset 0 4px 20px rgba(0,0,0,0.7), 0 0 6px ${config.glowColor}40`,
           border: `1.5px solid ${config.borderColor}30`,
           padding: '24px 28px 28px 24px',
         }}
       >
-        {/* Frost/condensation shimmer */}
-        <motion.div
-          className="absolute top-0 left-0 right-0 h-px pointer-events-none"
-          animate={{ opacity: [0.2, 0.6, 0.2] }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-          style={{
-            background: `linear-gradient(90deg, transparent 0%, ${config.color}60 50%, transparent 100%)`,
-          }}
-        />
-
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
@@ -152,17 +142,15 @@ export function ContainerSubView({
           </div>
 
           {/* Status LED */}
-          <motion.div
-            animate={hasCritical ? { opacity: [1, 0.15, 1] } : { opacity: 1 }}
-            transition={hasCritical ? { duration: 0.7, repeat: Infinity } : {}}
+          <div
             className="flex items-center gap-1.5 px-2.5 py-1 rounded"
             style={{
               background: hasCritical
-                ? 'rgba(153,27,27,0.7)'
+                ? 'rgba(153,27,27,0.4)'
                 : hasWarning
-                  ? 'rgba(120,60,0,0.7)'
-                  : 'rgba(10,50,20,0.7)',
-              border: `1px solid ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}`,
+                  ? 'rgba(120,60,0,0.4)'
+                  : 'rgba(10,50,20,0.4)',
+              border: `1px solid ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}40`,
             }}
           >
             <div
@@ -173,7 +161,7 @@ export function ContainerSubView({
                   : hasWarning
                     ? '#f59e0b'
                     : '#22c55e',
-                boxShadow: `0 0 6px ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}`,
+                boxShadow: `0 0 2px ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}`,
               }}
             />
             <span
@@ -188,7 +176,7 @@ export function ContainerSubView({
             >
               {hasCritical ? 'ALERT' : hasWarning ? 'WARN' : 'OK'}
             </span>
-          </motion.div>
+          </div>
         </div>
 
         {/* Sub-grid */}
@@ -202,31 +190,14 @@ export function ContainerSubView({
             boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.7)',
           }}
         >
-          {/* Frost shimmer */}
-          <motion.div
-            className="absolute top-0 left-0 right-0 h-px pointer-events-none"
-            animate={{ opacity: [0.3, 0.7, 0.3] }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: 'easeInOut',
-              delay: 0.5,
-            }}
-            style={{
-              background: `linear-gradient(90deg, transparent 0%, ${config.color}60 50%, transparent 100%)`,
-            }}
-          />
-
           {/* Sub-header row */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <motion.div
-                animate={{ opacity: [0.6, 1, 0.6] }}
-                transition={{ duration: 2, repeat: Infinity }}
+              <div
                 className="w-2 h-2 rounded-full"
                 style={{
                   background: config.color,
-                  boxShadow: `0 0 8px ${config.color}`,
+                  boxShadow: `0 0 2px ${config.color}`,
                 }}
               />
               <span className="text-[16px]" style={{ color: config.color }}>
@@ -238,20 +209,12 @@ export function ContainerSubView({
                 size={18}
                 color={hasWarning ? '#f59e0b' : config.color}
               />
-              <motion.span
-                animate={
-                  hasWarning
-                    ? { color: ['#f59e0b', '#ef4444', '#f59e0b'] }
-                    : {}
-                }
-                transition={
-                  hasWarning ? { duration: 1.5, repeat: Infinity } : {}
-                }
+              <span
                 className="text-[16px] font-mono tabular-nums"
                 style={{ color: hasWarning ? '#f59e0b' : config.color }}
               >
                 {containerTemp}°C
-              </motion.span>
+              </span>
               <span className="text-[13px]" style={{ color: '#475569' }}>
                 {filledCount}/{capacity}
               </span>
@@ -377,10 +340,7 @@ export function ContainerSubView({
               <motion.div
                 className="h-full rounded-full"
                 style={{
-                  background:
-                    filledCount / capacity > 0.75
-                      ? `linear-gradient(90deg, ${config.borderColor}, #ef4444)`
-                      : `linear-gradient(90deg, ${config.bgColor.replace('0.9', '0.6')}, ${config.borderColor})`,
+                  background: `linear-gradient(90deg, ${config.bgColor.replace('0.9', '0.6')}, ${config.borderColor})`,
                 }}
                 animate={{ width: `${(filledCount / capacity) * 100}%` }}
                 transition={{ duration: 0.6, ease: 'easeOut' }}

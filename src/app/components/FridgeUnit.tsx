@@ -11,6 +11,7 @@ import {
   GRID_MAX_ROWS,
   GRID_MAX_COLS,
 } from '../types';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { SampleSlot } from './SampleSlot';
 import { ContainerSubView } from './ContainerSubView';
 
@@ -237,19 +238,17 @@ export function FridgeUnit({
             </div>
           </div>
 
-          {/* Status LED cluster */}
+          {/* Status LED */}
           <div className="flex items-center gap-2">
-            <motion.div
-              animate={hasCritical ? { opacity: [1, 0.15, 1] } : { opacity: 1 }}
-              transition={hasCritical ? { duration: 0.7, repeat: Infinity } : {}}
+            <div
               className="flex items-center gap-1.5 px-2.5 py-1 rounded"
               style={{
                 background: hasCritical
-                  ? 'rgba(153,27,27,0.7)'
+                  ? 'rgba(153,27,27,0.4)'
                   : hasWarning
-                    ? 'rgba(120,60,0,0.7)'
-                    : 'rgba(10,50,20,0.7)',
-                border: `1px solid ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}`,
+                    ? 'rgba(120,60,0,0.4)'
+                    : 'rgba(10,50,20,0.4)',
+                border: `1px solid ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}40`,
               }}
             >
               <div
@@ -260,7 +259,7 @@ export function FridgeUnit({
                     : hasWarning
                       ? '#f59e0b'
                       : '#22c55e',
-                  boxShadow: `0 0 8px ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}`,
+                  boxShadow: `0 0 3px ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}`,
                 }}
               />
               <span
@@ -275,142 +274,144 @@ export function FridgeUnit({
               >
                 {hasCritical ? 'ALERT' : hasWarning ? 'WARN' : 'OK'}
               </span>
-            </motion.div>
+            </div>
           </div>
         </div>
 
-        {/* ── UPPER COMPARTMENT (Freezer) ── */}
-        <div
-          className="rounded-xl mb-2 p-4 relative overflow-hidden"
-          style={{
-            background:
-              'linear-gradient(180deg, #060e1f 0%, #0a1830 60%, #0d2248 100%)',
-            border: '1px solid #1a3a62',
-            boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.7)',
-          }}
-        >
-          {/* Frost shimmer top */}
-          <motion.div
-            className="absolute top-0 left-0 right-0 h-px pointer-events-none"
-            animate={{ opacity: [0.3, 0.7, 0.3] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        {/* ── COMPARTMENT TABS ── */}
+        <Tabs defaultValue="upper" className="flex flex-col gap-2">
+          <TabsList
+            className="self-center mb-1"
             style={{
-              background:
-                'linear-gradient(90deg, transparent 0%, rgba(147,197,253,0.6) 50%, transparent 100%)',
-            }}
-          />
-
-          {/* Compartment label row */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <motion.div
-                animate={{ opacity: [0.6, 1, 0.6] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="w-2 h-2 rounded-full"
-                style={{ background: '#60a5fa', boxShadow: '0 0 8px #60a5fa' }}
-              />
-              <span className="text-[16px]" style={{ color: '#93c5fd' }}>
-                冷冻层 / Freezer
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Thermometer
-                size={18}
-                color={hasWarning ? '#f59e0b' : '#60a5fa'}
-              />
-              <motion.span
-                animate={
-                  hasWarning
-                    ? { color: ['#f59e0b', '#ef4444', '#f59e0b'] }
-                    : {}
-                }
-                transition={hasWarning ? { duration: 1.5, repeat: Infinity } : {}}
-                className="text-[18px] font-mono tabular-nums"
-                style={{ color: hasWarning ? '#f59e0b' : '#60a5fa' }}
-              >
-                {upperTemp}°C
-              </motion.span>
-              <span className="text-[13px]" style={{ color: '#475569' }}>
-                {upperSamples.length}/{upperCapacity}
-              </span>
-            </div>
-          </div>
-
-          {/* Grid controls */}
-          <GridControls
-            rows={upperGrid.rows}
-            cols={upperGrid.cols}
-            onRowsChange={(r) =>
-              onUpdateCompartmentGrid('upper', {
-                rows: r,
-                cols: upperGrid.cols,
-              })
-            }
-            onColsChange={(c) =>
-              onUpdateCompartmentGrid('upper', {
-                rows: upperGrid.rows,
-                cols: c,
-              })
-            }
-            accentColor="#60a5fa"
-          />
-
-          {/* Upper Grid */}
-          <div
-            className="grid gap-3"
-            style={{
-              gridTemplateColumns: `repeat(${upperGrid.cols}, minmax(0, 1fr))`,
-              gridTemplateRows: `repeat(${upperGrid.rows}, auto)`,
-              justifyItems: 'center',
+              background: 'rgba(10,20,40,0.6)',
+              border: '1px solid rgba(30,58,100,0.4)',
             }}
           >
-            {Array.from({ length: upperCapacity }, (_, i) => {
-              const s = getSampleAt('upper', i);
-              return (
-                <SampleSlot
-                  key={`upper-${i}`}
-                  compartment="upper"
-                  position={i}
-                  sample={s}
-                  isHighlighted={
-                    s ? matchedIds.has(s.id) && searchQuery.length > 0 : false
-                  }
-                  isSelected={s ? s.id === selectedSampleId : false}
-                  onSelect={onSelectSample}
-                  onDelete={onDeleteSample}
-                  onDrop={onDropSample}
-                  onAddClick={onSlotClick}
-                  onEnterContainer={onEnterContainer}
-                />
-              );
-            })}
-          </div>
-
-          {/* Capacity bar */}
-          <div className="mt-4 flex items-center gap-2">
-            <div
-              className="flex-1 h-1.5 rounded-full overflow-hidden"
-              style={{ background: 'rgba(255,255,255,0.06)' }}
+            <TabsTrigger
+              value="upper"
+              style={{ color: '#93c5fd' }}
             >
-              <motion.div
-                className="h-full rounded-full"
-                style={{
-                  background:
-                    upperSamples.length / upperCapacity > 0.8
-                      ? 'linear-gradient(90deg, #3b82f6, #ef4444)'
-                      : 'linear-gradient(90deg, #1d4ed8, #3b82f6)',
-                }}
-                animate={{
-                  width: `${(upperSamples.length / upperCapacity) * 100}%`,
-                }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
+              冷冻层 / Freezer
+            </TabsTrigger>
+            <TabsTrigger
+              value="lower"
+              style={{ color: '#86efac' }}
+            >
+              冷藏层 / Refrigerator
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="upper" className="flex-1 outline-none">
+            <div
+              className="rounded-xl mb-2 p-4 relative overflow-hidden"
+              style={{
+                background:
+                  'linear-gradient(180deg, #060e1f 0%, #0a1830 60%, #0a1628 100%)',
+                border: '1px solid #1a3a62',
+                boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.7)',
+              }}
+            >
+              {/* Compartment label row */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ background: '#60a5fa', boxShadow: '0 0 3px #60a5fa' }}
+                  />
+                  <span className="text-[16px]" style={{ color: '#93c5fd' }}>
+                    冷冻层 / Freezer
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Thermometer
+                    size={18}
+                    color={hasWarning ? '#f59e0b' : '#60a5fa'}
+                  />
+                  <span
+                    className="text-[18px] font-mono tabular-nums"
+                    style={{ color: hasWarning ? '#f59e0b' : '#60a5fa' }}
+                  >
+                    {upperTemp}°C
+                  </span>
+                  <span className="text-[13px]" style={{ color: '#475569' }}>
+                    {upperSamples.length}/{upperCapacity}
+                  </span>
+                </div>
+              </div>
+
+              {/* Grid controls */}
+              <GridControls
+                rows={upperGrid.rows}
+                cols={upperGrid.cols}
+                onRowsChange={(r) =>
+                  onUpdateCompartmentGrid('upper', {
+                    rows: r,
+                    cols: upperGrid.cols,
+                  })
+                }
+                onColsChange={(c) =>
+                  onUpdateCompartmentGrid('upper', {
+                    rows: upperGrid.rows,
+                    cols: c,
+                  })
+                }
+                accentColor="#60a5fa"
               />
+
+              {/* Upper Grid */}
+              <div
+                className="grid gap-3"
+                style={{
+                  gridTemplateColumns: `repeat(${upperGrid.cols}, minmax(0, 1fr))`,
+                  gridTemplateRows: `repeat(${upperGrid.rows}, auto)`,
+                  justifyItems: 'center',
+                }}
+              >
+                {Array.from({ length: upperCapacity }, (_, i) => {
+                  const s = getSampleAt('upper', i);
+                  return (
+                    <SampleSlot
+                      key={`upper-${i}`}
+                      compartment="upper"
+                      position={i}
+                      sample={s}
+                      isHighlighted={
+                        s ? matchedIds.has(s.id) && searchQuery.length > 0 : false
+                      }
+                      isSelected={s ? s.id === selectedSampleId : false}
+                      onSelect={onSelectSample}
+                      onDelete={onDeleteSample}
+                      onDrop={onDropSample}
+                      onAddClick={onSlotClick}
+                      onEnterContainer={onEnterContainer}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Capacity bar */}
+              <div className="mt-4 flex items-center gap-2">
+                <div
+                  className="flex-1 h-1.5 rounded-full overflow-hidden"
+                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                >
+                  <motion.div
+                    className="h-full rounded-full"
+                    style={{
+                      background: 'linear-gradient(90deg, #1d4ed8, #3b82f6)',
+                    }}
+                    animate={{
+                      width: `${(upperSamples.length / upperCapacity) * 100}%`,
+                    }}
+                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                  />
+                </div>
+                <span className="text-[13px] font-mono" style={{ color: '#475569' }}>
+                  {Math.round((upperSamples.length / upperCapacity) * 100)}%
+                </span>
+              </div>
             </div>
-            <span className="text-[13px] font-mono" style={{ color: '#475569' }}>
-              {Math.round((upperSamples.length / upperCapacity) * 100)}%
-            </span>
-          </div>
-        </div>
+          </TabsContent>
 
         {/* ── SHELF DIVIDER ── */}
         <div
@@ -437,46 +438,24 @@ export function FridgeUnit({
           ))}
         </div>
 
-        {/* ── LOWER COMPARTMENT (Refrigerator) ── */}
-        <div
-          className="rounded-xl p-4 relative overflow-hidden"
-          style={{
-            background:
-              'linear-gradient(180deg, #060f09 0%, #091a0e 60%, #0c2212 100%)',
-            border: '1px solid #1a4428',
-            boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.7)',
-          }}
-        >
-          {/* LED light bar */}
-          <motion.div
-            className="absolute top-0 left-0 right-0 h-px pointer-events-none"
-            animate={{ opacity: [0.3, 0.7, 0.3] }}
-            transition={{
-              duration: 2.5,
-              repeat: Infinity,
-              ease: 'easeInOut',
-              delay: 0.5,
-            }}
-            style={{
-              background:
-                'linear-gradient(90deg, transparent 0%, rgba(134,239,172,0.6) 50%, transparent 100%)',
-            }}
-          />
-
+          <TabsContent value="lower" className="flex-1 outline-none">
+            <div
+              className="rounded-xl p-4 relative overflow-hidden"
+              style={{
+                background:
+                  'linear-gradient(180deg, #060f09 0%, #091a0e 60%, #081a0e 100%)',
+                border: '1px solid #1a4428',
+                boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.7)',
+              }}
+            >
           {/* Compartment label row */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <motion.div
-                animate={{ opacity: [0.6, 1, 0.6] }}
-                transition={{
-                  duration: 2.5,
-                  repeat: Infinity,
-                  delay: 0.3,
-                }}
+              <div
                 className="w-2 h-2 rounded-full"
                 style={{
                   background: '#4ade80',
-                  boxShadow: '0 0 8px #4ade80',
+                  boxShadow: '0 0 3px #4ade80',
                 }}
               />
               <span className="text-[16px]" style={{ color: '#86efac' }}>
@@ -556,10 +535,7 @@ export function FridgeUnit({
               <motion.div
                 className="h-full rounded-full"
                 style={{
-                  background:
-                    lowerSamples.length / lowerCapacity > 0.75
-                      ? 'linear-gradient(90deg, #22c55e, #ef4444)'
-                      : 'linear-gradient(90deg, #15803d, #22c55e)',
+                  background: 'linear-gradient(90deg, #15803d, #22c55e)',
                 }}
                 animate={{
                   width: `${(lowerSamples.length / lowerCapacity) * 100}%`,
@@ -572,6 +548,8 @@ export function FridgeUnit({
             </span>
           </div>
         </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Bottom status strip */}
         <div className="flex items-center justify-between mt-4 pr-10">
@@ -587,7 +565,6 @@ export function FridgeUnit({
                     className="w-2.5 h-2.5 rounded-full"
                     style={{
                       background: STATUS_CONFIG[status].borderColor,
-                      boxShadow: `0 0 5px ${STATUS_CONFIG[status].borderColor}`,
                     }}
                   />
                   <span className="text-[13px]" style={{ color: '#64748b' }}>
@@ -602,34 +579,6 @@ export function FridgeUnit({
             <Zap size={14} color="#64748b" />
           </div>
         </div>
-      </div>
-
-      {/* JSON Schema hint */}
-      <div
-        className="rounded-lg p-4 w-full text-[13px] font-mono"
-        style={{
-          background: 'rgba(15,23,42,0.8)',
-          border: '1px solid rgba(30,58,100,0.5)',
-          color: '#475569',
-          maxWidth: '560px',
-        }}
-      >
-        <div style={{ color: '#64748b' }} className="mb-1">
-          // 容器数据结构 (JSON Schema)
-        </div>
-        <span style={{ color: '#7dd3fc' }}>{'{ '}</span>
-        <span style={{ color: '#86efac' }}>"id"</span>
-        <span style={{ color: '#94a3b8' }}>: </span>
-        <span style={{ color: '#fcd34d' }}>"S-001"</span>
-        <span style={{ color: '#94a3b8' }}>, </span>
-        <span style={{ color: '#86efac' }}>"status"</span>
-        <span style={{ color: '#94a3b8' }}>: </span>
-        <span style={{ color: '#fcd34d' }}>"normal"</span>
-        <span style={{ color: '#94a3b8' }}>, </span>
-        <span style={{ color: '#86efac' }}>"subSamples"</span>
-        <span style={{ color: '#94a3b8' }}>: </span>
-        <span style={{ color: '#fcd34d' }}>"[...]"</span>
-        <span style={{ color: '#7dd3fc' }}>{' }'}</span>
       </div>
     </div>
   );

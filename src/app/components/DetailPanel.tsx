@@ -10,6 +10,7 @@ import {
   FileText,
   Droplets,
   Package,
+  Pencil,
 } from 'lucide-react';
 import { Sample, SubSample, STATUS_CONFIG, SampleStatus } from '../types';
 
@@ -22,9 +23,10 @@ interface DetailPanelProps {
   onClose: () => void;
   onStatusChange: (id: string, status: SampleStatus, containerId?: string) => void;
   onDelete: (id: string, containerId?: string) => void;
+  onEdit: (item: DetailItem) => void;
 }
 
-export function DetailPanel({ item, onClose, onStatusChange, onDelete }: DetailPanelProps) {
+export function DetailPanel({ item, onClose, onStatusChange, onDelete, onEdit }: DetailPanelProps) {
   if (!item) return null;
 
   const isSub = item.kind === 'subsample';
@@ -44,7 +46,7 @@ export function DetailPanel({ item, onClose, onStatusChange, onDelete }: DetailP
         style={{
           background: 'rgba(10,18,35,0.95)',
           border: `1.5px solid ${config.borderColor}40`,
-          boxShadow: `0 0 30px ${config.glowColor}`,
+          boxShadow: `0 0 8px ${config.glowColor}40`,
           minWidth: '340px',
         }}
       >
@@ -67,26 +69,31 @@ export function DetailPanel({ item, onClose, onStatusChange, onDelete }: DetailP
               </div>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
-          >
-            <X size={18} color="#94a3b8" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onEdit(item)}
+              className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+              title="编辑"
+            >
+              <Pencil size={16} color="#94a3b8" />
+            </button>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+            >
+              <X size={18} color="#94a3b8" />
+            </button>
+          </div>
         </div>
 
         {/* Badge row */}
         <div className="px-5 pt-4 pb-1 flex items-center gap-2">
-          <motion.div
-            animate={data.status === 'critical' ? { opacity: [1, 0.4, 1] } : {}}
-            transition={
-              data.status === 'critical' ? { duration: 0.8, repeat: Infinity } : {}
-            }
+          <div
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
             style={{
               background: config.bgColor,
               border: `1px solid ${config.borderColor}`,
-              boxShadow: `0 0 10px ${config.glowColor}`,
+              boxShadow: `0 0 4px ${config.glowColor}`,
             }}
           >
             <div
@@ -96,7 +103,7 @@ export function DetailPanel({ item, onClose, onStatusChange, onDelete }: DetailP
             <span className="text-[16px]" style={{ color: config.color }}>
               {config.label}
             </span>
-          </motion.div>
+          </div>
           <span
             className="text-[14px] px-2.5 py-1 rounded"
             style={{ background: 'rgba(255,255,255,0.06)', color: '#64748b' }}
@@ -210,7 +217,7 @@ export function DetailPanel({ item, onClose, onStatusChange, onDelete }: DetailP
                   color: data.status === s ? STATUS_CONFIG[s].color : '#64748b',
                   boxShadow:
                     data.status === s
-                      ? `0 0 8px ${STATUS_CONFIG[s].glowColor}`
+                      ? `0 0 3px ${STATUS_CONFIG[s].glowColor}`
                       : 'none',
                 }}
               >

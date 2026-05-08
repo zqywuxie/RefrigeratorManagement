@@ -59,35 +59,12 @@ export function SampleCard({
           isSelected ? '#fff' : isHighlighted ? '#22d3ee' : config.borderColor
         }`,
         boxShadow: isSelected
-          ? `0 0 0 3px rgba(255,255,255,0.25), 0 0 24px ${config.glowColor}`
+          ? `0 0 0 2px rgba(255,255,255,0.2), 0 0 6px ${config.glowColor}40`
           : isHighlighted
-            ? '0 0 0 2px #22d3ee, 0 0 20px rgba(34,211,238,0.55)'
-            : `0 0 12px ${config.glowColor}`,
+            ? '0 0 0 2px #22d3ee, 0 0 6px rgba(34,211,238,0.3)'
+            : `0 0 3px ${config.glowColor}30`,
       }}
     >
-      {/* Critical flashing overlay */}
-      {isCritical && (
-        <motion.div
-          className="absolute inset-0 pointer-events-none"
-          animate={{ opacity: [0, 0.45, 0] }}
-          transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ background: '#ef444435', borderRadius: '8px' }}
-        />
-      )}
-
-      {/* Warning pulse ring */}
-      {(isCritical || isWarning) && (
-        <motion.div
-          className="absolute inset-0 pointer-events-none"
-          animate={{ opacity: [0.6, 0, 0.6], scale: [1, 1.08, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-          style={{
-            borderRadius: '10px',
-            border: `1px solid ${isCritical ? '#ef4444' : '#f59e0b'}`,
-          }}
-        />
-      )}
-
       {/* Info icon — opens detail panel */}
       <button
         className="absolute top-1 left-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
@@ -133,7 +110,7 @@ export function SampleCard({
           className="mt-0.5 w-2 h-2 rounded-full"
           style={{
             background: config.borderColor,
-            boxShadow: `0 0 5px ${config.borderColor}`,
+            boxShadow: `0 0 1px ${config.borderColor}`,
           }}
         />
 

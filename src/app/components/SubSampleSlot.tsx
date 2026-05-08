@@ -69,18 +69,10 @@ export function SubSampleSlot({
             : 'rgba(20,15,5,0.25)',
         transition: 'border-color 0.15s ease, background 0.15s ease',
         boxShadow: isActive
-          ? '0 0 14px rgba(245,158,11,0.35), inset 0 0 8px rgba(245,158,11,0.08)'
+          ? '0 0 6px rgba(245,158,11,0.2), inset 0 0 4px rgba(245,158,11,0.05)'
           : 'none',
       }}
     >
-      {isActive && (
-        <motion.div
-          className="absolute inset-0 rounded pointer-events-none"
-          animate={{ opacity: [0.4, 0.8, 0.4] }}
-          transition={{ duration: 0.8, repeat: Infinity }}
-          style={{ background: 'rgba(245,158,11,0.06)', borderRadius: '7px' }}
-        />
-      )}
 
       <AnimatePresence mode="wait">
         {subSample ? (

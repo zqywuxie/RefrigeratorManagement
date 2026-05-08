@@ -53,33 +53,12 @@ export function SubSampleCard({
           isSelected ? '#fff' : isHighlighted ? '#22d3ee' : config.borderColor
         }`,
         boxShadow: isSelected
-          ? `0 0 0 2px rgba(255,255,255,0.25), 0 0 16px ${config.glowColor}`
+          ? `0 0 0 2px rgba(255,255,255,0.2), 0 0 4px ${config.glowColor}30`
           : isHighlighted
-            ? '0 0 0 1.5px #22d3ee, 0 0 14px rgba(34,211,238,0.55)'
-            : `0 0 8px ${config.glowColor}`,
+            ? '0 0 0 1.5px #22d3ee, 0 0 4px rgba(34,211,238,0.3)'
+            : `0 0 2px ${config.glowColor}20`,
       }}
     >
-      {isCritical && (
-        <motion.div
-          className="absolute inset-0 pointer-events-none"
-          animate={{ opacity: [0, 0.45, 0] }}
-          transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ background: '#ef444435', borderRadius: '6px' }}
-        />
-      )}
-
-      {(isCritical || isWarning) && (
-        <motion.div
-          className="absolute inset-0 pointer-events-none"
-          animate={{ opacity: [0.6, 0, 0.6], scale: [1, 1.06, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-          style={{
-            borderRadius: '8px',
-            border: `1px solid ${isCritical ? '#ef4444' : '#f59e0b'}`,
-          }}
-        />
-      )}
-
       {/* Delete button */}
       <button
         className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 rounded-full bg-red-600 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-all duration-150 z-20 flex items-center justify-center shadow-lg"
