@@ -19,6 +19,8 @@ interface AddSampleModalProps {
   onAddSubSample?: (containerId: string, subSample: SubSample) => void;
   existingIds: string[];
   containers: Sample[];
+  upperTemperature: number;
+  lowerTemperature: number;
   isSubSampleMode?: boolean;
   parentContainerId?: string;
   parentContainer?: Sample;
@@ -35,6 +37,7 @@ const DEFAULT_FORM = {
   status: 'normal' as SampleStatus,
   name: '',
   patientId: '',
+  uploader: '',
   volume: '',
   note: '',
   tags: '',
@@ -50,6 +53,8 @@ export function AddSampleModal({
   onAddSubSample,
   existingIds,
   containers,
+  upperTemperature,
+  lowerTemperature,
   isSubSampleMode = false,
   parentContainerId,
   parentContainer,
@@ -75,6 +80,7 @@ export function AddSampleModal({
         status: editSample.status,
         name: editSample.name,
         patientId: editSample.patientId,
+        uploader: editSample.uploader || '',
         volume: editSample.volume || '',
         note: editSample.note || '',
         tags: editSample.tags.join(', '),
@@ -86,6 +92,7 @@ export function AddSampleModal({
         status: editSubSample.status,
         name: editSubSample.name,
         patientId: editSubSample.patientId,
+        uploader: editSubSample.uploader || '',
         volume: editSubSample.volume || '',
         note: editSubSample.note || '',
         tags: editSubSample.tags.join(', '),
@@ -133,6 +140,7 @@ export function AddSampleModal({
         type: form.type,
         status: form.status,
         patientId: form.patientId || editSample.patientId,
+        uploader: form.uploader || editSample.uploader,
         collectedAt: form.collectedAt,
         tags: parseTags(),
         volume: form.volume || undefined,
@@ -151,6 +159,7 @@ export function AddSampleModal({
         type: form.type,
         status: form.status,
         patientId: form.patientId || editSubSample.patientId,
+        uploader: form.uploader || editSubSample.uploader,
         collectedAt: form.collectedAt,
         tags: parseTags(),
         volume: form.volume || undefined,
@@ -171,9 +180,10 @@ export function AddSampleModal({
         status: form.status,
         temperature:
           parentContainer?.temperature ??
-          (targetCompartment === 'upper' ? -20 : 4),
+          (targetCompartment === 'upper' ? upperTemperature : lowerTemperature),
         collectedAt: form.collectedAt,
         patientId: form.patientId || `P-${Date.now().toString().slice(-6)}`,
+        uploader: form.uploader || '未记录',
         tags: parseTags(),
         position: targetPosition ?? 0,
         volume: form.volume || undefined,
@@ -188,9 +198,10 @@ export function AddSampleModal({
         name: form.name || `${form.type}样本 ${newId.slice(2)}`,
         type: form.type,
         status: form.status,
-        temperature: targetCompartment === 'upper' ? -20 : 4,
+        temperature: targetCompartment === 'upper' ? upperTemperature : lowerTemperature,
         collectedAt: form.collectedAt,
         patientId: form.patientId || `P-${Date.now().toString().slice(-6)}`,
+        uploader: form.uploader || '未记录',
         tags: parseTags(),
         compartment: targetCompartment || 'upper',
         position: targetPosition ?? 0,
@@ -209,8 +220,8 @@ export function AddSampleModal({
     isSubSampleMode && parentContainer
       ? parentContainer.temperature
       : targetCompartment === 'upper'
-        ? -20
-        : 4;
+        ? upperTemperature
+        : lowerTemperature;
 
   const accentColor = isSubSampleMode || editSubSample ? '#a78bfa' : '#60a5fa';
 
@@ -502,6 +513,30 @@ export function AddSampleModal({
                     value={form.patientId}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, patientId: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-600"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#94a3b8',
+                    }}
+                  />
+                </div>
+
+                {/* Uploader */}
+                <div>
+                  <label
+                    className="block text-[14px] mb-1"
+                    style={{ color: '#64748b' }}
+                  >
+                    上传者（选填）
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="例：张三 / 检验科"
+                    value={form.uploader}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, uploader: e.target.value }))
                     }
                     className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-600"
                     style={{

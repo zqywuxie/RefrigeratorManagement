@@ -6,9 +6,20 @@ interface FridgeSelectorProps {
   refrigerators: Refrigerator[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  onAdd: (name: string, description?: string) => void;
+  onAdd: (
+    name: string,
+    description?: string,
+    upperTemperature?: number,
+    lowerTemperature?: number,
+  ) => void;
   onDelete: (id: string) => void;
-  onEdit: (id: string, name: string, description?: string) => void;
+  onEdit: (
+    id: string,
+    name: string,
+    description?: string,
+    upperTemperature?: number,
+    lowerTemperature?: number,
+  ) => void;
 }
 
 export function FridgeSelector({
@@ -23,9 +34,13 @@ export function FridgeSelector({
   const [adding, setAdding] = useState(false);
   const [addName, setAddName] = useState('');
   const [addDesc, setAddDesc] = useState('');
+  const [addUpperTemp, setAddUpperTemp] = useState('-20');
+  const [addLowerTemp, setAddLowerTemp] = useState('4');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
+  const [editUpperTemp, setEditUpperTemp] = useState('-20');
+  const [editLowerTemp, setEditLowerTemp] = useState('4');
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,20 +57,37 @@ export function FridgeSelector({
 
   const selectedName =
     refrigerators.find((r) => r.id === selectedId)?.name ?? '选择冰箱';
+  const parseTemperature = (value: string, fallback: number) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!addName.trim()) return;
-    onAdd(addName.trim(), addDesc.trim() || undefined);
+    onAdd(
+      addName.trim(),
+      addDesc.trim() || undefined,
+      parseTemperature(addUpperTemp, -20),
+      parseTemperature(addLowerTemp, 4),
+    );
     setAddName('');
     setAddDesc('');
+    setAddUpperTemp('-20');
+    setAddLowerTemp('4');
     setAdding(false);
   };
 
   const handleEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editName.trim() || !editingId) return;
-    onEdit(editingId, editName.trim(), editDesc.trim() || undefined);
+    onEdit(
+      editingId,
+      editName.trim(),
+      editDesc.trim() || undefined,
+      parseTemperature(editUpperTemp, -20),
+      parseTemperature(editLowerTemp, 4),
+    );
     setEditingId(null);
     setEditName('');
     setEditDesc('');
@@ -66,6 +98,8 @@ export function FridgeSelector({
     setEditingId(r.id);
     setEditName(r.name);
     setEditDesc(r.description || '');
+    setEditUpperTemp(String(r.upperTemperature));
+    setEditLowerTemp(String(r.lowerTemperature));
     setAdding(false);
   };
 
@@ -87,7 +121,7 @@ export function FridgeSelector({
 
       {open && (
         <div
-          className="absolute top-full mt-1 left-0 w-56 rounded-xl overflow-hidden z-30"
+          className="absolute top-full mt-1 left-0 w-72 rounded-xl overflow-hidden z-30"
           style={{
             background: 'rgba(10,20,40,0.98)',
             border: '1px solid rgba(59,130,246,0.3)',
@@ -110,6 +144,34 @@ export function FridgeSelector({
                       color: '#94a3b8',
                     }}
                   />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      step="0.1"
+                      placeholder="冷冻层 °C"
+                      value={editUpperTemp}
+                      onChange={(e) => setEditUpperTemp(e.target.value)}
+                      className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
+                      style={{
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#93c5fd',
+                      }}
+                    />
+                    <input
+                      type="number"
+                      step="0.1"
+                      placeholder="冷藏层 °C"
+                      value={editLowerTemp}
+                      onChange={(e) => setEditLowerTemp(e.target.value)}
+                      className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
+                      style={{
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#86efac',
+                      }}
+                    />
+                  </div>
                   <input
                     type="text"
                     placeholder="描述（选填）"
@@ -153,6 +215,9 @@ export function FridgeSelector({
                   }}
                 >
                   <span className="text-[14px] truncate flex-1">{r.name}</span>
+                  <span className="text-[11px] font-mono mr-1" style={{ color: '#475569' }}>
+                    {r.upperTemperature}°/{r.lowerTemperature}°
+                  </span>
                   <div className="flex items-center gap-0.5 flex-shrink-0">
                     <button
                       onClick={(e) => startEditing(r, e)}
@@ -195,6 +260,34 @@ export function FridgeSelector({
                     color: '#94a3b8',
                   }}
                 />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="冷冻层 °C"
+                    value={addUpperTemp}
+                    onChange={(e) => setAddUpperTemp(e.target.value)}
+                    className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#93c5fd',
+                    }}
+                  />
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="冷藏层 °C"
+                    value={addLowerTemp}
+                    onChange={(e) => setAddLowerTemp(e.target.value)}
+                    className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#86efac',
+                    }}
+                  />
+                </div>
                 <input
                   type="text"
                   placeholder="描述（选填）"

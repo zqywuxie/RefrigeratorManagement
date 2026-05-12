@@ -5,6 +5,7 @@ import refrigeratorsRouter from './routes/refrigerators.js';
 import samplesRouter from './routes/samples.js';
 import subSamplesRouter from './routes/subSamples.js';
 import sampleTypesRouter from './routes/sampleTypes.js';
+import { runSchemaMigrations } from './schemaMigrations.js';
 
 dotenv.config();
 const app = express();
@@ -17,4 +18,10 @@ app.use('/api/samples', subSamplesRouter);
 app.use('/api/sample-types', sampleTypesRouter);
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+runSchemaMigrations()
+  .catch((err) => {
+    console.warn('Schema migration skipped:', err.message);
+  })
+  .finally(() => {
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  });

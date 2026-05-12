@@ -8,6 +8,8 @@ export interface RefrigeratorResponse {
   upper_cols: number;
   lower_rows: number;
   lower_cols: number;
+  upper_temperature: number;
+  lower_temperature: number;
   created_at: string;
   updated_at: string;
 }
@@ -37,7 +39,16 @@ export async function fetchRefrigerator(id: string): Promise<RefrigeratorRespons
 }
 
 export async function createRefrigerator(
-  data: { name: string; description?: string; upperRows?: number; upperCols?: number; lowerRows?: number; lowerCols?: number },
+  data: {
+    name: string;
+    description?: string;
+    upperRows?: number;
+    upperCols?: number;
+    lowerRows?: number;
+    lowerCols?: number;
+    upperTemperature?: number;
+    lowerTemperature?: number;
+  },
 ): Promise<RefrigeratorResponse> {
   return fetchJSON(`${BASE}/refrigerators`, {
     method: 'POST',
@@ -51,6 +62,7 @@ export async function updateRefrigerator(
     name: string; description: string;
     upperRows: number; upperCols: number;
     lowerRows: number; lowerCols: number;
+    upperTemperature: number; lowerTemperature: number;
   }>,
 ): Promise<RefrigeratorResponse> {
   return fetchJSON(`${BASE}/refrigerators/${encodeURIComponent(id)}`, {

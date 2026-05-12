@@ -12,6 +12,7 @@ function rowToSubSample(row) {
     temperature: Number(row.temperature),
     collectedAt: row.collected_at ? row.collected_at.toString().slice(0, 10) : '',
     patientId: row.patient_id || '',
+    uploader: row.uploader || '',
     tags: Array.isArray(row.tags) ? row.tags : (typeof row.tags === 'string' ? JSON.parse(row.tags) : []),
     position: row.position,
     note: row.note || undefined,
@@ -41,7 +42,7 @@ router.post('/:sampleId/sub-samples', async (req, res) => {
 
     const {
       id, name, type, status = 'normal', temperature,
-      collectedAt, patientId, tags, position, note, volume,
+      collectedAt, patientId, uploader, tags, position, note, volume,
     } = req.body;
 
     if (!id || !name || !type || temperature == null || position == null) {
@@ -58,9 +59,9 @@ router.post('/:sampleId/sub-samples', async (req, res) => {
     }
 
     await pool.query(
-      `INSERT INTO sub_samples (id, sample_id, name, type, status, temperature, collected_at, patient_id, tags, position, note, volume)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, sampleId, name, type, status, temperature, collectedAt || null, patientId || null, JSON.stringify(tags || []), position, note || null, volume || null],
+      `INSERT INTO sub_samples (id, sample_id, name, type, status, temperature, collected_at, patient_id, uploader, tags, position, note, volume)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, sampleId, name, type, status, temperature, collectedAt || null, patientId || null, uploader || null, JSON.stringify(tags || []), position, note || null, volume || null],
     );
     const [[row]] = await pool.query('SELECT * FROM sub_samples WHERE id = ?', [id]);
     res.status(201).json(rowToSubSample(row));
@@ -89,6 +90,7 @@ router.put('/:sampleId/sub-samples/:id', async (req, res) => {
     if (updates.temperature !== undefined) { fields.push('temperature = ?'); values.push(updates.temperature); }
     if (updates.collectedAt !== undefined) { fields.push('collected_at = ?'); values.push(updates.collectedAt); }
     if (updates.patientId !== undefined) { fields.push('patient_id = ?'); values.push(updates.patientId); }
+    if (updates.uploader !== undefined) { fields.push('uploader = ?'); values.push(updates.uploader); }
     if (updates.tags !== undefined) { fields.push('tags = ?'); values.push(JSON.stringify(updates.tags)); }
     if (updates.position !== undefined) { fields.push('position = ?'); values.push(updates.position); }
     if (updates.note !== undefined) { fields.push('note = ?'); values.push(updates.note); }

@@ -11,6 +11,7 @@ import {
   Droplets,
   Package,
   Pencil,
+  Upload,
 } from 'lucide-react';
 import { Sample, SubSample, STATUS_CONFIG, SampleStatus } from '../types';
 
@@ -141,6 +142,11 @@ export function DetailPanel({ item, onClose, onStatusChange, onDelete, onEdit }:
             icon={<User size={16} color="#34d399" />}
             label="患者编号"
             value={data.patientId}
+          />
+          <DetailRow
+            icon={<Upload size={16} color="#38bdf8" />}
+            label="上传者"
+            value={data.uploader || '未记录'}
           />
           <DetailRow
             icon={<Droplets size={16} color="#fb923c" />}

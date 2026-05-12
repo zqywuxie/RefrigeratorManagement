@@ -9,6 +9,7 @@ import {
   Activity,
   AlertTriangle,
   Layers,
+  Tags,
 } from 'lucide-react';
 
 import {
@@ -84,6 +85,8 @@ export default function App() {
             upperCols: r.upper_cols,
             lowerRows: r.lower_rows,
             lowerCols: r.lower_cols,
+            upperTemperature: Number(r.upper_temperature ?? -20),
+            lowerTemperature: Number(r.lower_temperature ?? 4),
           })),
         );
         setLoading(false);
@@ -151,6 +154,7 @@ export default function App() {
         s.name.toLowerCase().includes(q) ||
         s.type.includes(q) ||
         s.patientId.toLowerCase().includes(q) ||
+        (s.uploader || '').toLowerCase().includes(q) ||
         s.tags.some((t) => t.toLowerCase().includes(q)) ||
         STATUS_CONFIG[s.status].label.includes(q)
       ) {
@@ -162,6 +166,7 @@ export default function App() {
           ss.name.toLowerCase().includes(q) ||
           ss.type.includes(q) ||
           ss.patientId.toLowerCase().includes(q) ||
+          (ss.uploader || '').toLowerCase().includes(q) ||
           ss.tags.some((t) => t.toLowerCase().includes(q)) ||
           STATUS_CONFIG[ss.status].label.includes(q)
         ) {
@@ -190,7 +195,12 @@ export default function App() {
   // ── Fridge handlers ──
 
   const handleAddFridge = useCallback(
-    async (name: string, description?: string) => {
+    async (
+      name: string,
+      description?: string,
+      upperTemperature = -20,
+      lowerTemperature = 4,
+    ) => {
       try {
         const data = await apiCreateRefrigerator({
           name,
@@ -199,6 +209,8 @@ export default function App() {
           upperCols: 3,
           lowerRows: 2,
           lowerCols: 2,
+          upperTemperature,
+          lowerTemperature,
         });
         const newFridge: Refrigerator = {
           id: data.id,
@@ -208,6 +220,8 @@ export default function App() {
           upperCols: data.upper_cols,
           lowerRows: data.lower_rows,
           lowerCols: data.lower_cols,
+          upperTemperature: Number(data.upper_temperature ?? upperTemperature),
+          lowerTemperature: Number(data.lower_temperature ?? lowerTemperature),
         };
         setRefrigerators((prev) => [...prev, newFridge]);
         setSelectedFridgeId(newFridge.id);
@@ -220,9 +234,20 @@ export default function App() {
   );
 
   const handleEditFridge = useCallback(
-    async (id: string, name: string, description?: string) => {
+    async (
+      id: string,
+      name: string,
+      description?: string,
+      upperTemperature?: number,
+      lowerTemperature?: number,
+    ) => {
       try {
-        const data = await apiUpdateRefrigerator(id, { name, description });
+        const data = await apiUpdateRefrigerator(id, {
+          name,
+          description,
+          upperTemperature,
+          lowerTemperature,
+        });
         setRefrigerators((prev) =>
           prev.map((r) =>
             r.id === id
@@ -234,6 +259,8 @@ export default function App() {
                   upperCols: data.upper_cols,
                   lowerRows: data.lower_rows,
                   lowerCols: data.lower_cols,
+                  upperTemperature: Number(data.upper_temperature ?? r.upperTemperature),
+                  lowerTemperature: Number(data.lower_temperature ?? r.lowerTemperature),
                 }
               : r,
           ),
@@ -442,6 +469,8 @@ export default function App() {
                     upperCols: data.upper_cols,
                     lowerRows: data.lower_rows,
                     lowerCols: data.lower_cols,
+                    upperTemperature: Number(data.upper_temperature ?? r.upperTemperature),
+                    lowerTemperature: Number(data.lower_temperature ?? r.lowerTemperature),
                   }
                 : r,
             ),
@@ -643,6 +672,23 @@ export default function App() {
     (sum, s) => sum + s.subSamples.filter((ss) => ss.status === 'warning').length,
     0,
   );
+  const tagStats = React.useMemo(() => {
+    const counts = new Map<string, number>();
+
+    samples.forEach((sample) => {
+      [...sample.tags, ...sample.subSamples.flatMap((subSample) => subSample.tags)].forEach((tag) => {
+        const normalized = tag.trim();
+        if (!normalized) return;
+        counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+      });
+    });
+
+    return Array.from(counts, ([tag, count]) => ({ tag, count })).sort(
+      (a, b) => b.count - a.count || a.tag.localeCompare(b.tag, 'zh-CN'),
+    );
+  }, [samples]);
+  const displayedTagStats = tagStats.slice(0, 8);
+  const remainingTagCount = Math.max(tagStats.length - displayedTagStats.length, 0);
 
   const notifColors = {
     info: { bg: 'rgba(29,78,216,0.85)', border: '#3b82f6', text: '#93c5fd' },
@@ -764,7 +810,7 @@ export default function App() {
               <Search size={20} color={searchQuery ? '#22d3ee' : '#475569'} />
               <input
                 type="text"
-                placeholder="搜索样本 ID、类型、患者编号、标签..."
+                placeholder="搜索样本 ID、类型、患者编号、上传者、标签..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 bg-transparent outline-none text-[16px] placeholder:text-slate-600"
@@ -809,6 +855,8 @@ export default function App() {
                 matchedIds={matchedIds}
                 searchQuery={searchQuery}
                 compartmentGrids={compartmentGrids}
+                upperTemperature={selectedFridge?.upperTemperature ?? -20}
+                lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
                 viewingContainer={viewingContainer}
                 onDropSample={handleDrop}
                 onSelectSample={setSelectedSampleId}
@@ -889,13 +937,13 @@ export default function App() {
               <StatsCard
                 label="冷冻层"
                 value={`${samples.filter((s) => s.compartment === 'upper').length}/${upperCapacity}`}
-                sub="-20°C 冷冻"
+                sub={`${selectedFridge?.upperTemperature ?? -20}°C 冷冻`}
                 color="#818cf8"
               />
               <StatsCard
                 label="冷藏层"
                 value={`${samples.filter((s) => s.compartment === 'lower').length}/${lowerCapacity}`}
-                sub="+4°C 冷藏"
+                sub={`${selectedFridge?.lowerTemperature ?? 4}°C 冷藏`}
                 color="#34d399"
               />
               <StatsCard
@@ -954,7 +1002,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Status legend */}
+            {/* Tag stats */}
             <div
               className="rounded-xl p-4"
               style={{
@@ -962,35 +1010,64 @@ export default function App() {
                 border: '1px solid rgba(30,58,100,0.4)',
               }}
             >
-              <div className="text-[14px] mb-2" style={{ color: '#475569' }}>
-                状态图例
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <Tags size={15} color="#38bdf8" />
+                  <span className="text-[14px]" style={{ color: '#94a3b8' }}>
+                    标签统计
+                  </span>
+                </div>
+                <span className="text-[12px] font-mono" style={{ color: '#475569' }}>
+                  {tagStats.length} 类
+                </span>
               </div>
-              <div className="space-y-2">
-                {(Object.keys(STATUS_CONFIG) as SampleStatus[]).map((status) => {
-                  const count = samples.filter((s) => s.status === status).length;
-                  return (
-                    <div key={status} className="flex items-center gap-2">
-                      <div
-                        className="w-4 h-4 rounded-sm flex-shrink-0"
-                        style={{
-                          background: STATUS_CONFIG[status].bgColor,
-                          border: `1px solid ${STATUS_CONFIG[status].borderColor}`,
-                          boxShadow: `0 0 2px ${STATUS_CONFIG[status].glowColor}`,
-                        }}
-                      />
+              {displayedTagStats.length > 0 ? (
+                <div className="space-y-2">
+                  {displayedTagStats.map(({ tag, count }, index) => (
+                    <div key={tag} className="flex items-center gap-2">
                       <span
-                        className="text-[14px] flex-1"
-                        style={{ color: STATUS_CONFIG[status].color }}
+                        className="w-6 text-[12px] font-mono text-right flex-shrink-0"
+                        style={{ color: index < 3 ? '#38bdf8' : '#475569' }}
                       >
-                        {STATUS_CONFIG[status].label}
+                        {String(index + 1).padStart(2, '0')}
                       </span>
-                      <span className="text-[14px] font-mono" style={{ color: '#334155' }}>
+                      <span
+                        className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
+                        title={tag}
+                        style={{
+                          background: 'rgba(56,189,248,0.08)',
+                          border: '1px solid rgba(56,189,248,0.14)',
+                          color: '#bae6fd',
+                        }}
+                      >
+                        {tag}
+                      </span>
+                      <span
+                        className="min-w-8 text-right text-[14px] font-mono"
+                        style={{ color: '#38bdf8' }}
+                      >
                         {count}
                       </span>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                  {remainingTagCount > 0 && (
+                    <div className="pt-1 text-right text-[12px]" style={{ color: '#475569' }}>
+                      另有 {remainingTagCount} 类标签
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className="rounded-lg px-3 py-4 text-center text-[13px]"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px dashed rgba(148,163,184,0.18)',
+                    color: '#475569',
+                  }}
+                >
+                  暂无标签数据
+                </div>
+              )}
             </div>
 
           </div>
@@ -1028,6 +1105,8 @@ export default function App() {
           onAddSubSample={handleAddSubSample}
           existingIds={samples.map((s) => s.id)}
           containers={samples}
+          upperTemperature={selectedFridge?.upperTemperature ?? -20}
+          lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
           isSubSampleMode={addTarget?.isSubSample ?? false}
           parentContainerId={
             editItem?.kind === 'subsample'

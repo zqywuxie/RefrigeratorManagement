@@ -12,6 +12,8 @@ const SCHEMA_STATEMENTS = [
     upper_cols  INT NOT NULL DEFAULT 3,
     lower_rows  INT NOT NULL DEFAULT 2,
     lower_cols  INT NOT NULL DEFAULT 2,
+    upper_temperature DECIMAL(5,1) NOT NULL DEFAULT -20.0,
+    lower_temperature DECIMAL(5,1) NOT NULL DEFAULT 4.0,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ) ENGINE=InnoDB`,
@@ -24,6 +26,7 @@ const SCHEMA_STATEMENTS = [
     temperature     DECIMAL(5,1) NOT NULL,
     collected_at    DATE NOT NULL,
     patient_id      VARCHAR(50),
+    uploader        VARCHAR(100),
     tags            JSON,
     compartment     ENUM('upper','lower') NOT NULL,
     position        INT NOT NULL,
@@ -46,6 +49,7 @@ const SCHEMA_STATEMENTS = [
     temperature   DECIMAL(5,1) NOT NULL,
     collected_at  DATE NOT NULL,
     patient_id    VARCHAR(50),
+    uploader      VARCHAR(100),
     tags          JSON,
     position      INT NOT NULL,
     note          TEXT,
@@ -67,6 +71,8 @@ const FRIDGE = {
   upper_cols: 3,
   lower_rows: 2,
   lower_cols: 2,
+  upper_temperature: -20,
+  lower_temperature: 4,
 };
 
 const SAMPLES = [
@@ -119,6 +125,14 @@ const SUB_SAMPLES = [
   { id: 'SS-008', sample_id: 'S-006', name: '组织副样本 006-B', type: '组织', status: 'normal', temperature: -20, collected_at: '2026-05-03', patient_id: 'P-2024-099', tags: JSON.stringify(['切片B']), position: 1, volume: '0.3g' },
 ];
 
+async function ensureColumn(conn, table, column, definition) {
+  const [rows] = await conn.query(`SHOW COLUMNS FROM \`${table}\` LIKE ?`, [column]);
+  if (rows.length === 0) {
+    await conn.query(`ALTER TABLE \`${table}\` ADD COLUMN ${definition}`);
+    console.log(`Added ${table}.${column}`);
+  }
+}
+
 async function main() {
   const conn = await pool.getConnection();
   try {
@@ -126,15 +140,29 @@ async function main() {
     for (const stmt of SCHEMA_STATEMENTS) {
       await conn.query(stmt);
     }
+    await ensureColumn(conn, 'refrigerators', 'upper_temperature', '`upper_temperature` DECIMAL(5,1) NOT NULL DEFAULT -20.0');
+    await ensureColumn(conn, 'refrigerators', 'lower_temperature', '`lower_temperature` DECIMAL(5,1) NOT NULL DEFAULT 4.0');
+    await ensureColumn(conn, 'samples', 'uploader', '`uploader` VARCHAR(100) NULL AFTER `patient_id`');
+    await ensureColumn(conn, 'sub_samples', 'uploader', '`uploader` VARCHAR(100) NULL AFTER `patient_id`');
     console.log('Tables created.');
 
     // Insert default fridge if not exists
     const [existing] = await conn.query('SELECT id FROM refrigerators WHERE id = ?', [FRIDGE_ID]);
     if (existing.length === 0) {
       await conn.query(
-        `INSERT INTO refrigerators (id, name, description, upper_rows, upper_cols, lower_rows, lower_cols)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [FRIDGE.id, FRIDGE.name, FRIDGE.description, FRIDGE.upper_rows, FRIDGE.upper_cols, FRIDGE.lower_rows, FRIDGE.lower_cols],
+        `INSERT INTO refrigerators (id, name, description, upper_rows, upper_cols, lower_rows, lower_cols, upper_temperature, lower_temperature)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          FRIDGE.id,
+          FRIDGE.name,
+          FRIDGE.description,
+          FRIDGE.upper_rows,
+          FRIDGE.upper_cols,
+          FRIDGE.lower_rows,
+          FRIDGE.lower_cols,
+          FRIDGE.upper_temperature,
+          FRIDGE.lower_temperature,
+        ],
       );
       console.log('Default refrigerator inserted.');
     } else {
@@ -144,9 +172,9 @@ async function main() {
     // Insert samples (ignore duplicates)
     for (const s of SAMPLES) {
       await conn.query(
-        `INSERT IGNORE INTO samples (id, refrigerator_id, name, type, status, temperature, collected_at, patient_id, tags, compartment, position, note, volume, grid_rows, grid_cols)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [s.id, s.refrigerator_id, s.name, s.type, s.status, s.temperature, s.collected_at, s.patient_id, s.tags, s.compartment, s.position, s.note || null, s.volume || null, s.grid_rows, s.grid_cols],
+        `INSERT IGNORE INTO samples (id, refrigerator_id, name, type, status, temperature, collected_at, patient_id, uploader, tags, compartment, position, note, volume, grid_rows, grid_cols)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [s.id, s.refrigerator_id, s.name, s.type, s.status, s.temperature, s.collected_at, s.patient_id, s.uploader || '系统导入', s.tags, s.compartment, s.position, s.note || null, s.volume || null, s.grid_rows, s.grid_cols],
       );
     }
     console.log(`${SAMPLES.length} samples seeded.`);
@@ -154,9 +182,9 @@ async function main() {
     // Insert sub-samples (ignore duplicates)
     for (const ss of SUB_SAMPLES) {
       await conn.query(
-        `INSERT IGNORE INTO sub_samples (id, sample_id, name, type, status, temperature, collected_at, patient_id, tags, position, note, volume)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [ss.id, ss.sample_id, ss.name, ss.type, ss.status, ss.temperature, ss.collected_at, ss.patient_id, ss.tags, ss.position, ss.note || null, ss.volume || null],
+        `INSERT IGNORE INTO sub_samples (id, sample_id, name, type, status, temperature, collected_at, patient_id, uploader, tags, position, note, volume)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [ss.id, ss.sample_id, ss.name, ss.type, ss.status, ss.temperature, ss.collected_at, ss.patient_id, ss.uploader || '系统导入', ss.tags, ss.position, ss.note || null, ss.volume || null],
       );
     }
     console.log(`${SUB_SAMPLES.length} sub-samples seeded.`);

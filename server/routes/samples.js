@@ -12,6 +12,7 @@ function rowToSample(row) {
     temperature: Number(row.temperature),
     collectedAt: row.collected_at ? row.collected_at.toString().slice(0, 10) : '',
     patientId: row.patient_id || '',
+    uploader: row.uploader || '',
     tags: Array.isArray(row.tags) ? row.tags : (typeof row.tags === 'string' ? JSON.parse(row.tags) : []),
     compartment: row.compartment,
     position: row.position,
@@ -32,6 +33,7 @@ function rowToSubSample(row) {
     temperature: Number(row.temperature),
     collectedAt: row.collected_at ? row.collected_at.toString().slice(0, 10) : '',
     patientId: row.patient_id || '',
+    uploader: row.uploader || '',
     tags: Array.isArray(row.tags) ? row.tags : (typeof row.tags === 'string' ? JSON.parse(row.tags) : []),
     position: row.position,
     note: row.note || undefined,
@@ -103,7 +105,7 @@ router.post('/:fridgeId/samples', async (req, res) => {
     const {
       id, name, type, status = 'normal', temperature,
       collectedAt, patientId, tags, compartment, position,
-      note, volume, gridRows = 2, gridCols = 2,
+      note, volume, uploader, gridRows = 2, gridCols = 2,
     } = req.body;
 
     if (!id || !name || !type || temperature == null || !compartment || position == null) {
@@ -120,9 +122,9 @@ router.post('/:fridgeId/samples', async (req, res) => {
     }
 
     await pool.query(
-      `INSERT INTO samples (id, refrigerator_id, name, type, status, temperature, collected_at, patient_id, tags, compartment, position, note, volume, grid_rows, grid_cols)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, fridgeId, name, type, status, temperature, collectedAt || null, patientId || null, JSON.stringify(tags || []), compartment, position, note || null, volume || null, gridRows, gridCols],
+      `INSERT INTO samples (id, refrigerator_id, name, type, status, temperature, collected_at, patient_id, uploader, tags, compartment, position, note, volume, grid_rows, grid_cols)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, fridgeId, name, type, status, temperature, collectedAt || null, patientId || null, uploader || null, JSON.stringify(tags || []), compartment, position, note || null, volume || null, gridRows, gridCols],
     );
     const [[row]] = await pool.query('SELECT * FROM samples WHERE id = ?', [id]);
     const sample = rowToSample(row);
@@ -153,6 +155,7 @@ router.put('/:fridgeId/samples/:id', async (req, res) => {
     if (updates.temperature !== undefined) { fields.push('temperature = ?'); values.push(updates.temperature); }
     if (updates.collectedAt !== undefined) { fields.push('collected_at = ?'); values.push(updates.collectedAt); }
     if (updates.patientId !== undefined) { fields.push('patient_id = ?'); values.push(updates.patientId); }
+    if (updates.uploader !== undefined) { fields.push('uploader = ?'); values.push(updates.uploader); }
     if (updates.tags !== undefined) { fields.push('tags = ?'); values.push(JSON.stringify(updates.tags)); }
     if (updates.compartment !== undefined) { fields.push('compartment = ?'); values.push(updates.compartment); }
     if (updates.position !== undefined) { fields.push('position = ?'); values.push(updates.position); }

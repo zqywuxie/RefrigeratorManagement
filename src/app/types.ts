@@ -10,6 +10,8 @@ export interface Refrigerator {
   upperCols: number;
   lowerRows: number;
   lowerCols: number;
+  upperTemperature: number;
+  lowerTemperature: number;
 }
 
 export interface SubSample {
@@ -20,6 +22,7 @@ export interface SubSample {
   temperature: number;
   collectedAt: string;
   patientId: string;
+  uploader: string;
   tags: string[];
   position: number;
   note?: string;
@@ -34,6 +37,7 @@ export interface Sample {
   temperature: number;
   collectedAt: string;
   patientId: string;
+  uploader: string;
   tags: string[];
   compartment: Compartment;
   position: number;

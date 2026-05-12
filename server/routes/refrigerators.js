@@ -25,13 +25,22 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, description, upperRows = 2, upperCols = 3, lowerRows = 2, lowerCols = 2 } = req.body;
+    const {
+      name,
+      description,
+      upperRows = 2,
+      upperCols = 3,
+      lowerRows = 2,
+      lowerCols = 2,
+      upperTemperature = -20,
+      lowerTemperature = 4,
+    } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     const id = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO refrigerators (id, name, description, upper_rows, upper_cols, lower_rows, lower_cols)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, name, description || null, upperRows, upperCols, lowerRows, lowerCols],
+      `INSERT INTO refrigerators (id, name, description, upper_rows, upper_cols, lower_rows, lower_cols, upper_temperature, lower_temperature)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, name, description || null, upperRows, upperCols, lowerRows, lowerCols, upperTemperature, lowerTemperature],
     );
     const [[row]] = await pool.query('SELECT * FROM refrigerators WHERE id = ?', [id]);
     res.status(201).json(row);
@@ -46,11 +55,13 @@ router.put('/:id', async (req, res) => {
     const [[existing]] = await pool.query('SELECT * FROM refrigerators WHERE id = ?', [id]);
     if (!existing) return res.status(404).json({ error: 'Refrigerator not found' });
 
-    const { name, description, upperRows, upperCols, lowerRows, lowerCols } = req.body;
+    const { name, description, upperRows, upperCols, lowerRows, lowerCols, upperTemperature, lowerTemperature } = req.body;
     const newUpperRows = upperRows ?? existing.upper_rows;
     const newUpperCols = upperCols ?? existing.upper_cols;
     const newLowerRows = lowerRows ?? existing.lower_rows;
     const newLowerCols = lowerCols ?? existing.lower_cols;
+    const newUpperTemperature = upperTemperature ?? existing.upper_temperature ?? -20;
+    const newLowerTemperature = lowerTemperature ?? existing.lower_temperature ?? 4;
 
     // Validate: no samples at positions >= new capacity
     const upperCap = newUpperRows * newUpperCols;
@@ -68,9 +79,19 @@ router.put('/:id', async (req, res) => {
     }
 
     await pool.query(
-      `UPDATE refrigerators SET name = ?, description = ?, upper_rows = ?, upper_cols = ?, lower_rows = ?, lower_cols = ?
+      `UPDATE refrigerators SET name = ?, description = ?, upper_rows = ?, upper_cols = ?, lower_rows = ?, lower_cols = ?, upper_temperature = ?, lower_temperature = ?
        WHERE id = ?`,
-      [name ?? existing.name, description ?? existing.description, newUpperRows, newUpperCols, newLowerRows, newLowerCols, id],
+      [
+        name ?? existing.name,
+        description ?? existing.description,
+        newUpperRows,
+        newUpperCols,
+        newLowerRows,
+        newLowerCols,
+        newUpperTemperature,
+        newLowerTemperature,
+        id,
+      ],
     );
     const [[row]] = await pool.query('SELECT * FROM refrigerators WHERE id = ?', [id]);
     res.json(row);

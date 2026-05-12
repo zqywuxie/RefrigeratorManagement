@@ -21,6 +21,8 @@ interface FridgeUnitProps {
   matchedIds: Set<string>;
   searchQuery: string;
   compartmentGrids: Record<Compartment, CompartmentGridConfig>;
+  upperTemperature: number;
+  lowerTemperature: number;
   viewingContainer: Sample | null;
   onDropSample: (
     sampleId: string,
@@ -145,6 +147,8 @@ export function FridgeUnit({
   matchedIds,
   searchQuery,
   compartmentGrids,
+  upperTemperature,
+  lowerTemperature,
   viewingContainer,
   onDropSample,
   onSelectSample,
@@ -184,8 +188,8 @@ export function FridgeUnit({
     (s) => s.status === 'warning' || s.status === 'critical',
   );
 
-  const upperTemp = hasCritical ? -15 : hasWarning ? -18 : -20;
-  const lowerTemp = 4;
+  const upperTemp = upperTemperature;
+  const lowerTemp = lowerTemperature;
 
   const upperGrid = compartmentGrids.upper;
   const lowerGrid = compartmentGrids.lower;
@@ -468,7 +472,7 @@ export function FridgeUnit({
                 className="text-[18px] font-mono"
                 style={{ color: '#4ade80' }}
               >
-                +{lowerTemp}°C
+                {lowerTemp}°C
               </span>
               <span className="text-[13px]" style={{ color: '#475569' }}>
                 {lowerSamples.length}/{lowerCapacity}

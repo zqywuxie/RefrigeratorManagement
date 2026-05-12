@@ -1,0 +1,10 @@
+.git
+.claude
+node_modules
+dist
+server/node_modules
+server/.env
+npm-debug.log
+vite-dev.log
+vite-dev.err.log
+.playwright-mcp
