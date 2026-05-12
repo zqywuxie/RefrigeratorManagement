@@ -63,12 +63,12 @@ export function SampleSlot({
           ? '2px dashed #22d3ee'
           : sample
             ? '2px solid transparent'
-            : '2px dashed rgba(100,160,200,0.25)',
+            : '2px dashed var(--slot-empty-border)',
         background: isActive
           ? 'rgba(34,211,238,0.12)'
           : sample
             ? 'transparent'
-            : 'rgba(10,30,60,0.25)',
+            : 'var(--slot-empty-bg)',
         transition: 'border-color 0.15s ease, background 0.15s ease',
         boxShadow: isActive
           ? '0 0 6px rgba(34,211,238,0.2), inset 0 0 6px rgba(34,211,238,0.05)'

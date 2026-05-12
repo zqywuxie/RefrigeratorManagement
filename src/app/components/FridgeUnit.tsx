@@ -76,9 +76,9 @@ function GridControls({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: '4px',
-    background: disabled ? 'rgba(255,255,255,0.03)' : `${accentColor}15`,
-    border: `1px solid ${disabled ? 'rgba(255,255,255,0.06)' : `${accentColor}40`}`,
-    color: disabled ? '#334155' : accentColor,
+    background: disabled ? 'rgba(148,163,184,0.08)' : `${accentColor}15`,
+    border: `1px solid ${disabled ? 'rgba(148,163,184,0.14)' : `${accentColor}40`}`,
+    color: disabled ? 'var(--app-muted)' : accentColor,
     cursor: disabled ? 'default' : 'pointer',
     fontSize: '14px',
     lineHeight: '1',
@@ -206,11 +206,9 @@ export function FridgeUnit({
         className="relative rounded-3xl select-none"
         style={{
           width: '560px',
-          background:
-            'linear-gradient(145deg, #cfd9e0 0%, #e4ecf2 25%, #d0dce6 50%, #e8eef4 75%, #c8d5de 100%)',
-          boxShadow:
-            '8px 8px 24px rgba(0,0,0,0.45), -3px -3px 10px rgba(255,255,255,0.35), inset 1px 1px 3px rgba(255,255,255,0.6)',
-          border: '1.5px solid #aebdca',
+          background: 'var(--fridge-body)',
+          boxShadow: 'var(--fridge-shadow)',
+          border: '1.5px solid var(--fridge-border)',
           padding: '24px 28px 28px 24px',
         }}
       >
@@ -233,12 +231,12 @@ export function FridgeUnit({
           <div>
             <div
               className="text-[18px] font-mono uppercase tracking-[0.2em]"
-              style={{ color: '#5a6e7f', letterSpacing: '0.2em' }}
+              style={{ color: 'var(--fridge-label)', letterSpacing: '0.2em' }}
             >
-              BioFridge™
+              冰箱管理系统
             </div>
-            <div className="text-[13px] mt-0.5" style={{ color: '#8a9aa8' }}>
-              样本存储管理系统 v2.0
+            <div className="text-[13px] mt-0.5" style={{ color: 'var(--app-muted)' }}>
+              Refrigerator Management v2.0
             </div>
           </div>
 
@@ -248,10 +246,10 @@ export function FridgeUnit({
               className="flex items-center gap-1.5 px-2.5 py-1 rounded"
               style={{
                 background: hasCritical
-                  ? 'rgba(153,27,27,0.4)'
+                  ? 'rgba(254,226,226,0.9)'
                   : hasWarning
-                    ? 'rgba(120,60,0,0.4)'
-                    : 'rgba(10,50,20,0.4)',
+                    ? 'rgba(254,243,199,0.9)'
+                    : 'rgba(220,252,231,0.9)',
                 border: `1px solid ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}40`,
               }}
             >
@@ -270,10 +268,10 @@ export function FridgeUnit({
                 className="text-[13px] font-mono"
                 style={{
                   color: hasCritical
-                    ? '#fca5a5'
+                    ? '#b91c1c'
                     : hasWarning
-                      ? '#fcd34d'
-                      : '#86efac',
+                      ? '#92400e'
+                      : '#166534',
                 }}
               >
                 {hasCritical ? 'ALERT' : hasWarning ? 'WARN' : 'OK'}
@@ -287,21 +285,20 @@ export function FridgeUnit({
           <TabsList
             className="self-center mb-1"
             style={{
-              background: 'rgba(10,20,40,0.6)',
-              border: '1px solid rgba(30,58,100,0.4)',
+              background: '#eef2ff',
+              border: '1px solid #c7d2fe',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.85)',
             }}
           >
             <TabsTrigger
               value="upper"
-              style={{ color: '#93c5fd' }}
             >
-              冷冻层 / Freezer
+              上层 / Upper
             </TabsTrigger>
             <TabsTrigger
               value="lower"
-              style={{ color: '#86efac' }}
             >
-              冷藏层 / Refrigerator
+              下层 / Lower
             </TabsTrigger>
           </TabsList>
 
@@ -309,10 +306,9 @@ export function FridgeUnit({
             <div
               className="rounded-xl mb-2 p-4 relative overflow-hidden"
               style={{
-                background:
-                  'linear-gradient(180deg, #060e1f 0%, #0a1830 60%, #0a1628 100%)',
-                border: '1px solid #1a3a62',
-                boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.7)',
+                background: 'var(--fridge-chamber-bg)',
+                border: '1px solid var(--fridge-chamber-border)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55)',
               }}
             >
               {/* Compartment label row */}
@@ -322,18 +318,18 @@ export function FridgeUnit({
                     className="w-2 h-2 rounded-full"
                     style={{ background: '#60a5fa', boxShadow: '0 0 3px #60a5fa' }}
                   />
-                  <span className="text-[16px]" style={{ color: '#93c5fd' }}>
-                    冷冻层 / Freezer
+                  <span className="text-[16px]" style={{ color: 'var(--fridge-label)' }}>
+                    上层 / Upper
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Thermometer
                     size={18}
-                    color={hasWarning ? '#f59e0b' : '#60a5fa'}
+                    color={hasWarning ? '#f59e0b' : 'var(--fridge-accent)'}
                   />
                   <span
                     className="text-[18px] font-mono tabular-nums"
-                    style={{ color: hasWarning ? '#f59e0b' : '#60a5fa' }}
+                    style={{ color: hasWarning ? '#f59e0b' : 'var(--fridge-accent)' }}
                   >
                     {upperTemp}°C
                   </span>
@@ -397,7 +393,7 @@ export function FridgeUnit({
               <div className="mt-4 flex items-center gap-2">
                 <div
                   className="flex-1 h-1.5 rounded-full overflow-hidden"
-                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                  style={{ background: 'rgba(148,163,184,0.18)' }}
                 >
                   <motion.div
                     className="h-full rounded-full"
@@ -422,9 +418,9 @@ export function FridgeUnit({
           className="h-5 mx-2 mb-2 rounded flex items-center justify-center overflow-hidden relative"
           style={{
             background:
-              'linear-gradient(180deg, #7a8c9a 0%, #b0c2d0 40%, #a0b2c0 60%, #7a8c9a 100%)',
+              'linear-gradient(180deg, #d6e0ea 0%, #f8fafc 45%, #d6e0ea 100%)',
             boxShadow:
-              '0 2px 5px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)',
+              '0 2px 8px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.8)',
           }}
         >
           {[20, 50, 80].map((pct) => (
@@ -446,10 +442,9 @@ export function FridgeUnit({
             <div
               className="rounded-xl p-4 relative overflow-hidden"
               style={{
-                background:
-                  'linear-gradient(180deg, #060f09 0%, #091a0e 60%, #081a0e 100%)',
-                border: '1px solid #1a4428',
-                boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.7)',
+                background: 'var(--fridge-chamber-bg)',
+                border: '1px solid var(--fridge-chamber-border)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55)',
               }}
             >
           {/* Compartment label row */}
@@ -462,15 +457,15 @@ export function FridgeUnit({
                   boxShadow: '0 0 3px #4ade80',
                 }}
               />
-              <span className="text-[16px]" style={{ color: '#86efac' }}>
-                冷藏层 / Refrigerator
+              <span className="text-[16px]" style={{ color: 'var(--fridge-label)' }}>
+                下层 / Lower
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Thermometer size={18} color="#4ade80" />
+              <Thermometer size={18} color="var(--fridge-accent)" />
               <span
                 className="text-[18px] font-mono"
-                style={{ color: '#4ade80' }}
+                style={{ color: 'var(--fridge-accent)' }}
               >
                 {lowerTemp}°C
               </span>
@@ -534,7 +529,7 @@ export function FridgeUnit({
           <div className="mt-4 flex items-center gap-2">
             <div
               className="flex-1 h-1.5 rounded-full overflow-hidden"
-              style={{ background: 'rgba(255,255,255,0.06)' }}
+              style={{ background: 'rgba(148,163,184,0.18)' }}
             >
               <motion.div
                 className="h-full rounded-full"

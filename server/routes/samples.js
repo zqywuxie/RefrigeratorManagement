@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import pool from '../db.js';
+import { authenticate, requireOwner } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ function rowToSample(row) {
     collectedAt: row.collected_at ? row.collected_at.toString().slice(0, 10) : '',
     patientId: row.patient_id || '',
     uploader: row.uploader || '',
+    createdBy: row.created_by || undefined,
     tags: Array.isArray(row.tags) ? row.tags : (typeof row.tags === 'string' ? JSON.parse(row.tags) : []),
     compartment: row.compartment,
     position: row.position,
@@ -34,6 +36,7 @@ function rowToSubSample(row) {
     collectedAt: row.collected_at ? row.collected_at.toString().slice(0, 10) : '',
     patientId: row.patient_id || '',
     uploader: row.uploader || '',
+    createdBy: row.created_by || undefined,
     tags: Array.isArray(row.tags) ? row.tags : (typeof row.tags === 'string' ? JSON.parse(row.tags) : []),
     position: row.position,
     note: row.note || undefined,
@@ -96,7 +99,7 @@ router.get('/:fridgeId/samples/:id', async (req, res) => {
 });
 
 // POST create sample
-router.post('/:fridgeId/samples', async (req, res) => {
+router.post('/:fridgeId/samples', authenticate, async (req, res) => {
   try {
     const { fridgeId } = req.params;
     const [[fridge]] = await pool.query('SELECT id FROM refrigerators WHERE id = ?', [fridgeId]);
@@ -122,9 +125,9 @@ router.post('/:fridgeId/samples', async (req, res) => {
     }
 
     await pool.query(
-      `INSERT INTO samples (id, refrigerator_id, name, type, status, temperature, collected_at, patient_id, uploader, tags, compartment, position, note, volume, grid_rows, grid_cols)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, fridgeId, name, type, status, temperature, collectedAt || null, patientId || null, uploader || null, JSON.stringify(tags || []), compartment, position, note || null, volume || null, gridRows, gridCols],
+      `INSERT INTO samples (id, refrigerator_id, name, type, status, temperature, collected_at, patient_id, uploader, created_by, tags, compartment, position, note, volume, grid_rows, grid_cols)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, fridgeId, name, type, status, temperature, collectedAt || null, patientId || null, uploader || null, req.user.username, JSON.stringify(tags || []), compartment, position, note || null, volume || null, gridRows, gridCols],
     );
     const [[row]] = await pool.query('SELECT * FROM samples WHERE id = ?', [id]);
     const sample = rowToSample(row);
@@ -137,7 +140,7 @@ router.post('/:fridgeId/samples', async (req, res) => {
 });
 
 // PUT update sample
-router.put('/:fridgeId/samples/:id', async (req, res) => {
+router.put('/:fridgeId/samples/:id', authenticate, requireOwner('samples', 'id'), async (req, res) => {
   try {
     const { fridgeId, id } = req.params;
     const [[existing]] = await pool.query(
@@ -199,7 +202,7 @@ router.put('/:fridgeId/samples/:id', async (req, res) => {
 });
 
 // DELETE sample
-router.delete('/:fridgeId/samples/:id', async (req, res) => {
+router.delete('/:fridgeId/samples/:id', authenticate, requireOwner('samples', 'id'), async (req, res) => {
   try {
     const [[existing]] = await pool.query(
       'SELECT * FROM samples WHERE id = ? AND refrigerator_id = ?',

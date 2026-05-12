@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { motion, AnimatePresence } from 'motion/react';
+import { ThemeProvider, useTheme } from 'next-themes';
 import {
   Search,
   Plus,
@@ -10,6 +11,13 @@ import {
   AlertTriangle,
   Layers,
   Tags,
+  LogOut,
+  Moon,
+  Sun,
+  UserCircle,
+  UserPlus,
+  ChevronDown,
+  FlaskConical,
 } from 'lucide-react';
 
 import {
@@ -42,8 +50,51 @@ import { FridgeUnit } from './components/FridgeUnit';
 import { FridgeSelector } from './components/FridgeSelector';
 import { DetailPanel, DetailItem } from './components/DetailPanel';
 import { AddSampleModal } from './components/AddSampleModal';
+import { AuthProvider, useAuth } from './AuthContext';
+import { LoginPage } from './components/LoginPage';
+
+type UploadedSampleItem = {
+  id: string;
+  name: string;
+  type: string;
+  status: SampleStatus;
+  temperature: number;
+  collectedAt: string;
+  kind: 'sample' | 'subsample';
+  compartment?: Compartment;
+  position: number;
+  parentId?: string;
+  parentName?: string;
+};
 
 export default function App() {
+  return (
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+      <AuthProvider>
+        <AppGate />
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+function AppGate() {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: 'var(--app-bg)', color: 'var(--app-muted)' }}
+      >
+        正在恢复登录状态...
+      </div>
+    );
+  }
+  if (!user) return <LoginPage />;
+  return <AppContent />;
+}
+
+function AppContent() {
+  const { user, logout, isRoot } = useAuth();
   const [refrigerators, setRefrigerators] = useState<Refrigerator[]>([]);
   const [selectedFridgeId, setSelectedFridgeId] = useState<string | null>(null);
   const [samples, setSamples] = useState<Sample[]>([]);
@@ -191,6 +242,53 @@ export default function App() {
     }
     return null;
   }, [selectedSampleId, samples, viewingContainer]);
+
+  const myUploadedItems = React.useMemo<UploadedSampleItem[]>(() => {
+    const username = user!.username;
+    const isMine = (item: { createdBy?: string; uploader?: string }) =>
+      item.createdBy ? item.createdBy === username : (item.uploader || '').trim() === username;
+
+    return samples
+      .flatMap<UploadedSampleItem>((sample) => {
+        const items: UploadedSampleItem[] = [];
+        if (isMine(sample)) {
+          items.push({
+            id: sample.id,
+            name: sample.name,
+            type: sample.type,
+            status: sample.status,
+            temperature: sample.temperature,
+            collectedAt: sample.collectedAt,
+            kind: 'sample',
+            compartment: sample.compartment,
+            position: sample.position,
+          });
+        }
+        sample.subSamples.forEach((subSample) => {
+          if (isMine(subSample)) {
+            items.push({
+              id: subSample.id,
+              name: subSample.name,
+              type: subSample.type,
+              status: subSample.status,
+              temperature: subSample.temperature,
+              collectedAt: subSample.collectedAt,
+              kind: 'subsample',
+              position: subSample.position,
+              parentId: sample.id,
+              parentName: sample.name,
+            });
+          }
+        });
+        return items;
+      })
+      .sort((a, b) => b.collectedAt.localeCompare(a.collectedAt));
+  }, [samples, user]);
+
+  const handleOpenUploadedItem = useCallback((item: UploadedSampleItem) => {
+    setSelectedSampleId(item.id);
+    setViewingContainerId(item.kind === 'subsample' ? item.parentId ?? null : null);
+  }, []);
 
   // ── Fridge handlers ──
 
@@ -447,7 +545,7 @@ export default function App() {
       if (hasOverflow) {
         showNotif(
           `无法缩小 ${
-            compartment === 'upper' ? '冷冻层' : '冷藏层'
+            compartment === 'upper' ? '上层' : '下层'
           } 网格：超出位置的样本仍存在，请先移除或移动`,
           'error',
         );
@@ -476,7 +574,7 @@ export default function App() {
             ),
           );
           showNotif(
-            `${compartment === 'upper' ? '冷冻层' : '冷藏层'} 网格 → ${grid.rows}×${grid.cols}`,
+            `${compartment === 'upper' ? '上层' : '下层'} 网格 → ${grid.rows}×${grid.cols}`,
             'success',
           );
         } catch (err: any) {
@@ -702,17 +800,17 @@ export default function App() {
       <div
         className="min-h-screen flex flex-col"
         style={{
-          background:
-            'radial-gradient(ellipse at top left, #0a0e14 0%, #080c12 40%, #060a10 100%)',
+          background: 'var(--app-bg)',
           fontFamily: "'SF Mono', 'Consolas', monospace",
+          color: 'var(--app-text)',
         }}
       >
         {/* ── HEADER ── */}
         <header
           className="flex items-center justify-between px-6 py-4 flex-shrink-0"
           style={{
-            background: 'rgba(8,16,32,0.9)',
-            borderBottom: '1px solid rgba(30,58,100,0.5)',
+            background: 'var(--app-header-bg)',
+            borderBottom: '1px solid var(--app-border)',
             backdropFilter: 'blur(10px)',
           }}
         >
@@ -720,18 +818,19 @@ export default function App() {
             <div
               className="w-10 h-10 rounded-lg flex items-center justify-center"
               style={{
-                background: 'rgba(29,78,216,0.3)',
-                border: '1px solid rgba(59,130,246,0.4)',
+                background: 'var(--app-logo-bg)',
+                border: '1px solid var(--app-logo-border)',
+                boxShadow: '0 10px 22px rgba(37,99,235,0.12)',
               }}
             >
-              <Database size={22} color="#60a5fa" />
+              <Database size={22} color="var(--app-logo-icon)" />
             </div>
             <div>
-              <h1 className="text-[20px]" style={{ color: '#e2e8f0' }}>
-                冷链样本管理系统
+              <h1 className="text-[20px]" style={{ color: 'var(--app-text)' }}>
+                冰箱管理系统
               </h1>
               <div className="text-[13px]" style={{ color: '#334155' }}>
-                BioFridge™ Lab Management · v2.0.{tick % 10}
+                Refrigerator Management · v2.0.{tick % 10}
               </div>
             </div>
             <FridgeSelector
@@ -745,6 +844,13 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-6">
+            <UserMenu
+              username={user!.username}
+              role={user!.role}
+              uploadedItems={myUploadedItems}
+              onOpenSample={handleOpenUploadedItem}
+              onLogout={logout}
+            />
             <div className="flex items-center gap-5">
               <StatChip
                 icon={<Activity size={16} />}
@@ -793,6 +899,8 @@ export default function App() {
               }
             }}
             onEdit={handleOpenEdit}
+            currentUser={user!.username}
+            isRoot={isRoot}
           />
 
           {/* Left: Fridge */}
@@ -801,30 +909,30 @@ export default function App() {
             <div
               className="flex items-center gap-3 px-4 py-3 rounded-xl"
               style={{
-                background: 'rgba(10,20,40,0.8)',
-                border: `1px solid ${searchQuery ? 'rgba(34,211,238,0.4)' : 'rgba(30,58,100,0.5)'}`,
-                boxShadow: searchQuery ? '0 0 4px rgba(34,211,238,0.08)' : 'none',
+                background: 'var(--app-card-bg)',
+                border: `1px solid ${searchQuery ? 'rgba(37,99,235,0.35)' : 'var(--app-border)'}`,
+                boxShadow: searchQuery ? '0 12px 34px rgba(37,99,235,0.08)' : '0 12px 34px rgba(15,23,42,0.06)',
                 width: '560px',
               }}
             >
-              <Search size={20} color={searchQuery ? '#22d3ee' : '#475569'} />
+              <Search size={20} color={searchQuery ? '#2563eb' : '#64748b'} />
               <input
                 type="text"
                 placeholder="搜索样本 ID、类型、患者编号、上传者、标签..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 bg-transparent outline-none text-[16px] placeholder:text-slate-600"
-                style={{ color: '#94a3b8' }}
+                style={{ color: 'var(--app-text)' }}
               />
               {searchQuery && (
                 <div className="flex items-center gap-1">
-                  <span className="text-[14px]" style={{ color: '#22d3ee' }}>
+                  <span className="text-[14px]" style={{ color: '#2563eb' }}>
                     {matchedIds.size} 个匹配
                   </span>
                   <button
                     onClick={() => setSearchQuery('')}
                     className="text-[14px] px-2 py-1 rounded"
-                    style={{ color: '#64748b' }}
+                    style={{ color: 'var(--app-muted)' }}
                   >
                     ✕
                   </button>
@@ -839,11 +947,11 @@ export default function App() {
                 style={{
                   width: '560px',
                   height: '200px',
-                  background: 'rgba(5,12,25,0.7)',
-                  border: '1px solid rgba(30,58,100,0.4)',
+                  background: 'var(--app-card-bg)',
+                  border: '1px solid var(--app-border)',
                 }}
               >
-                <span style={{ color: '#475569' }}>加载中...</span>
+                <span style={{ color: 'var(--app-muted)' }}>加载中...</span>
               </div>
             )}
 
@@ -879,18 +987,18 @@ export default function App() {
                 style={{
                   width: '560px',
                   height: '200px',
-                  background: 'rgba(5,12,25,0.7)',
-                  border: '1px solid rgba(30,58,100,0.4)',
+                  background: 'var(--app-card-bg)',
+                  border: '1px solid var(--app-border)',
                 }}
               >
-                <span style={{ color: '#475569' }}>没有冰箱，请先创建一个</span>
+                <span style={{ color: 'var(--app-muted)' }}>没有冰箱，请先创建一个</span>
                 <button
                   onClick={() => handleAddFridge('主冰箱', '默认冰箱')}
                   className="px-4 py-2 rounded-lg text-[14px]"
                   style={{
                     background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
                     border: '1px solid #3b82f6',
-                    color: '#bfdbfe',
+                    color: '#fff',
                   }}
                 >
                   创建默认冰箱
@@ -914,12 +1022,12 @@ export default function App() {
               style={{
                 background: selectedFridgeId
                   ? 'linear-gradient(135deg, #1d4ed8, #2563eb)'
-                  : 'rgba(255,255,255,0.05)',
+                  : 'var(--app-panel-bg)',
                 border: selectedFridgeId
                   ? '1px solid #3b82f6'
-                  : '1px solid rgba(255,255,255,0.1)',
-                color: selectedFridgeId ? '#bfdbfe' : '#475569',
-                boxShadow: selectedFridgeId ? '0 0 6px rgba(59,130,246,0.15)' : 'none',
+                  : '1px solid var(--app-border)',
+                color: selectedFridgeId ? '#fff' : 'var(--app-muted)',
+                boxShadow: selectedFridgeId ? '0 14px 32px rgba(37,99,235,0.2)' : 'none',
               }}
             >
               <Plus size={22} />
@@ -935,15 +1043,15 @@ export default function App() {
                 color="#60a5fa"
               />
               <StatsCard
-                label="冷冻层"
+                label="上层"
                 value={`${samples.filter((s) => s.compartment === 'upper').length}/${upperCapacity}`}
-                sub={`${selectedFridge?.upperTemperature ?? -20}°C 冷冻`}
+                sub={`${selectedFridge?.upperTemperature ?? -20}°C 参考`}
                 color="#818cf8"
               />
               <StatsCard
-                label="冷藏层"
+                label="下层"
                 value={`${samples.filter((s) => s.compartment === 'lower').length}/${lowerCapacity}`}
-                sub={`${selectedFridge?.lowerTemperature ?? 4}°C 冷藏`}
+                sub={`${selectedFridge?.lowerTemperature ?? 4}°C 参考`}
                 color="#34d399"
               />
               <StatsCard
@@ -965,17 +1073,18 @@ export default function App() {
             <div
               className="rounded-xl p-4"
               style={{
-                background: 'rgba(10,18,35,0.7)',
-                border: '1px solid rgba(30,58,100,0.4)',
+                background: 'var(--app-card-bg)',
+                border: '1px solid var(--app-border)',
+                boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
               }}
             >
-              <div className="text-[14px] mb-2" style={{ color: '#475569' }}>
+              <div className="text-[14px] mb-2" style={{ color: 'var(--app-muted)' }}>
                 副样本统计
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Layers size={16} color="#a78bfa" />
-                  <span className="text-[14px] flex-1" style={{ color: '#94a3b8' }}>
+                  <span className="text-[14px] flex-1" style={{ color: 'var(--app-text)' }}>
                     副样本总数
                   </span>
                   <span className="text-[14px] font-mono" style={{ color: '#a78bfa' }}>
@@ -1006,18 +1115,19 @@ export default function App() {
             <div
               className="rounded-xl p-4"
               style={{
-                background: 'rgba(10,18,35,0.7)',
-                border: '1px solid rgba(30,58,100,0.4)',
+                background: 'var(--app-card-bg)',
+                border: '1px solid var(--app-border)',
+                boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
               }}
             >
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2">
                   <Tags size={15} color="#38bdf8" />
-                  <span className="text-[14px]" style={{ color: '#94a3b8' }}>
+                  <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>
                     标签统计
                   </span>
                 </div>
-                <span className="text-[12px] font-mono" style={{ color: '#475569' }}>
+                <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>
                   {tagStats.length} 类
                 </span>
               </div>
@@ -1027,7 +1137,7 @@ export default function App() {
                     <div key={tag} className="flex items-center gap-2">
                       <span
                         className="w-6 text-[12px] font-mono text-right flex-shrink-0"
-                        style={{ color: index < 3 ? '#38bdf8' : '#475569' }}
+                        style={{ color: index < 3 ? '#2563eb' : 'var(--app-muted)' }}
                       >
                         {String(index + 1).padStart(2, '0')}
                       </span>
@@ -1035,23 +1145,23 @@ export default function App() {
                         className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
                         title={tag}
                         style={{
-                          background: 'rgba(56,189,248,0.08)',
-                          border: '1px solid rgba(56,189,248,0.14)',
-                          color: '#bae6fd',
+                          background: '#eff6ff',
+                          border: '1px solid #bfdbfe',
+                          color: '#1d4ed8',
                         }}
                       >
                         {tag}
                       </span>
                       <span
                         className="min-w-8 text-right text-[14px] font-mono"
-                        style={{ color: '#38bdf8' }}
+                        style={{ color: '#2563eb' }}
                       >
                         {count}
                       </span>
                     </div>
                   ))}
                   {remainingTagCount > 0 && (
-                    <div className="pt-1 text-right text-[12px]" style={{ color: '#475569' }}>
+                    <div className="pt-1 text-right text-[12px]" style={{ color: 'var(--app-muted)' }}>
                       另有 {remainingTagCount} 类标签
                     </div>
                   )}
@@ -1060,9 +1170,9 @@ export default function App() {
                 <div
                   className="rounded-lg px-3 py-4 text-center text-[13px]"
                   style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px dashed rgba(148,163,184,0.18)',
-                    color: '#475569',
+                    background: '#f8fafc',
+                    border: '1px dashed rgba(148,163,184,0.35)',
+                    color: 'var(--app-muted)',
                   }}
                 >
                   暂无标签数据
@@ -1107,6 +1217,7 @@ export default function App() {
           containers={samples}
           upperTemperature={selectedFridge?.upperTemperature ?? -20}
           lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
+          currentUsername={user!.username}
           isSubSampleMode={addTarget?.isSubSample ?? false}
           parentContainerId={
             editItem?.kind === 'subsample'
@@ -1162,6 +1273,283 @@ function StatChip({
   );
 }
 
+function UserMenu({
+  username,
+  role,
+  uploadedItems,
+  onOpenSample,
+  onLogout,
+}: {
+  username: string;
+  role: string;
+  uploadedItems: UploadedSampleItem[];
+  onOpenSample: (item: UploadedSampleItem) => void;
+  onLogout: () => void;
+}) {
+  const { theme, setTheme } = useTheme();
+  const { register, isRoot } = useAuth();
+  const isDark = theme === 'dark';
+  const [showRegister, setShowRegister] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newRole, setNewRole] = useState<'user' | 'root'>('user');
+  const [message, setMessage] = useState('');
+  const [registering, setRegistering] = useState(false);
+  const [showUploads, setShowUploads] = useState(false);
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const normalizedUsername = newUsername.trim();
+    if (!normalizedUsername || !newPassword) {
+      setMessage('请填写用户名和密码');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setMessage('两次密码不一致');
+      return;
+    }
+    setRegistering(true);
+    setMessage('');
+    try {
+      await register(normalizedUsername, newPassword, newRole);
+      setMessage(`已创建 ${normalizedUsername}`);
+      setNewUsername('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setNewRole('user');
+    } catch (err: any) {
+      setMessage(err.message || '创建失败');
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  return (
+    <div className="relative flex items-center gap-2">
+      <button
+        onClick={() => setTheme(isDark ? 'light' : 'dark')}
+        className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
+        style={{
+          background: 'var(--app-panel-bg)',
+          border: '1px solid var(--app-border)',
+          color: 'var(--app-muted)',
+        }}
+        title={isDark ? '切换浅色模式' : '切换深色模式'}
+      >
+        {isDark ? <Sun size={17} /> : <Moon size={17} />}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setShowUploads((v) => !v);
+          setShowRegister(false);
+        }}
+        className="flex items-center gap-2 px-3 py-2 rounded-lg"
+        style={{
+          background: 'var(--app-panel-bg)',
+          border: '1px solid var(--app-border)',
+          color: 'var(--app-text)',
+        }}
+      >
+        <UserCircle size={16} />
+        <span className="text-[13px]">{username}</span>
+        <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
+          {role}
+        </span>
+        <ChevronDown
+          size={14}
+          style={{
+            color: 'var(--app-muted)',
+            transform: showUploads ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 160ms ease',
+          }}
+        />
+      </button>
+      {isRoot && (
+        <button
+          onClick={() => {
+            setShowRegister((v) => !v);
+            setShowUploads(false);
+          }}
+          className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
+          style={{
+            background: 'var(--app-panel-bg)',
+            border: '1px solid var(--app-border)',
+            color: '#2563eb',
+          }}
+          title="创建用户"
+        >
+          <UserPlus size={16} />
+        </button>
+      )}
+      <button
+        onClick={onLogout}
+        className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
+        style={{
+          background: 'var(--app-panel-bg)',
+          border: '1px solid var(--app-border)',
+          color: '#ef4444',
+        }}
+        title="退出登录"
+      >
+        <LogOut size={16} />
+      </button>
+      {showUploads && (
+        <div
+          className="absolute right-0 top-11 w-80 rounded-xl p-3 z-50"
+          style={{
+            background: 'var(--app-header-bg)',
+            border: '1px solid var(--app-border)',
+            boxShadow: '0 18px 52px rgba(15,23,42,0.2)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className="text-[13px]" style={{ color: 'var(--app-text)' }}>
+                我的上传样本
+              </div>
+              <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
+                当前冰箱 · {uploadedItems.length} 个
+              </div>
+            </div>
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{
+                background: 'var(--app-card-bg)',
+                border: '1px solid var(--app-border)',
+                color: '#2563eb',
+              }}
+            >
+              <FlaskConical size={16} />
+            </div>
+          </div>
+
+          {uploadedItems.length === 0 ? (
+            <div
+              className="rounded-lg px-3 py-5 text-center text-[13px]"
+              style={{
+                background: 'var(--app-card-bg)',
+                border: '1px solid var(--app-border)',
+                color: 'var(--app-muted)',
+              }}
+            >
+              当前冰箱暂无你上传的样本
+            </div>
+          ) : (
+            <div className="max-h-80 overflow-y-auto pr-1 space-y-2">
+              {uploadedItems.map((item) => {
+                const config = STATUS_CONFIG[item.status];
+                const location =
+                  item.kind === 'subsample'
+                    ? `${item.parentId} · 子格 ${item.position + 1}`
+                    : `${item.compartment === 'upper' ? '上层' : '下层'} · 格位 ${item.position + 1}`;
+                return (
+                  <button
+                    key={`${item.kind}-${item.id}`}
+                    type="button"
+                    onClick={() => {
+                      onOpenSample(item);
+                      setShowUploads(false);
+                    }}
+                    className="w-full rounded-lg px-3 py-2.5 text-left transition-all hover:brightness-95"
+                    style={{
+                      background: 'var(--app-card-bg)',
+                      border: '1px solid var(--app-border)',
+                      color: 'var(--app-text)',
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ background: config.borderColor }}
+                          />
+                          <span className="text-[13px] truncate">
+                            {item.id} · {item.name}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-[11px] truncate" style={{ color: 'var(--app-muted)' }}>
+                          {item.type} · {location}
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-[11px]" style={{ color: config.color }}>
+                          {config.label}
+                        </div>
+                        <div className="text-[11px] mt-1" style={{ color: 'var(--app-muted)' }}>
+                          {item.temperature}°C
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+      {showRegister && (
+        <form
+          onSubmit={handleRegister}
+          className="absolute right-0 top-11 w-64 rounded-xl p-3 space-y-2 z-40"
+          style={{
+            background: 'var(--app-header-bg)',
+            border: '1px solid var(--app-border)',
+            boxShadow: '0 16px 48px rgba(15,23,42,0.18)',
+          }}
+        >
+          <div className="text-[13px]" style={{ color: 'var(--app-text)' }}>
+            创建用户
+          </div>
+          <input
+            value={newUsername}
+            onChange={(e) => setNewUsername(e.target.value)}
+            placeholder="用户名"
+            className="w-full rounded-md px-2 py-1.5 text-[13px] outline-none"
+            style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
+          />
+          <input
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="密码"
+            type="password"
+            className="w-full rounded-md px-2 py-1.5 text-[13px] outline-none"
+            style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
+          />
+          <input
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="确认密码"
+            type="password"
+            className="w-full rounded-md px-2 py-1.5 text-[13px] outline-none"
+            style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
+          />
+          <select
+            value={newRole}
+            onChange={(e) => setNewRole(e.target.value as 'user' | 'root')}
+            className="w-full rounded-md px-2 py-1.5 text-[13px] outline-none"
+            style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
+          >
+            <option value="user">普通用户</option>
+            <option value="root">管理员 root</option>
+          </select>
+          <button
+            disabled={registering}
+            className="w-full rounded-md py-1.5 text-[13px]"
+            style={{ background: registering ? '#94a3b8' : '#2563eb', color: '#fff' }}
+          >
+            {registering ? '创建中...' : '创建'}
+          </button>
+          {message && <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>{message}</div>}
+        </form>
+      )}
+    </div>
+  );
+}
+
 function StatsCard({
   label,
   value,
@@ -1179,19 +1567,20 @@ function StatsCard({
     <div
       className="rounded-xl p-4"
       style={{
-        background: 'rgba(10,18,35,0.7)',
+        background: 'var(--app-card-bg)',
         border: pulse
           ? `1px solid ${color}50`
           : `1px solid ${color}20`,
+        boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
       }}
     >
-      <div className="text-[13px] mb-1" style={{ color: '#475569' }}>
+      <div className="text-[13px] mb-1" style={{ color: 'var(--app-muted)' }}>
         {label}
       </div>
       <div className="text-[22px] font-mono" style={{ color }}>
         {value}
       </div>
-      <div className="text-[12px] mt-1" style={{ color: '#334155' }}>
+      <div className="text-[12px] mt-1" style={{ color: 'var(--app-muted)' }}>
         {sub}
       </div>
     </div>

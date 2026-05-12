@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import pool from '../db.js';
+import { authenticate, requireOwner } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ function rowToSubSample(row) {
     collectedAt: row.collected_at ? row.collected_at.toString().slice(0, 10) : '',
     patientId: row.patient_id || '',
     uploader: row.uploader || '',
+    createdBy: row.created_by || undefined,
     tags: Array.isArray(row.tags) ? row.tags : (typeof row.tags === 'string' ? JSON.parse(row.tags) : []),
     position: row.position,
     note: row.note || undefined,
@@ -34,7 +36,7 @@ router.get('/:sampleId/sub-samples', async (req, res) => {
 });
 
 // POST create sub-sample
-router.post('/:sampleId/sub-samples', async (req, res) => {
+router.post('/:sampleId/sub-samples', authenticate, async (req, res) => {
   try {
     const { sampleId } = req.params;
     const [[sample]] = await pool.query('SELECT * FROM samples WHERE id = ?', [sampleId]);
@@ -59,9 +61,9 @@ router.post('/:sampleId/sub-samples', async (req, res) => {
     }
 
     await pool.query(
-      `INSERT INTO sub_samples (id, sample_id, name, type, status, temperature, collected_at, patient_id, uploader, tags, position, note, volume)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, sampleId, name, type, status, temperature, collectedAt || null, patientId || null, uploader || null, JSON.stringify(tags || []), position, note || null, volume || null],
+      `INSERT INTO sub_samples (id, sample_id, name, type, status, temperature, collected_at, patient_id, uploader, created_by, tags, position, note, volume)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, sampleId, name, type, status, temperature, collectedAt || null, patientId || null, uploader || null, req.user.username, JSON.stringify(tags || []), position, note || null, volume || null],
     );
     const [[row]] = await pool.query('SELECT * FROM sub_samples WHERE id = ?', [id]);
     res.status(201).json(rowToSubSample(row));
@@ -72,7 +74,7 @@ router.post('/:sampleId/sub-samples', async (req, res) => {
 });
 
 // PUT update sub-sample
-router.put('/:sampleId/sub-samples/:id', async (req, res) => {
+router.put('/:sampleId/sub-samples/:id', authenticate, requireOwner('sub_samples', 'id'), async (req, res) => {
   try {
     const { sampleId, id } = req.params;
     const [[existing]] = await pool.query(
@@ -123,7 +125,7 @@ router.put('/:sampleId/sub-samples/:id', async (req, res) => {
 });
 
 // DELETE sub-sample
-router.delete('/:sampleId/sub-samples/:id', async (req, res) => {
+router.delete('/:sampleId/sub-samples/:id', authenticate, requireOwner('sub_samples', 'id'), async (req, res) => {
   try {
     const [[existing]] = await pool.query(
       'SELECT * FROM sub_samples WHERE id = ? AND sample_id = ?',

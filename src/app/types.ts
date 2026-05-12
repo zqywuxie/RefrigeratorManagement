@@ -23,6 +23,7 @@ export interface SubSample {
   collectedAt: string;
   patientId: string;
   uploader: string;
+  createdBy?: string;
   tags: string[];
   position: number;
   note?: string;
@@ -38,6 +39,7 @@ export interface Sample {
   collectedAt: string;
   patientId: string;
   uploader: string;
+  createdBy?: string;
   tags: string[];
   compartment: Compartment;
   position: number;
@@ -81,37 +83,37 @@ export const STATUS_CONFIG: Record<
 > = {
   normal: {
     label: '正常',
-    color: '#93c5fd',
-    bgColor: 'rgba(29,78,216,0.9)',
-    borderColor: '#3b82f6',
-    glowColor: 'rgba(59,130,246,0.55)',
+    color: '#1d4ed8',
+    bgColor: '#dbeafe',
+    borderColor: '#60a5fa',
+    glowColor: 'rgba(37,99,235,0.22)',
   },
   warning: {
     label: '温度异常',
-    color: '#fcd34d',
-    bgColor: 'rgba(180,83,9,0.9)',
+    color: '#92400e',
+    bgColor: '#fef3c7',
     borderColor: '#f59e0b',
-    glowColor: 'rgba(245,158,11,0.55)',
+    glowColor: 'rgba(245,158,11,0.22)',
   },
   critical: {
     label: '严重异常',
-    color: '#fca5a5',
-    bgColor: 'rgba(153,27,27,0.9)',
+    color: '#b91c1c',
+    bgColor: '#fee2e2',
     borderColor: '#ef4444',
-    glowColor: 'rgba(239,68,68,0.65)',
+    glowColor: 'rgba(239,68,68,0.24)',
   },
   used: {
     label: '已使用',
-    color: '#9ca3af',
-    bgColor: 'rgba(55,65,81,0.9)',
-    borderColor: '#6b7280',
-    glowColor: 'rgba(107,114,128,0.3)',
+    color: '#475569',
+    bgColor: '#e2e8f0',
+    borderColor: '#94a3b8',
+    glowColor: 'rgba(100,116,139,0.18)',
   },
   pending: {
     label: '待处理',
-    color: '#c4b5fd',
-    bgColor: 'rgba(91,33,182,0.9)',
+    color: '#6d28d9',
+    bgColor: '#ede9fe',
     borderColor: '#8b5cf6',
-    glowColor: 'rgba(139,92,246,0.55)',
+    glowColor: 'rgba(139,92,246,0.22)',
   },
 };

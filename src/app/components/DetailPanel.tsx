@@ -25,15 +25,26 @@ interface DetailPanelProps {
   onStatusChange: (id: string, status: SampleStatus, containerId?: string) => void;
   onDelete: (id: string, containerId?: string) => void;
   onEdit: (item: DetailItem) => void;
+  currentUser: string;
+  isRoot: boolean;
 }
 
-export function DetailPanel({ item, onClose, onStatusChange, onDelete, onEdit }: DetailPanelProps) {
+export function DetailPanel({
+  item,
+  onClose,
+  onStatusChange,
+  onDelete,
+  onEdit,
+  currentUser,
+  isRoot,
+}: DetailPanelProps) {
   if (!item) return null;
 
   const isSub = item.kind === 'subsample';
   const data = item.data;
   const containerId = isSub ? item.containerId : undefined;
   const config = STATUS_CONFIG[data.status];
+  const canEdit = isRoot || data.createdBy === currentUser;
 
   return (
     <AnimatePresence>
@@ -45,9 +56,9 @@ export function DetailPanel({ item, onClose, onStatusChange, onDelete, onEdit }:
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
         className="rounded-xl overflow-hidden"
         style={{
-          background: 'rgba(10,18,35,0.95)',
+          background: 'var(--app-card-bg)',
           border: `1.5px solid ${config.borderColor}40`,
-          boxShadow: `0 0 8px ${config.glowColor}40`,
+          boxShadow: `0 18px 50px rgba(15,23,42,0.08), 0 0 0 1px ${config.glowColor}`,
           minWidth: '340px',
         }}
       >
@@ -55,7 +66,7 @@ export function DetailPanel({ item, onClose, onStatusChange, onDelete, onEdit }:
         <div
           className="px-5 py-4 flex items-center justify-between"
           style={{
-            background: `linear-gradient(135deg, ${config.bgColor}, rgba(10,18,35,0.8))`,
+            background: `linear-gradient(135deg, ${config.bgColor}, var(--app-card-bg))`,
             borderBottom: `1px solid ${config.borderColor}30`,
           }}
         >
@@ -71,18 +82,20 @@ export function DetailPanel({ item, onClose, onStatusChange, onDelete, onEdit }:
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => onEdit(item)}
-              className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
-              title="编辑"
-            >
-              <Pencil size={16} color="#94a3b8" />
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => onEdit(item)}
+                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+                title="编辑"
+              >
+                <Pencil size={16} color="#94a3b8" />
+              </button>
+            )}
             <button
               onClick={onClose}
               className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
             >
-              <X size={18} color="#94a3b8" />
+              <X size={18} color="#64748b" />
             </button>
           </div>
         </div>
@@ -107,7 +120,7 @@ export function DetailPanel({ item, onClose, onStatusChange, onDelete, onEdit }:
           </div>
           <span
             className="text-[14px] px-2.5 py-1 rounded"
-            style={{ background: 'rgba(255,255,255,0.06)', color: '#64748b' }}
+            style={{ background: '#f1f5f9', color: '#475569' }}
           >
             {data.type}
           </span>
@@ -121,6 +134,18 @@ export function DetailPanel({ item, onClose, onStatusChange, onDelete, onEdit }:
               }}
             >
               副样本
+            </span>
+          )}
+          {!canEdit && (
+            <span
+              className="text-[13px] px-2 py-1 rounded"
+              style={{
+                background: 'rgba(148,163,184,0.14)',
+                color: '#64748b',
+                border: '1px solid rgba(148,163,184,0.2)',
+              }}
+            >
+              仅查看 / Read Only
             </span>
           )}
         </div>
@@ -163,7 +188,7 @@ export function DetailPanel({ item, onClose, onStatusChange, onDelete, onEdit }:
             <DetailRow
               icon={<Package size={16} color="#94a3b8" />}
               label="存储位置"
-              value={`${data.compartment === 'upper' ? '冷冻层' : '冷藏层'} · 格位 ${(data as Sample).position + 1}`}
+              value={`${data.compartment === 'upper' ? '上层' : '下层'} · 格位 ${(data as Sample).position + 1}`}
             />
           )}
           {!isSub && (
@@ -204,52 +229,56 @@ export function DetailPanel({ item, onClose, onStatusChange, onDelete, onEdit }:
         </div>
 
         {/* Status change */}
-        <div className="px-5 pt-2 pb-1">
-          <div className="text-[13px] mb-2" style={{ color: '#475569' }}>
-            更改状态
+        {canEdit && (
+          <div className="px-5 pt-2 pb-1">
+            <div className="text-[13px] mb-2" style={{ color: '#475569' }}>
+              更改状态
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(Object.keys(STATUS_CONFIG) as SampleStatus[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => onStatusChange(data.id, s, containerId)}
+                  className="text-[13px] px-2.5 py-1.5 rounded transition-all duration-150"
+                  style={{
+                    background:
+                      data.status === s
+                        ? STATUS_CONFIG[s].bgColor
+                        : '#f8fafc',
+                    border: `1px solid ${data.status === s ? STATUS_CONFIG[s].borderColor : '#e2e8f0'}`,
+                    color: data.status === s ? STATUS_CONFIG[s].color : '#64748b',
+                    boxShadow:
+                      data.status === s
+                        ? `0 0 3px ${STATUS_CONFIG[s].glowColor}`
+                        : 'none',
+                  }}
+                >
+                  {STATUS_CONFIG[s].label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {(Object.keys(STATUS_CONFIG) as SampleStatus[]).map((s) => (
-              <button
-                key={s}
-                onClick={() => onStatusChange(data.id, s, containerId)}
-                className="text-[13px] px-2.5 py-1.5 rounded transition-all duration-150"
-                style={{
-                  background:
-                    data.status === s
-                      ? STATUS_CONFIG[s].bgColor
-                      : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${data.status === s ? STATUS_CONFIG[s].borderColor : 'rgba(255,255,255,0.08)'}`,
-                  color: data.status === s ? STATUS_CONFIG[s].color : '#64748b',
-                  boxShadow:
-                    data.status === s
-                      ? `0 0 3px ${STATUS_CONFIG[s].glowColor}`
-                      : 'none',
-                }}
-              >
-                {STATUS_CONFIG[s].label}
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
         {/* Delete button */}
-        <div className="px-5 py-4">
-          <button
-            onClick={() => {
-              onDelete(data.id, containerId);
-              onClose();
-            }}
-            className="w-full py-2 rounded text-[16px] transition-all duration-150 hover:bg-red-900/40"
-            style={{
-              background: 'rgba(239,68,68,0.12)',
-              border: '1px solid rgba(239,68,68,0.3)',
-              color: '#f87171',
-            }}
-          >
-            {isSub ? '删除副样本' : '删除样本'}
-          </button>
-        </div>
+        {canEdit && (
+          <div className="px-5 py-4">
+            <button
+              onClick={() => {
+                onDelete(data.id, containerId);
+                onClose();
+              }}
+              className="w-full py-2 rounded text-[16px] transition-all duration-150 hover:bg-red-900/40"
+              style={{
+                background: 'rgba(239,68,68,0.12)',
+                border: '1px solid rgba(239,68,68,0.3)',
+                color: '#f87171',
+              }}
+            >
+              {isSub ? '删除副样本' : '删除样本'}
+            </button>
+          </div>
+        )}
       </motion.div>
     </AnimatePresence>
   );
@@ -277,7 +306,7 @@ function DetailRow({
       </span>
       <span
         className="text-[14px] font-mono"
-        style={{ color: highlight ? '#f87171' : '#94a3b8' }}
+        style={{ color: highlight ? '#dc2626' : '#334155' }}
       >
         {value}
       </span>

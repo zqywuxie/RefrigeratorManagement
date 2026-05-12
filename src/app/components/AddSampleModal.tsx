@@ -21,6 +21,7 @@ interface AddSampleModalProps {
   containers: Sample[];
   upperTemperature: number;
   lowerTemperature: number;
+  currentUsername: string;
   isSubSampleMode?: boolean;
   parentContainerId?: string;
   parentContainer?: Sample;
@@ -55,6 +56,7 @@ export function AddSampleModal({
   containers,
   upperTemperature,
   lowerTemperature,
+  currentUsername,
   isSubSampleMode = false,
   parentContainerId,
   parentContainer,
@@ -99,9 +101,9 @@ export function AddSampleModal({
         collectedAt: editSubSample.collectedAt || new Date().toISOString().split('T')[0],
       });
     } else {
-      setForm({ ...DEFAULT_FORM, name: '' });
+      setForm({ ...DEFAULT_FORM, name: '', uploader: currentUsername });
     }
-  }, [isOpen, editSample, editSubSample]);
+  }, [isOpen, editSample, editSubSample, currentUsername]);
 
   const generateId = () => {
     let num = existingIds.length + 1;
@@ -224,6 +226,18 @@ export function AddSampleModal({
         : lowerTemperature;
 
   const accentColor = isSubSampleMode || editSubSample ? '#a78bfa' : '#60a5fa';
+  const fieldStyle: React.CSSProperties = {
+    background: '#eef3f8',
+    border: '1px solid #cbd5e1',
+    color: '#0f172a',
+  };
+  const mutedFieldStyle: React.CSSProperties = {
+    background: '#e8eef5',
+    border: '1px solid #e2e8f0',
+    color: '#475569',
+  };
+  const labelStyle: React.CSSProperties = { color: '#475569' };
+  const optionStyle: React.CSSProperties = { background: '#f7f9fc', color: '#0f172a' };
 
   return (
     <AnimatePresence>
@@ -236,7 +250,7 @@ export function AddSampleModal({
             exit={{ opacity: 0 }}
             onClick={onClose}
             className="fixed inset-0 z-40"
-            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+            style={{ background: 'rgba(15,23,42,0.28)', backdropFilter: 'blur(4px)' }}
           />
 
           {/* Modal */}
@@ -252,13 +266,13 @@ export function AddSampleModal({
               className="rounded-2xl overflow-hidden w-full max-w-md flex flex-col"
               style={{
                 maxHeight: '90vh',
-                background: 'rgba(8,15,30,0.98)',
+                background: '#f7f9fc',
                 border: isEdit
-                  ? `1.5px solid ${accentColor}40`
+                  ? `1.5px solid ${accentColor}55`
                   : isSubSampleMode
-                    ? '1.5px solid rgba(167,139,250,0.3)'
-                    : '1.5px solid rgba(59,130,246,0.3)',
-                boxShadow: '0 0 10px rgba(0,0,0,0.5), 0 20px 60px rgba(0,0,0,0.8)',
+                    ? '1.5px solid rgba(167,139,250,0.35)'
+                    : '1.5px solid rgba(59,130,246,0.35)',
+                boxShadow: '0 24px 80px rgba(15,23,42,0.16)',
                 pointerEvents: 'all',
               }}
             >
@@ -267,10 +281,10 @@ export function AddSampleModal({
                 className="px-5 py-4 flex items-center justify-between"
                 style={{
                   background: isEdit
-                    ? `linear-gradient(135deg, ${accentColor}30, rgba(8,15,30,0.6))`
+                    ? `linear-gradient(135deg, ${accentColor}22, rgba(247,249,252,0.96))`
                     : isSubSampleMode
-                      ? 'linear-gradient(135deg, rgba(167,139,250,0.3), rgba(8,15,30,0.6))'
-                      : 'linear-gradient(135deg, rgba(29,78,216,0.4), rgba(8,15,30,0.6))',
+                      ? 'linear-gradient(135deg, rgba(167,139,250,0.18), rgba(247,249,252,0.96))'
+                      : 'linear-gradient(135deg, rgba(219,234,254,0.9), rgba(247,249,252,0.96))',
                   borderBottom: isEdit
                     ? `1px solid ${accentColor}20`
                     : isSubSampleMode
@@ -290,20 +304,20 @@ export function AddSampleModal({
                           ? '添加副样本'
                           : '添加新样本'}
                     </div>
-                    <div className="text-[14px]" style={{ color: '#475569' }}>
+                    <div className="text-[14px]" style={labelStyle}>
                       {isEdit
                         ? `${editData!.id}`
                         : isSubSampleMode && parentContainer
                           ? `${parentContainer.id} 容器内 · 格位 ${targetPosition != null ? targetPosition + 1 : '—'}`
-                          : `${targetCompartment === 'upper' ? '冷冻层' : '冷藏层'} · 格位 ${targetPosition != null ? targetPosition + 1 : '—'}`}
+                          : `${targetCompartment === 'upper' ? '上层' : '下层'} · 格位 ${targetPosition != null ? targetPosition + 1 : '—'}`}
                     </div>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors"
                 >
-                  <X size={20} color="#64748b" />
+                  <X size={20} color="#475569" />
                 </button>
               </div>
 
@@ -312,7 +326,7 @@ export function AddSampleModal({
                 {/* Name (only for edit mode) */}
                 {isEdit && (
                   <div>
-                    <label className="block text-[14px] mb-1" style={{ color: '#64748b' }}>
+                    <label className="block text-[14px] mb-1" style={labelStyle}>
                       名称
                     </label>
                     <input
@@ -320,11 +334,7 @@ export function AddSampleModal({
                       value={form.name}
                       onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                       className="w-full px-3 py-2 rounded text-[16px] outline-none"
-                      style={{
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#94a3b8',
-                      }}
+                      style={fieldStyle}
                     />
                   </div>
                 )}
@@ -334,7 +344,7 @@ export function AddSampleModal({
                   <div>
                     <label
                       className="block text-[14px] mb-1"
-                      style={{ color: '#64748b' }}
+                      style={labelStyle}
                     >
                       样本类型
                     </label>
@@ -347,11 +357,7 @@ export function AddSampleModal({
                           onChange={(e) => setNewTypeName(e.target.value)}
                           autoFocus
                           className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                          style={{
-                            background: 'rgba(255,255,255,0.06)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#94a3b8',
-                          }}
+                          style={fieldStyle}
                         />
                         <div className="flex gap-1">
                           <button
@@ -367,7 +373,7 @@ export function AddSampleModal({
                             className="flex-1 py-1 rounded text-[12px]"
                             style={{
                               background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
-                              color: '#bfdbfe',
+                              color: '#ffffff',
                             }}
                           >
                             添加
@@ -377,8 +383,8 @@ export function AddSampleModal({
                             onClick={() => setShowNewType(false)}
                             className="flex-1 py-1 rounded text-[12px]"
                             style={{
-                              background: 'rgba(255,255,255,0.05)',
-                              color: '#64748b',
+                              background: '#f1f5f9',
+                              color: '#475569',
                             }}
                           >
                             取消
@@ -396,14 +402,10 @@ export function AddSampleModal({
                             }))
                           }
                           className="flex-1 px-3 py-2 rounded text-[16px] outline-none"
-                          style={{
-                            background: 'rgba(255,255,255,0.06)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#93c5fd',
-                          }}
+                          style={fieldStyle}
                         >
                           {sampleTypes.map((t) => (
-                            <option key={t} value={t} style={{ background: '#0f172a' }}>
+                            <option key={t} value={t} style={optionStyle}>
                               {t}
                             </option>
                           ))}
@@ -413,9 +415,9 @@ export function AddSampleModal({
                           onClick={() => setShowNewType(true)}
                           className="px-2 py-2 rounded text-[14px] flex items-center justify-center"
                           style={{
-                            background: 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#64748b',
+                            background: '#eef3f8',
+                            border: '1px solid #cbd5e1',
+                            color: '#475569',
                           }}
                           title="添加新类型"
                         >
@@ -427,7 +429,7 @@ export function AddSampleModal({
                   <div>
                     <label
                       className="block text-[14px] mb-1"
-                      style={{ color: '#64748b' }}
+                      style={labelStyle}
                     >
                       状态
                     </label>
@@ -441,13 +443,13 @@ export function AddSampleModal({
                       }
                       className="w-full px-3 py-2 rounded text-[16px] outline-none"
                       style={{
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        background: '#eef3f8',
+                        border: '1px solid #cbd5e1',
                         color: STATUS_CONFIG[form.status].color,
                       }}
                     >
                       {(Object.keys(STATUS_CONFIG) as SampleStatus[]).map((s) => (
-                        <option key={s} value={s} style={{ background: '#0f172a' }}>
+                        <option key={s} value={s} style={optionStyle}>
                           {STATUS_CONFIG[s].label}
                         </option>
                       ))}
@@ -460,7 +462,7 @@ export function AddSampleModal({
                   <div>
                     <label
                       className="block text-[14px] mb-1"
-                      style={{ color: '#64748b' }}
+                      style={labelStyle}
                     >
                       {isSubSampleMode ? '存储温度（继承自容器）' : '存储温度'}
                     </label>
@@ -469,11 +471,7 @@ export function AddSampleModal({
                       value={`${tempValue}°C`}
                       readOnly
                       className="w-full px-3 py-2 rounded text-[16px] outline-none"
-                      style={{
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        color: '#64748b',
-                      }}
+                      style={mutedFieldStyle}
                     />
                   </div>
                 )}
@@ -482,7 +480,7 @@ export function AddSampleModal({
                 <div>
                   <label
                     className="block text-[14px] mb-1"
-                    style={{ color: '#64748b' }}
+                    style={labelStyle}
                   >
                     采集日期
                   </label>
@@ -491,11 +489,7 @@ export function AddSampleModal({
                     value={form.collectedAt}
                     onChange={(e) => setForm((f) => ({ ...f, collectedAt: e.target.value }))}
                     className="w-full px-3 py-2 rounded text-[16px] outline-none"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#94a3b8',
-                    }}
+                    style={fieldStyle}
                   />
                 </div>
 
@@ -503,7 +497,7 @@ export function AddSampleModal({
                 <div>
                   <label
                     className="block text-[14px] mb-1"
-                    style={{ color: '#64748b' }}
+                    style={labelStyle}
                   >
                     患者编号（选填）
                   </label>
@@ -514,12 +508,8 @@ export function AddSampleModal({
                     onChange={(e) =>
                       setForm((f) => ({ ...f, patientId: e.target.value }))
                     }
-                    className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-600"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#94a3b8',
-                    }}
+                    className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-500"
+                    style={fieldStyle}
                   />
                 </div>
 
@@ -527,7 +517,7 @@ export function AddSampleModal({
                 <div>
                   <label
                     className="block text-[14px] mb-1"
-                    style={{ color: '#64748b' }}
+                    style={labelStyle}
                   >
                     上传者（选填）
                   </label>
@@ -538,12 +528,8 @@ export function AddSampleModal({
                     onChange={(e) =>
                       setForm((f) => ({ ...f, uploader: e.target.value }))
                     }
-                    className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-600"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#94a3b8',
-                    }}
+                    className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-500"
+                    style={fieldStyle}
                   />
                 </div>
 
@@ -552,7 +538,7 @@ export function AddSampleModal({
                   <div>
                     <label
                       className="block text-[14px] mb-1"
-                      style={{ color: '#64748b' }}
+                      style={labelStyle}
                     >
                       样本量（选填）
                     </label>
@@ -563,18 +549,14 @@ export function AddSampleModal({
                       onChange={(e) =>
                         setForm((f) => ({ ...f, volume: e.target.value }))
                       }
-                      className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-600"
-                      style={{
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#94a3b8',
-                      }}
+                      className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-500"
+                      style={fieldStyle}
                     />
                   </div>
                   <div>
                     <label
                       className="block text-[14px] mb-1"
-                      style={{ color: '#64748b' }}
+                      style={labelStyle}
                     >
                       标签（逗号分隔）
                     </label>
@@ -585,12 +567,8 @@ export function AddSampleModal({
                       onChange={(e) =>
                         setForm((f) => ({ ...f, tags: e.target.value }))
                       }
-                      className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-600"
-                      style={{
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#94a3b8',
-                      }}
+                      className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-500"
+                      style={fieldStyle}
                     />
                   </div>
                 </div>
@@ -599,7 +577,7 @@ export function AddSampleModal({
                 <div>
                   <label
                     className="block text-[14px] mb-1"
-                    style={{ color: '#64748b' }}
+                    style={labelStyle}
                   >
                     备注（选填）
                   </label>
@@ -610,12 +588,8 @@ export function AddSampleModal({
                     onChange={(e) =>
                       setForm((f) => ({ ...f, note: e.target.value }))
                     }
-                    className="w-full px-3 py-2 rounded text-[16px] outline-none resize-none"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#94a3b8',
-                    }}
+                    className="w-full px-3 py-2 rounded text-[16px] outline-none resize-none placeholder:text-slate-500"
+                    style={fieldStyle}
                   />
                 </div>
 
@@ -641,7 +615,7 @@ export function AddSampleModal({
                       ? `保存后状态更新为「${STATUS_CONFIG[form.status].label}」`
                       : isSubSampleMode
                         ? `将创建为「${STATUS_CONFIG[form.status].label}」状态副样本，存入容器 ${parentContainer?.id ?? '—'} 格位 ${targetPosition != null ? targetPosition + 1 : '—'}`
-                        : `将创建为「${STATUS_CONFIG[form.status].label}」状态样本，存入 ${targetCompartment === 'upper' ? '冷冻层' : '冷藏层'} 格位 ${targetPosition != null ? targetPosition + 1 : '—'}`}
+                        : `将创建为「${STATUS_CONFIG[form.status].label}」状态样本，存入 ${targetCompartment === 'upper' ? '上层' : '下层'} 格位 ${targetPosition != null ? targetPosition + 1 : '—'}`}
                   </span>
                 </div>
 
@@ -652,9 +626,9 @@ export function AddSampleModal({
                     onClick={onClose}
                     className="flex-1 py-2.5 rounded text-[16px] transition-colors"
                     style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#64748b',
+                      background: '#eef3f8',
+                      border: '1px solid #cbd5e1',
+                      color: '#475569',
                     }}
                   >
                     取消
@@ -673,8 +647,8 @@ export function AddSampleModal({
                         : isSubSampleMode
                           ? '1px solid #8b5cf6'
                           : '1px solid #3b82f6',
-                      color: '#bfdbfe',
-                      boxShadow: '0 0 4px rgba(59,130,246,0.15)',
+                      color: '#ffffff',
+                      boxShadow: '0 12px 28px rgba(37,99,235,0.18)',
                     }}
                   >
                     {isEdit

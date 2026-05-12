@@ -39,6 +39,26 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --app-bg: linear-gradient(135deg, #eef3f8 0%, #e5eff9 48%, #edf4ed 100%);
+  --app-header-bg: rgba(246, 248, 251, 0.9);
+  --app-panel-bg: rgba(244, 247, 250, 0.78);
+  --app-border: rgba(100, 116, 139, 0.26);
+  --app-text: #0f172a;
+  --app-muted: #64748b;
+  --app-soft-panel: rgba(246, 248, 251, 0.86);
+  --app-card-bg: #f7f9fc;
+  --app-logo-bg: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  --app-logo-border: rgba(37, 99, 235, 0.28);
+  --app-logo-icon: #1d4ed8;
+  --fridge-body: linear-gradient(145deg, #f7f9fc 0%, #eef3f8 45%, #dfe8f1 100%);
+  --fridge-border: #c9d6e3;
+  --fridge-shadow: 0 24px 70px rgba(15, 23, 42, 0.13), inset 0 1px 0 rgba(255,255,255,0.92);
+  --fridge-chamber-bg: linear-gradient(180deg, #f6f9fc 0%, #eef4fa 100%);
+  --fridge-chamber-border: rgba(100, 116, 139, 0.24);
+  --fridge-label: #0f172a;
+  --fridge-accent: #2563eb;
+  --slot-empty-bg: rgba(226, 232, 240, 0.45);
+  --slot-empty-border: rgba(100, 116, 139, 0.24);
 }
 
 .dark {
@@ -76,6 +96,26 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+  --app-bg: radial-gradient(ellipse at top left, #0a0e14 0%, #080c12 40%, #060a10 100%);
+  --app-header-bg: rgba(8, 16, 32, 0.9);
+  --app-panel-bg: rgba(10, 18, 35, 0.72);
+  --app-border: rgba(30, 58, 100, 0.5);
+  --app-text: #e2e8f0;
+  --app-muted: #94a3b8;
+  --app-soft-panel: rgba(10, 18, 35, 0.7);
+  --app-card-bg: rgba(10, 18, 35, 0.95);
+  --app-logo-bg: rgba(29,78,216,0.3);
+  --app-logo-border: rgba(59,130,246,0.4);
+  --app-logo-icon: #60a5fa;
+  --fridge-body: linear-gradient(145deg, #cfd9e0 0%, #e4ecf2 25%, #d0dce6 50%, #e8eef4 75%, #c8d5de 100%);
+  --fridge-border: #aebdca;
+  --fridge-shadow: 8px 8px 24px rgba(0,0,0,0.45), -3px -3px 10px rgba(255,255,255,0.35), inset 1px 1px 3px rgba(255,255,255,0.6);
+  --fridge-chamber-bg: linear-gradient(180deg, #060e1f 0%, #0a1830 60%, #0a1628 100%);
+  --fridge-chamber-border: #1a3a62;
+  --fridge-label: #93c5fd;
+  --fridge-accent: #60a5fa;
+  --slot-empty-bg: rgba(10,30,60,0.25);
+  --slot-empty-border: rgba(100,160,200,0.25);
 }
 
 @theme inline {

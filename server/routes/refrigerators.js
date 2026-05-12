@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import pool from '../db.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -23,7 +24,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
     const {
       name,
@@ -49,7 +50,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const [[existing]] = await pool.query('SELECT * FROM refrigerators WHERE id = ?', [id]);
@@ -100,7 +101,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     const [[existing]] = await pool.query('SELECT * FROM refrigerators WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Refrigerator not found' });

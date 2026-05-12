@@ -61,6 +61,16 @@ export function FridgeSelector({
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
+  const fieldStyle: React.CSSProperties = {
+    background: 'var(--app-card-bg)',
+    border: '1px solid var(--app-border)',
+    color: 'var(--app-text)',
+  };
+  const secondaryButtonStyle: React.CSSProperties = {
+    background: 'var(--app-panel-bg)',
+    border: '1px solid var(--app-border)',
+    color: 'var(--app-muted)',
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,9 +119,10 @@ export function FridgeSelector({
         onClick={() => { setOpen(!open); setAdding(false); setEditingId(null); }}
         className="flex items-center gap-2 px-3 py-2 rounded-lg text-[14px] transition-all"
         style={{
-          background: 'rgba(29,78,216,0.2)',
-          border: '1px solid rgba(59,130,246,0.3)',
-          color: '#93c5fd',
+          background: 'var(--app-logo-bg)',
+          border: '1px solid var(--app-logo-border)',
+          color: 'var(--app-logo-icon)',
+          boxShadow: '0 8px 18px rgba(37,99,235,0.1)',
         }}
       >
         <Box size={16} />
@@ -123,9 +134,10 @@ export function FridgeSelector({
         <div
           className="absolute top-full mt-1 left-0 w-72 rounded-xl overflow-hidden z-30"
           style={{
-            background: 'rgba(10,20,40,0.98)',
-            border: '1px solid rgba(59,130,246,0.3)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            background: 'var(--app-header-bg)',
+            border: '1px solid var(--app-border)',
+            boxShadow: '0 18px 52px rgba(15,23,42,0.18)',
+            backdropFilter: 'blur(12px)',
           }}
         >
           {refrigerators.map((r) => (
@@ -138,38 +150,26 @@ export function FridgeSelector({
                     onChange={(e) => setEditName(e.target.value)}
                     autoFocus
                     className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#94a3b8',
-                    }}
+                    style={fieldStyle}
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="number"
                       step="0.1"
-                      placeholder="冷冻层 °C"
+                      placeholder="上层 °C"
                       value={editUpperTemp}
                       onChange={(e) => setEditUpperTemp(e.target.value)}
                       className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                      style={{
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#93c5fd',
-                      }}
+                      style={fieldStyle}
                     />
                     <input
                       type="number"
                       step="0.1"
-                      placeholder="冷藏层 °C"
+                      placeholder="下层 °C"
                       value={editLowerTemp}
                       onChange={(e) => setEditLowerTemp(e.target.value)}
                       className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                      style={{
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#86efac',
-                      }}
+                      style={fieldStyle}
                     />
                   </div>
                   <input
@@ -178,18 +178,14 @@ export function FridgeSelector({
                     value={editDesc}
                     onChange={(e) => setEditDesc(e.target.value)}
                     className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#94a3b8',
-                    }}
+                    style={fieldStyle}
                   />
                   <div className="flex gap-1.5">
                     <button
                       type="button"
                       onClick={() => setEditingId(null)}
                       className="flex-1 py-1.5 rounded text-[13px]"
-                      style={{ background: 'rgba(255,255,255,0.05)', color: '#64748b' }}
+                      style={secondaryButtonStyle}
                     >
                       取消
                     </button>
@@ -198,7 +194,7 @@ export function FridgeSelector({
                       className="flex-1 py-1.5 rounded text-[13px]"
                       style={{
                         background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
-                        color: '#bfdbfe',
+                        color: '#ffffff',
                       }}
                     >
                       保存
@@ -208,23 +204,23 @@ export function FridgeSelector({
               ) : (
                 <div
                   onClick={() => { onSelect(r.id); setOpen(false); }}
-                  className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-white/5 transition-colors"
+                  className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
                   style={{
-                    background: r.id === selectedId ? 'rgba(29,78,216,0.15)' : undefined,
-                    color: r.id === selectedId ? '#60a5fa' : '#94a3b8',
+                    background: r.id === selectedId ? 'rgba(37,99,235,0.12)' : undefined,
+                    color: r.id === selectedId ? '#1d4ed8' : 'var(--app-text)',
                   }}
                 >
                   <span className="text-[14px] truncate flex-1">{r.name}</span>
-                  <span className="text-[11px] font-mono mr-1" style={{ color: '#475569' }}>
+                  <span className="text-[11px] font-mono mr-1" style={{ color: 'var(--app-muted)' }}>
                     {r.upperTemperature}°/{r.lowerTemperature}°
                   </span>
                   <div className="flex items-center gap-0.5 flex-shrink-0">
                     <button
                       onClick={(e) => startEditing(r, e)}
-                      className="p-1 rounded hover:bg-white/10 transition-colors"
+                      className="p-1 rounded hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
                       title="编辑冰箱"
                     >
-                      <Pencil size={13} color="#64748b" />
+                      <Pencil size={13} color="var(--app-muted)" />
                     </button>
                     {refrigerators.length > 1 && (
                       <button
@@ -244,7 +240,7 @@ export function FridgeSelector({
             </div>
           ))}
 
-          <div style={{ borderTop: '1px solid rgba(30,58,100,0.3)' }}>
+          <div style={{ borderTop: '1px solid var(--app-border)' }}>
             {adding ? (
               <form onSubmit={handleAdd} className="p-3 space-y-2">
                 <input
@@ -254,38 +250,26 @@ export function FridgeSelector({
                   onChange={(e) => setAddName(e.target.value)}
                   autoFocus
                   className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                  style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: '#94a3b8',
-                  }}
+                  style={fieldStyle}
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="number"
                     step="0.1"
-                    placeholder="冷冻层 °C"
+                    placeholder="上层 °C"
                     value={addUpperTemp}
                     onChange={(e) => setAddUpperTemp(e.target.value)}
                     className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#93c5fd',
-                    }}
+                    style={fieldStyle}
                   />
                   <input
                     type="number"
                     step="0.1"
-                    placeholder="冷藏层 °C"
+                    placeholder="下层 °C"
                     value={addLowerTemp}
                     onChange={(e) => setAddLowerTemp(e.target.value)}
                     className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#86efac',
-                    }}
+                    style={fieldStyle}
                   />
                 </div>
                 <input
@@ -294,21 +278,14 @@ export function FridgeSelector({
                   value={addDesc}
                   onChange={(e) => setAddDesc(e.target.value)}
                   className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                  style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: '#94a3b8',
-                  }}
+                  style={fieldStyle}
                 />
                 <div className="flex gap-1.5">
                   <button
                     type="button"
                     onClick={() => setAdding(false)}
                     className="flex-1 py-1.5 rounded text-[13px]"
-                    style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      color: '#64748b',
-                    }}
+                    style={secondaryButtonStyle}
                   >
                     取消
                   </button>
@@ -317,7 +294,7 @@ export function FridgeSelector({
                     className="flex-1 py-1.5 rounded text-[13px]"
                     style={{
                       background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
-                      color: '#bfdbfe',
+                      color: '#ffffff',
                     }}
                   >
                     确认
@@ -327,8 +304,8 @@ export function FridgeSelector({
             ) : (
               <button
                 onClick={() => setAdding(true)}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-[14px] hover:bg-white/5 transition-colors"
-                style={{ color: '#60a5fa' }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-[14px] hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                style={{ color: '#2563eb' }}
               >
                 <Plus size={16} />
                 添加新冰箱

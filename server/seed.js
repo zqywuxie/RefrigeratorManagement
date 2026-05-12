@@ -2,8 +2,16 @@ import dotenv from 'dotenv';
 dotenv.config();
 import mysql from 'mysql2/promise';
 import pool from './db.js';
+import { hashPassword } from './authUtils.js';
 
 const SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(36) PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('root','user') DEFAULT 'user',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB`,
   `CREATE TABLE IF NOT EXISTS refrigerators (
     id          VARCHAR(36)  PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,
@@ -27,6 +35,7 @@ const SCHEMA_STATEMENTS = [
     collected_at    DATE NOT NULL,
     patient_id      VARCHAR(50),
     uploader        VARCHAR(100),
+    created_by      VARCHAR(50),
     tags            JSON,
     compartment     ENUM('upper','lower') NOT NULL,
     position        INT NOT NULL,
@@ -50,6 +59,7 @@ const SCHEMA_STATEMENTS = [
     collected_at  DATE NOT NULL,
     patient_id    VARCHAR(50),
     uploader      VARCHAR(100),
+    created_by    VARCHAR(50),
     tags          JSON,
     position      INT NOT NULL,
     note          TEXT,
@@ -144,7 +154,18 @@ async function main() {
     await ensureColumn(conn, 'refrigerators', 'lower_temperature', '`lower_temperature` DECIMAL(5,1) NOT NULL DEFAULT 4.0');
     await ensureColumn(conn, 'samples', 'uploader', '`uploader` VARCHAR(100) NULL AFTER `patient_id`');
     await ensureColumn(conn, 'sub_samples', 'uploader', '`uploader` VARCHAR(100) NULL AFTER `patient_id`');
+    await ensureColumn(conn, 'samples', 'created_by', '`created_by` VARCHAR(50) NULL AFTER `uploader`');
+    await ensureColumn(conn, 'sub_samples', 'created_by', '`created_by` VARCHAR(50) NULL AFTER `uploader`');
     console.log('Tables created.');
+
+    const [rootRows] = await conn.query('SELECT username FROM users WHERE username = ?', ['root']);
+    if (rootRows.length === 0) {
+      await conn.query(
+        'INSERT INTO users (id, username, password_hash, role) VALUES (UUID(), ?, ?, ?)',
+        ['root', hashPassword('root123'), 'root'],
+      );
+      console.log('Root user inserted.');
+    }
 
     // Insert default fridge if not exists
     const [existing] = await conn.query('SELECT id FROM refrigerators WHERE id = ?', [FRIDGE_ID]);

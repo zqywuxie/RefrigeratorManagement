@@ -104,7 +104,7 @@ export function ContainerSubView({
           /
         </span>
         <span className="text-[14px]" style={{ color: '#64748b' }}>
-          {isUpper ? '冷冻层' : '冷藏层'}
+          {isUpper ? '上层' : '下层'}
         </span>
         <span className="text-[13px]" style={{ color: '#475569' }}>
           /

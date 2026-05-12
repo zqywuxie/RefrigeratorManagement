@@ -1,3 +1,4 @@
+import type { AuthUser } from './AuthContext';
 import { Sample, SubSample } from './types';
 
 export interface RefrigeratorResponse {
@@ -17,15 +18,48 @@ export interface RefrigeratorResponse {
 const BASE = '/api';
 
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
+  const token = localStorage.getItem('biofridge_token');
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options?.headers || {}),
+    },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      window.dispatchEvent(new Event('biofridge:unauthorized'));
+    }
     throw new Error(err.error || `HTTP ${res.status}`);
   }
   return res.json();
+}
+
+export async function loginUser(
+  username: string,
+  password: string,
+): Promise<{ token: string; user: AuthUser }> {
+  return fetchJSON(`${BASE}/auth/login`, {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export async function registerUser(
+  username: string,
+  password: string,
+  role: AuthUser['role'] = 'user',
+): Promise<AuthUser> {
+  return fetchJSON(`${BASE}/auth/register`, {
+    method: 'POST',
+    body: JSON.stringify({ username, password, role }),
+  });
+}
+
+export async function fetchCurrentUser(): Promise<{ user: AuthUser }> {
+  return fetchJSON(`${BASE}/auth/me`);
 }
 
 // ── Refrigerators ──

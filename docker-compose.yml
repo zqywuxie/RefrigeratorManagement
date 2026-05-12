@@ -27,6 +27,7 @@ services:
       DB_USER: root
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-biofridge_password}
       DB_NAME: ${MYSQL_DATABASE:-biofridge}
+      JWT_SECRET: ${JWT_SECRET:-biofridge-secret-key}
       PORT: 3001
       TZ: Asia/Shanghai
     depends_on:
