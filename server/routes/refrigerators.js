@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import pool from '../db.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireRoot } from '../middleware/auth.js';
 
 const router = Router();
 
 router.get('/', async (_req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM refrigerators ORDER BY created_at ASC');
+    const [rows] = await pool.query(
+      'SELECT * FROM refrigerators WHERE deleted_at IS NULL ORDER BY created_at ASC',
+    );
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -16,7 +18,10 @@ router.get('/', async (_req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM refrigerators WHERE id = ?', [req.params.id]);
+    const [rows] = await pool.query(
+      'SELECT * FROM refrigerators WHERE id = ? AND deleted_at IS NULL',
+      [req.params.id],
+    );
     if (rows.length === 0) return res.status(404).json({ error: 'Refrigerator not found' });
     res.json(rows[0]);
   } catch (err) {
@@ -24,7 +29,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', authenticate, async (req, res) => {
+router.post('/', authenticate, requireRoot, async (req, res) => {
   try {
     const {
       name,
@@ -50,10 +55,13 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', authenticate, requireRoot, async (req, res) => {
   try {
     const { id } = req.params;
-    const [[existing]] = await pool.query('SELECT * FROM refrigerators WHERE id = ?', [id]);
+    const [[existing]] = await pool.query(
+      'SELECT * FROM refrigerators WHERE id = ? AND deleted_at IS NULL',
+      [id],
+    );
     if (!existing) return res.status(404).json({ error: 'Refrigerator not found' });
 
     const { name, description, upperRows, upperCols, lowerRows, lowerCols, upperTemperature, lowerTemperature } = req.body;
@@ -68,11 +76,11 @@ router.put('/:id', authenticate, async (req, res) => {
     const upperCap = newUpperRows * newUpperCols;
     const lowerCap = newLowerRows * newLowerCols;
     const [[{ cnt: upperOverflow }]] = await pool.query(
-      'SELECT COUNT(*) as cnt FROM samples WHERE refrigerator_id = ? AND compartment = ? AND position >= ?',
+      'SELECT COUNT(*) as cnt FROM samples WHERE refrigerator_id = ? AND deleted_at IS NULL AND compartment = ? AND position >= ?',
       [id, 'upper', upperCap],
     );
     const [[{ cnt: lowerOverflow }]] = await pool.query(
-      'SELECT COUNT(*) as cnt FROM samples WHERE refrigerator_id = ? AND compartment = ? AND position >= ?',
+      'SELECT COUNT(*) as cnt FROM samples WHERE refrigerator_id = ? AND deleted_at IS NULL AND compartment = ? AND position >= ?',
       [id, 'lower', lowerCap],
     );
     if (upperOverflow > 0 || lowerOverflow > 0) {
@@ -101,11 +109,28 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 });
 
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', authenticate, requireRoot, async (req, res) => {
   try {
-    const [[existing]] = await pool.query('SELECT * FROM refrigerators WHERE id = ?', [req.params.id]);
+    const [[existing]] = await pool.query(
+      'SELECT * FROM refrigerators WHERE id = ? AND deleted_at IS NULL',
+      [req.params.id],
+    );
     if (!existing) return res.status(404).json({ error: 'Refrigerator not found' });
-    await pool.query('DELETE FROM refrigerators WHERE id = ?', [req.params.id]);
+    await pool.query(
+      'UPDATE refrigerators SET deleted_at = CURRENT_TIMESTAMP, deleted_by = ? WHERE id = ?',
+      [req.user.username, req.params.id],
+    );
+    await pool.query(
+      'UPDATE samples SET deleted_at = CURRENT_TIMESTAMP, deleted_by = ? WHERE refrigerator_id = ? AND deleted_at IS NULL',
+      [req.user.username, req.params.id],
+    );
+    await pool.query(
+      `UPDATE sub_samples
+       JOIN samples ON samples.id = sub_samples.sample_id
+       SET sub_samples.deleted_at = CURRENT_TIMESTAMP, sub_samples.deleted_by = ?
+       WHERE samples.refrigerator_id = ? AND sub_samples.deleted_at IS NULL`,
+      [req.user.username, req.params.id],
+    );
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -5,6 +5,7 @@ import { Refrigerator } from '../types';
 interface FridgeSelectorProps {
   refrigerators: Refrigerator[];
   selectedId: string | null;
+  canManage: boolean;
   onSelect: (id: string) => void;
   onAdd: (
     name: string,
@@ -25,6 +26,7 @@ interface FridgeSelectorProps {
 export function FridgeSelector({
   refrigerators,
   selectedId,
+  canManage,
   onSelect,
   onAdd,
   onDelete,
@@ -214,32 +216,35 @@ export function FridgeSelector({
                   <span className="text-[11px] font-mono mr-1" style={{ color: 'var(--app-muted)' }}>
                     {r.upperTemperature}°/{r.lowerTemperature}°
                   </span>
-                  <div className="flex items-center gap-0.5 flex-shrink-0">
-                    <button
-                      onClick={(e) => startEditing(r, e)}
-                      className="p-1 rounded hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
-                      title="编辑冰箱"
-                    >
-                      <Pencil size={13} color="var(--app-muted)" />
-                    </button>
-                    {refrigerators.length > 1 && (
+                  {canManage && (
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete(r.id);
-                        }}
-                        className="p-1 rounded hover:bg-red-500/20 transition-colors"
-                        title="删除冰箱"
+                        onClick={(e) => startEditing(r, e)}
+                        className="p-1 rounded hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                        title="编辑冰箱"
                       >
-                        <Trash2 size={13} color="#f87171" />
+                        <Pencil size={13} color="var(--app-muted)" />
                       </button>
-                    )}
-                  </div>
+                      {refrigerators.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(r.id);
+                          }}
+                          className="p-1 rounded hover:bg-red-500/20 transition-colors"
+                          title="删除冰箱"
+                        >
+                          <Trash2 size={13} color="#f87171" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           ))}
 
+          {canManage && (
           <div style={{ borderTop: '1px solid var(--app-border)' }}>
             {adding ? (
               <form onSubmit={handleAdd} className="p-3 space-y-2">
@@ -312,6 +317,7 @@ export function FridgeSelector({
               </button>
             )}
           </div>
+          )}
         </div>
       )}
     </div>

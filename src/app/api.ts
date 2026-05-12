@@ -15,6 +15,63 @@ export interface RefrigeratorResponse {
   updated_at: string;
 }
 
+export interface AdminSummary {
+  totals: {
+    refrigerators: number;
+    samples: number;
+    subSamples: number;
+    totalItems: number;
+    totalCapacity: number;
+    usedSlots: number;
+    usageRate: number;
+    critical: number;
+    warning: number;
+    abnormal: number;
+  };
+  statusCounts: Array<{ status: string; count: number }>;
+  refrigerators: Array<{
+    id: string;
+    name: string;
+    capacity: number;
+    sampleCount: number;
+    subSampleCount: number;
+    criticalCount: number;
+    warningCount: number;
+  }>;
+  owners: Array<{ username: string; sampleCount: number; subSampleCount: number }>;
+}
+
+export interface AdminUser {
+  username: string;
+  role: AuthUser['role'];
+  createdAt: string;
+  sampleCount: number;
+  subSampleCount: number;
+}
+
+export interface AdminSampleItem {
+  kind: 'sample' | 'subsample';
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  temperature: number;
+  collectedAt: string;
+  patientId: string;
+  uploader: string;
+  createdBy?: string;
+  tags: string[];
+  note: string;
+  volume: string;
+  refrigeratorId: string;
+  refrigeratorName: string;
+  compartment: 'upper' | 'lower';
+  position: number;
+  parentId?: string;
+  parentName?: string;
+  subSampleCount: number;
+}
+
 const BASE = '/api';
 
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
@@ -60,6 +117,45 @@ export async function registerUser(
 
 export async function fetchCurrentUser(): Promise<{ user: AuthUser }> {
   return fetchJSON(`${BASE}/auth/me`);
+}
+
+// ── Admin ──
+
+export async function fetchAdminSummary(): Promise<AdminSummary> {
+  return fetchJSON(`${BASE}/admin/summary`);
+}
+
+export async function fetchAdminUsers(): Promise<AdminUser[]> {
+  return fetchJSON(`${BASE}/admin/users`);
+}
+
+export async function fetchAdminSamples(): Promise<AdminSampleItem[]> {
+  return fetchJSON(`${BASE}/admin/samples`);
+}
+
+export async function createAdminUser(
+  username: string,
+  password: string,
+  role: AuthUser['role'] = 'user',
+): Promise<AdminUser> {
+  return fetchJSON(`${BASE}/admin/users`, {
+    method: 'POST',
+    body: JSON.stringify({ username, password, role }),
+  });
+}
+
+export async function updateAdminUser(
+  username: string,
+  data: Partial<{ role: AuthUser['role']; password: string }>,
+): Promise<AdminUser> {
+  return fetchJSON(`${BASE}/admin/users/${encodeURIComponent(username)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteAdminUser(username: string): Promise<void> {
+  await fetchJSON(`${BASE}/admin/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
 }
 
 // ── Refrigerators ──

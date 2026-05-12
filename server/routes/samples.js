@@ -47,17 +47,22 @@ function rowToSubSample(row) {
 // GET all samples for a fridge (with nested sub-samples)
 router.get('/:fridgeId/samples', async (req, res) => {
   try {
-    const [[fridge]] = await pool.query('SELECT id FROM refrigerators WHERE id = ?', [req.params.fridgeId]);
+    const [[fridge]] = await pool.query(
+      'SELECT id FROM refrigerators WHERE id = ? AND deleted_at IS NULL',
+      [req.params.fridgeId],
+    );
     if (!fridge) return res.status(404).json({ error: 'Refrigerator not found' });
 
     const [sampleRows] = await pool.query(
-      'SELECT * FROM samples WHERE refrigerator_id = ? ORDER BY compartment, position',
+      'SELECT * FROM samples WHERE refrigerator_id = ? AND deleted_at IS NULL ORDER BY compartment, position',
       [req.params.fridgeId],
     );
     const [subRows] = await pool.query(
       `SELECT sub_samples.* FROM sub_samples
        JOIN samples ON samples.id = sub_samples.sample_id
        WHERE samples.refrigerator_id = ?
+         AND samples.deleted_at IS NULL
+         AND sub_samples.deleted_at IS NULL
        ORDER BY sub_samples.position`,
       [req.params.fridgeId],
     );
@@ -82,13 +87,13 @@ router.get('/:fridgeId/samples', async (req, res) => {
 router.get('/:fridgeId/samples/:id', async (req, res) => {
   try {
     const [[row]] = await pool.query(
-      'SELECT * FROM samples WHERE id = ? AND refrigerator_id = ?',
+      'SELECT * FROM samples WHERE id = ? AND refrigerator_id = ? AND deleted_at IS NULL',
       [req.params.id, req.params.fridgeId],
     );
     if (!row) return res.status(404).json({ error: 'Sample not found' });
     const sample = rowToSample(row);
     const [subs] = await pool.query(
-      'SELECT * FROM sub_samples WHERE sample_id = ? ORDER BY position',
+      'SELECT * FROM sub_samples WHERE sample_id = ? AND deleted_at IS NULL ORDER BY position',
       [row.id],
     );
     sample.subSamples = subs.map(rowToSubSample);
@@ -100,11 +105,9 @@ router.get('/:fridgeId/samples/:id', async (req, res) => {
 
 // POST create sample
 router.post('/:fridgeId/samples', authenticate, async (req, res) => {
+  let conn;
   try {
     const { fridgeId } = req.params;
-    const [[fridge]] = await pool.query('SELECT id FROM refrigerators WHERE id = ?', [fridgeId]);
-    if (!fridge) return res.status(404).json({ error: 'Refrigerator not found' });
-
     const {
       id, name, type, status = 'normal', temperature,
       collectedAt, patientId, tags, compartment, position,
@@ -115,27 +118,49 @@ router.post('/:fridgeId/samples', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Check position not occupied
-    const [[existing]] = await pool.query(
-      'SELECT id FROM samples WHERE refrigerator_id = ? AND compartment = ? AND position = ?',
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    const [[fridge]] = await conn.query(
+      'SELECT id FROM refrigerators WHERE id = ? AND deleted_at IS NULL FOR UPDATE',
+      [fridgeId],
+    );
+    if (!fridge) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Refrigerator not found' });
+    }
+
+    const [[existing]] = await conn.query(
+      'SELECT id FROM samples WHERE refrigerator_id = ? AND deleted_at IS NULL AND compartment = ? AND position = ?',
       [fridgeId, compartment, position],
     );
     if (existing) {
+      await conn.rollback();
       return res.status(409).json({ error: 'Position already occupied' });
     }
 
-    await pool.query(
+    await conn.query(
       `INSERT INTO samples (id, refrigerator_id, name, type, status, temperature, collected_at, patient_id, uploader, created_by, tags, compartment, position, note, volume, grid_rows, grid_cols)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, fridgeId, name, type, status, temperature, collectedAt || null, patientId || null, uploader || null, req.user.username, JSON.stringify(tags || []), compartment, position, note || null, volume || null, gridRows, gridCols],
     );
-    const [[row]] = await pool.query('SELECT * FROM samples WHERE id = ?', [id]);
+    const [[row]] = await conn.query('SELECT * FROM samples WHERE id = ?', [id]);
+    await conn.commit();
     const sample = rowToSample(row);
     sample.subSamples = [];
     res.status(201).json(sample);
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Sample ID already exists' });
+    if (conn) await conn.rollback();
+    if (err.code === 'ER_DUP_ENTRY') {
+      const message = String(err.sqlMessage || '');
+      if (message.includes('uniq_samples_fridge_compartment_position')) {
+        return res.status(409).json({ error: 'Position already occupied' });
+      }
+      return res.status(409).json({ error: 'Sample ID already exists' });
+    }
     res.status(500).json({ error: err.message });
+  } finally {
+    if (conn) conn.release();
   }
 });
 
@@ -144,7 +169,7 @@ router.put('/:fridgeId/samples/:id', authenticate, requireOwner('samples', 'id')
   try {
     const { fridgeId, id } = req.params;
     const [[existing]] = await pool.query(
-      'SELECT * FROM samples WHERE id = ? AND refrigerator_id = ?', [id, fridgeId],
+      'SELECT * FROM samples WHERE id = ? AND refrigerator_id = ? AND deleted_at IS NULL', [id, fridgeId],
     );
     if (!existing) return res.status(404).json({ error: 'Sample not found' });
 
@@ -168,9 +193,9 @@ router.put('/:fridgeId/samples/:id', authenticate, requireOwner('samples', 'id')
     if (updates.gridCols !== undefined) { fields.push('grid_cols = ?'); values.push(updates.gridCols); }
 
     if (fields.length === 0) {
-      const [[row]] = await pool.query('SELECT * FROM samples WHERE id = ?', [id]);
+      const [[row]] = await pool.query('SELECT * FROM samples WHERE id = ? AND deleted_at IS NULL', [id]);
       const s = rowToSample(row);
-      const [subs] = await pool.query('SELECT * FROM sub_samples WHERE sample_id = ? ORDER BY position', [id]);
+      const [subs] = await pool.query('SELECT * FROM sub_samples WHERE sample_id = ? AND deleted_at IS NULL ORDER BY position', [id]);
       s.subSamples = subs.map(rowToSubSample);
       return res.json(s);
     }
@@ -180,7 +205,7 @@ router.put('/:fridgeId/samples/:id', authenticate, requireOwner('samples', 'id')
     const newPosition = updates.position !== undefined ? updates.position : existing.position;
     if (updates.compartment !== undefined || updates.position !== undefined) {
       const [[conflict]] = await pool.query(
-        'SELECT id FROM samples WHERE refrigerator_id = ? AND compartment = ? AND position = ? AND id != ?',
+        'SELECT id FROM samples WHERE refrigerator_id = ? AND deleted_at IS NULL AND compartment = ? AND position = ? AND id != ?',
         [fridgeId, newCompartment, newPosition, id],
       );
       if (conflict) {
@@ -191,9 +216,9 @@ router.put('/:fridgeId/samples/:id', authenticate, requireOwner('samples', 'id')
     values.push(id);
     await pool.query(`UPDATE samples SET ${fields.join(', ')} WHERE id = ?`, values);
 
-    const [[row]] = await pool.query('SELECT * FROM samples WHERE id = ?', [id]);
+    const [[row]] = await pool.query('SELECT * FROM samples WHERE id = ? AND deleted_at IS NULL', [id]);
     const sample = rowToSample(row);
-    const [subs] = await pool.query('SELECT * FROM sub_samples WHERE sample_id = ? ORDER BY position', [id]);
+    const [subs] = await pool.query('SELECT * FROM sub_samples WHERE sample_id = ? AND deleted_at IS NULL ORDER BY position', [id]);
     sample.subSamples = subs.map(rowToSubSample);
     res.json(sample);
   } catch (err) {
@@ -205,11 +230,18 @@ router.put('/:fridgeId/samples/:id', authenticate, requireOwner('samples', 'id')
 router.delete('/:fridgeId/samples/:id', authenticate, requireOwner('samples', 'id'), async (req, res) => {
   try {
     const [[existing]] = await pool.query(
-      'SELECT * FROM samples WHERE id = ? AND refrigerator_id = ?',
+      'SELECT * FROM samples WHERE id = ? AND refrigerator_id = ? AND deleted_at IS NULL',
       [req.params.id, req.params.fridgeId],
     );
     if (!existing) return res.status(404).json({ error: 'Sample not found' });
-    await pool.query('DELETE FROM samples WHERE id = ?', [req.params.id]);
+    await pool.query(
+      'UPDATE samples SET deleted_at = CURRENT_TIMESTAMP, deleted_by = ? WHERE id = ?',
+      [req.user.username, req.params.id],
+    );
+    await pool.query(
+      'UPDATE sub_samples SET deleted_at = CURRENT_TIMESTAMP, deleted_by = ? WHERE sample_id = ? AND deleted_at IS NULL',
+      [req.user.username, req.params.id],
+    );
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

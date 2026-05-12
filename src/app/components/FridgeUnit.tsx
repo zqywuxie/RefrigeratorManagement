@@ -23,6 +23,7 @@ interface FridgeUnitProps {
   compartmentGrids: Record<Compartment, CompartmentGridConfig>;
   upperTemperature: number;
   lowerTemperature: number;
+  canManageFridge: boolean;
   viewingContainer: Sample | null;
   onDropSample: (
     sampleId: string,
@@ -149,6 +150,7 @@ export function FridgeUnit({
   compartmentGrids,
   upperTemperature,
   lowerTemperature,
+  canManageFridge,
   viewingContainer,
   onDropSample,
   onSelectSample,
@@ -339,24 +341,25 @@ export function FridgeUnit({
                 </div>
               </div>
 
-              {/* Grid controls */}
-              <GridControls
-                rows={upperGrid.rows}
-                cols={upperGrid.cols}
-                onRowsChange={(r) =>
-                  onUpdateCompartmentGrid('upper', {
-                    rows: r,
-                    cols: upperGrid.cols,
-                  })
-                }
-                onColsChange={(c) =>
-                  onUpdateCompartmentGrid('upper', {
-                    rows: upperGrid.rows,
-                    cols: c,
-                  })
-                }
-                accentColor="#60a5fa"
-              />
+              {canManageFridge && (
+                <GridControls
+                  rows={upperGrid.rows}
+                  cols={upperGrid.cols}
+                  onRowsChange={(r) =>
+                    onUpdateCompartmentGrid('upper', {
+                      rows: r,
+                      cols: upperGrid.cols,
+                    })
+                  }
+                  onColsChange={(c) =>
+                    onUpdateCompartmentGrid('upper', {
+                      rows: upperGrid.rows,
+                      cols: c,
+                    })
+                  }
+                  accentColor="#60a5fa"
+                />
+              )}
 
               {/* Upper Grid */}
               <div
@@ -475,24 +478,25 @@ export function FridgeUnit({
             </div>
           </div>
 
-          {/* Grid controls */}
-          <GridControls
-            rows={lowerGrid.rows}
-            cols={lowerGrid.cols}
-            onRowsChange={(r) =>
-              onUpdateCompartmentGrid('lower', {
-                rows: r,
-                cols: lowerGrid.cols,
-              })
-            }
-            onColsChange={(c) =>
-              onUpdateCompartmentGrid('lower', {
-                rows: lowerGrid.rows,
-                cols: c,
-              })
-            }
-            accentColor="#4ade80"
-          />
+          {canManageFridge && (
+            <GridControls
+              rows={lowerGrid.rows}
+              cols={lowerGrid.cols}
+              onRowsChange={(r) =>
+                onUpdateCompartmentGrid('lower', {
+                  rows: r,
+                  cols: lowerGrid.cols,
+                })
+              }
+              onColsChange={(c) =>
+                onUpdateCompartmentGrid('lower', {
+                  rows: lowerGrid.rows,
+                  cols: c,
+                })
+              }
+              accentColor="#4ade80"
+            />
+          )}
 
           {/* Lower Grid */}
           <div

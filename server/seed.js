@@ -23,7 +23,9 @@ const SCHEMA_STATEMENTS = [
     upper_temperature DECIMAL(5,1) NOT NULL DEFAULT -20.0,
     lower_temperature DECIMAL(5,1) NOT NULL DEFAULT 4.0,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at  TIMESTAMP NULL,
+    deleted_by  VARCHAR(50)
   ) ENGINE=InnoDB`,
   `CREATE TABLE IF NOT EXISTS samples (
     id              VARCHAR(20) PRIMARY KEY,
@@ -45,9 +47,11 @@ const SCHEMA_STATEMENTS = [
     grid_cols       INT NOT NULL DEFAULT 2,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at      TIMESTAMP NULL,
+    deleted_by      VARCHAR(50),
     FOREIGN KEY (refrigerator_id) REFERENCES refrigerators(id) ON DELETE CASCADE,
     INDEX idx_fridge (refrigerator_id),
-    INDEX idx_fridge_comp_pos (refrigerator_id, compartment, position)
+    INDEX idx_samples_active_position (refrigerator_id, deleted_at, compartment, position)
   ) ENGINE=InnoDB`,
   `CREATE TABLE IF NOT EXISTS sub_samples (
     id            VARCHAR(20) PRIMARY KEY,
@@ -66,8 +70,11 @@ const SCHEMA_STATEMENTS = [
     volume        VARCHAR(20),
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at    TIMESTAMP NULL,
+    deleted_by    VARCHAR(50),
     FOREIGN KEY (sample_id) REFERENCES samples(id) ON DELETE CASCADE,
-    INDEX idx_sample (sample_id)
+    INDEX idx_sample (sample_id),
+    INDEX idx_sub_samples_active_position (sample_id, deleted_at, position)
   ) ENGINE=InnoDB`,
 ];
 
@@ -156,6 +163,12 @@ async function main() {
     await ensureColumn(conn, 'sub_samples', 'uploader', '`uploader` VARCHAR(100) NULL AFTER `patient_id`');
     await ensureColumn(conn, 'samples', 'created_by', '`created_by` VARCHAR(50) NULL AFTER `uploader`');
     await ensureColumn(conn, 'sub_samples', 'created_by', '`created_by` VARCHAR(50) NULL AFTER `uploader`');
+    await ensureColumn(conn, 'refrigerators', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `updated_at`');
+    await ensureColumn(conn, 'refrigerators', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
+    await ensureColumn(conn, 'samples', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `updated_at`');
+    await ensureColumn(conn, 'samples', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
+    await ensureColumn(conn, 'sub_samples', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `updated_at`');
+    await ensureColumn(conn, 'sub_samples', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
     console.log('Tables created.');
 
     const [rootRows] = await conn.query('SELECT username FROM users WHERE username = ?', ['root']);

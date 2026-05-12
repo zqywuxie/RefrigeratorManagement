@@ -6,6 +6,7 @@ import samplesRouter from './routes/samples.js';
 import subSamplesRouter from './routes/subSamples.js';
 import sampleTypesRouter from './routes/sampleTypes.js';
 import authRouter from './routes/auth.js';
+import adminRouter from './routes/admin.js';
 import { runSchemaMigrations } from './schemaMigrations.js';
 
 dotenv.config();
@@ -18,6 +19,7 @@ app.use('/api/refrigerators', samplesRouter);
 app.use('/api/samples', subSamplesRouter);
 app.use('/api/sample-types', sampleTypesRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/admin', adminRouter);
 
 const PORT = process.env.PORT || 3001;
 runSchemaMigrations()

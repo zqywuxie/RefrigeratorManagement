@@ -18,6 +18,7 @@ import {
   UserPlus,
   ChevronDown,
   FlaskConical,
+  Shield,
 } from 'lucide-react';
 
 import {
@@ -50,6 +51,7 @@ import { FridgeUnit } from './components/FridgeUnit';
 import { FridgeSelector } from './components/FridgeSelector';
 import { DetailPanel, DetailItem } from './components/DetailPanel';
 import { AddSampleModal } from './components/AddSampleModal';
+import { RootAdminPanel } from './components/RootAdminPanel';
 import { AuthProvider, useAuth } from './AuthContext';
 import { LoginPage } from './components/LoginPage';
 
@@ -101,6 +103,7 @@ function AppContent() {
   const [loading, setLoading] = useState(true);
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeView, setActiveView] = useState<'fridge' | 'admin'>('fridge');
   const [showAddModal, setShowAddModal] = useState(false);
   const [addTarget, setAddTarget] = useState<{
     compartment: Compartment;
@@ -179,13 +182,13 @@ function AppContent() {
       }
     : DEFAULT_COMPARTMENT_GRIDS;
 
-  const showNotif = (
+  const showNotif = useCallback((
     msg: string,
     type: 'info' | 'warn' | 'success' | 'error' = 'info',
   ) => {
     setNotification({ msg, type });
     setTimeout(() => setNotification(null), 3000);
-  };
+  }, []);
 
   const upperCapacity = compartmentGrids.upper.rows * compartmentGrids.upper.cols;
   const lowerCapacity = compartmentGrids.lower.rows * compartmentGrids.lower.cols;
@@ -836,6 +839,7 @@ function AppContent() {
             <FridgeSelector
               refrigerators={refrigerators}
               selectedId={selectedFridgeId}
+              canManage={isRoot}
               onSelect={setSelectedFridgeId}
               onAdd={handleAddFridge}
               onDelete={handleDeleteFridge}
@@ -844,6 +848,21 @@ function AppContent() {
           </div>
 
           <div className="flex items-center gap-6">
+            {isRoot && (
+              <button
+                type="button"
+                onClick={() => setActiveView((view) => (view === 'admin' ? 'fridge' : 'admin'))}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px]"
+                style={{
+                  background: activeView === 'admin' ? '#2563eb' : 'var(--app-panel-bg)',
+                  border: activeView === 'admin' ? '1px solid #3b82f6' : '1px solid var(--app-border)',
+                  color: activeView === 'admin' ? '#ffffff' : 'var(--app-text)',
+                }}
+              >
+                <Shield size={15} />
+                {activeView === 'admin' ? '返回冰箱' : '全局管理'}
+              </button>
+            )}
             <UserMenu
               username={user!.username}
               role={user!.role}
@@ -884,7 +903,9 @@ function AppContent() {
           </div>
         </header>
 
-        {/* ── MAIN CONTENT ── */}
+        {activeView === 'admin' && isRoot ? (
+          <RootAdminPanel currentUsername={user!.username} onNotify={showNotif} />
+        ) : (
         <main className="flex-1 flex gap-6 p-6 overflow-auto items-start justify-center flex-wrap">
           {/* Detail panel — left of fridge */}
           <DetailPanel
@@ -965,6 +986,7 @@ function AppContent() {
                 compartmentGrids={compartmentGrids}
                 upperTemperature={selectedFridge?.upperTemperature ?? -20}
                 lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
+                canManageFridge={isRoot}
                 viewingContainer={viewingContainer}
                 onDropSample={handleDrop}
                 onSelectSample={setSelectedSampleId}
@@ -991,18 +1013,22 @@ function AppContent() {
                   border: '1px solid var(--app-border)',
                 }}
               >
-                <span style={{ color: 'var(--app-muted)' }}>没有冰箱，请先创建一个</span>
-                <button
-                  onClick={() => handleAddFridge('主冰箱', '默认冰箱')}
-                  className="px-4 py-2 rounded-lg text-[14px]"
-                  style={{
-                    background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
-                    border: '1px solid #3b82f6',
-                    color: '#fff',
-                  }}
-                >
-                  创建默认冰箱
-                </button>
+                <span style={{ color: 'var(--app-muted)' }}>
+                  {isRoot ? '没有冰箱，请先创建一个' : '暂无可用冰箱，请联系 root 创建'}
+                </span>
+                {isRoot && (
+                  <button
+                    onClick={() => handleAddFridge('主冰箱', '默认冰箱')}
+                    className="px-4 py-2 rounded-lg text-[14px]"
+                    style={{
+                      background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
+                      border: '1px solid #3b82f6',
+                      color: '#fff',
+                    }}
+                  >
+                    创建默认冰箱
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -1182,6 +1208,7 @@ function AppContent() {
 
           </div>
         </main>
+        )}
 
         {/* ── NOTIFICATION TOAST ── */}
         <AnimatePresence>
@@ -1206,6 +1233,7 @@ function AppContent() {
         </AnimatePresence>
 
         {/* ── ADD / EDIT MODAL ── */}
+        {activeView === 'fridge' && (
         <AddSampleModal
           isOpen={showAddModal}
           targetCompartment={addTarget?.compartment ?? null}
@@ -1242,6 +1270,7 @@ function AppContent() {
           sampleTypes={sampleTypes}
           onAddSampleType={handleAddSampleType}
         />
+        )}
       </div>
     </DndProvider>
   );

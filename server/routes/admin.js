@@ -1,0 +1,438 @@
+import { Router } from 'express';
+import crypto from 'crypto';
+import pool from '../db.js';
+import { authenticate, requireRoot } from '../middleware/auth.js';
+import { hashPassword } from '../authUtils.js';
+
+const router = Router();
+
+router.use(authenticate, requireRoot);
+
+function normalizeUsername(username) {
+  return String(username || '').trim();
+}
+
+function validateCredentials(username, password, { passwordRequired = true } = {}) {
+  if (!username) return '用户名不能为空';
+  if (!/^[a-zA-Z0-9_-]{3,32}$/.test(username)) {
+    return '用户名需为 3-32 位字母、数字、下划线或短横线';
+  }
+  if (passwordRequired || password) {
+    if (!password) return '密码不能为空';
+    if (String(password).length < 6 || String(password).length > 72) {
+      return '密码长度需为 6-72 位';
+    }
+  }
+  return '';
+}
+
+async function getRootCount(excludingUsername) {
+  const params = [];
+  let where = "role = 'root'";
+  if (excludingUsername) {
+    where += ' AND username != ?';
+    params.push(excludingUsername);
+  }
+  const [[row]] = await pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE ${where}`, params);
+  return Number(row.cnt || 0);
+}
+
+function parseTags(tags) {
+  if (Array.isArray(tags)) return tags;
+  if (!tags) return [];
+  try {
+    return JSON.parse(tags);
+  } catch {
+    return [];
+  }
+}
+
+function formatDbDate(value) {
+  if (!value) return '';
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value).slice(0, 10);
+}
+
+router.get('/summary', async (_req, res) => {
+  try {
+    const [
+      [[refrigeratorTotals]],
+      [[sampleTotals]],
+      [[subSampleTotals]],
+      [statusRows],
+      [fridgeRows],
+      [ownerRows],
+    ] = await Promise.all([
+      pool.query(
+        `SELECT
+          COUNT(*) AS refrigerator_count,
+          COALESCE(SUM(upper_rows * upper_cols + lower_rows * lower_cols), 0) AS total_capacity
+         FROM refrigerators
+         WHERE deleted_at IS NULL`,
+      ),
+      pool.query(
+        `SELECT
+          COUNT(*) AS sample_count,
+          SUM(CASE WHEN status = 'critical' THEN 1 ELSE 0 END) AS critical_count,
+          SUM(CASE WHEN status = 'warning' THEN 1 ELSE 0 END) AS warning_count
+         FROM samples
+         WHERE deleted_at IS NULL`,
+      ),
+      pool.query(
+        `SELECT
+          COUNT(*) AS sub_sample_count,
+          SUM(CASE WHEN status = 'critical' THEN 1 ELSE 0 END) AS critical_count,
+          SUM(CASE WHEN status = 'warning' THEN 1 ELSE 0 END) AS warning_count
+         FROM sub_samples
+         WHERE deleted_at IS NULL`,
+      ),
+      pool.query(
+        `SELECT status, SUM(cnt) AS count
+         FROM (
+           SELECT status, COUNT(*) AS cnt FROM samples WHERE deleted_at IS NULL GROUP BY status
+           UNION ALL
+           SELECT status, COUNT(*) AS cnt FROM sub_samples WHERE deleted_at IS NULL GROUP BY status
+         ) combined
+         GROUP BY status
+         ORDER BY status`,
+      ),
+      pool.query(
+        `SELECT
+          r.id,
+          r.name,
+          (r.upper_rows * r.upper_cols + r.lower_rows * r.lower_cols) AS capacity,
+          COALESCE(s.sample_count, 0) AS sample_count,
+          COALESCE(ss.sub_sample_count, 0) AS sub_sample_count,
+          COALESCE(s.critical_count, 0) + COALESCE(ss.critical_count, 0) AS critical_count,
+          COALESCE(s.warning_count, 0) + COALESCE(ss.warning_count, 0) AS warning_count
+         FROM refrigerators r
+         LEFT JOIN (
+           SELECT
+             refrigerator_id,
+             COUNT(*) AS sample_count,
+             SUM(CASE WHEN status = 'critical' THEN 1 ELSE 0 END) AS critical_count,
+             SUM(CASE WHEN status = 'warning' THEN 1 ELSE 0 END) AS warning_count
+           FROM samples
+           WHERE deleted_at IS NULL
+           GROUP BY refrigerator_id
+         ) s ON s.refrigerator_id = r.id
+         LEFT JOIN (
+           SELECT
+             samples.refrigerator_id,
+             COUNT(*) AS sub_sample_count,
+             SUM(CASE WHEN sub_samples.status = 'critical' THEN 1 ELSE 0 END) AS critical_count,
+             SUM(CASE WHEN sub_samples.status = 'warning' THEN 1 ELSE 0 END) AS warning_count
+           FROM sub_samples
+           JOIN samples ON samples.id = sub_samples.sample_id
+           WHERE sub_samples.deleted_at IS NULL
+             AND samples.deleted_at IS NULL
+           GROUP BY samples.refrigerator_id
+         ) ss ON ss.refrigerator_id = r.id
+         WHERE r.deleted_at IS NULL
+         ORDER BY r.created_at ASC`,
+      ),
+      pool.query(
+        `SELECT
+          owner,
+          SUM(sample_count) AS sample_count,
+          SUM(sub_sample_count) AS sub_sample_count
+         FROM (
+           SELECT COALESCE(created_by, 'legacy') AS owner, COUNT(*) AS sample_count, 0 AS sub_sample_count
+           FROM samples
+           WHERE deleted_at IS NULL
+           GROUP BY COALESCE(created_by, 'legacy')
+           UNION ALL
+           SELECT COALESCE(created_by, 'legacy') AS owner, 0 AS sample_count, COUNT(*) AS sub_sample_count
+           FROM sub_samples
+           WHERE deleted_at IS NULL
+           GROUP BY COALESCE(created_by, 'legacy')
+         ) combined
+         GROUP BY owner
+         ORDER BY SUM(sample_count) + SUM(sub_sample_count) DESC, owner ASC`,
+      ),
+    ]);
+
+    const sampleCount = Number(sampleTotals.sample_count || 0);
+    const subSampleCount = Number(subSampleTotals.sub_sample_count || 0);
+    const totalCapacity = Number(refrigeratorTotals.total_capacity || 0);
+    const criticalCount =
+      Number(sampleTotals.critical_count || 0) + Number(subSampleTotals.critical_count || 0);
+    const warningCount =
+      Number(sampleTotals.warning_count || 0) + Number(subSampleTotals.warning_count || 0);
+
+    res.json({
+      totals: {
+        refrigerators: Number(refrigeratorTotals.refrigerator_count || 0),
+        samples: sampleCount,
+        subSamples: subSampleCount,
+        totalItems: sampleCount + subSampleCount,
+        totalCapacity,
+        usedSlots: sampleCount,
+        usageRate: totalCapacity > 0 ? Math.round((sampleCount / totalCapacity) * 100) : 0,
+        critical: criticalCount,
+        warning: warningCount,
+        abnormal: criticalCount + warningCount,
+      },
+      statusCounts: statusRows.map((row) => ({
+        status: row.status,
+        count: Number(row.count || 0),
+      })),
+      refrigerators: fridgeRows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        capacity: Number(row.capacity || 0),
+        sampleCount: Number(row.sample_count || 0),
+        subSampleCount: Number(row.sub_sample_count || 0),
+        criticalCount: Number(row.critical_count || 0),
+        warningCount: Number(row.warning_count || 0),
+      })),
+      owners: ownerRows.map((row) => ({
+        username: row.owner,
+        sampleCount: Number(row.sample_count || 0),
+        subSampleCount: Number(row.sub_sample_count || 0),
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/samples', async (_req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT *
+       FROM (
+         SELECT
+           'sample' AS kind,
+           samples.id,
+           samples.name,
+           samples.type,
+           samples.status,
+           samples.temperature,
+           samples.collected_at,
+           samples.patient_id,
+           samples.uploader,
+           samples.created_by,
+           samples.tags,
+           samples.note,
+           samples.volume,
+           refrigerators.id AS refrigerator_id,
+           refrigerators.name AS refrigerator_name,
+           samples.compartment,
+           samples.position,
+           NULL AS parent_id,
+           NULL AS parent_name,
+           COALESCE(sub_counts.sub_sample_count, 0) AS sub_sample_count
+         FROM samples
+         JOIN refrigerators ON refrigerators.id = samples.refrigerator_id
+         LEFT JOIN (
+           SELECT sample_id, COUNT(*) AS sub_sample_count
+           FROM sub_samples
+           WHERE deleted_at IS NULL
+           GROUP BY sample_id
+         ) sub_counts ON sub_counts.sample_id = samples.id
+         WHERE samples.deleted_at IS NULL
+           AND refrigerators.deleted_at IS NULL
+         UNION ALL
+         SELECT
+           'subsample' AS kind,
+           sub_samples.id,
+           sub_samples.name,
+           sub_samples.type,
+           sub_samples.status,
+           sub_samples.temperature,
+           sub_samples.collected_at,
+           sub_samples.patient_id,
+           sub_samples.uploader,
+           sub_samples.created_by,
+           sub_samples.tags,
+           sub_samples.note,
+           sub_samples.volume,
+           refrigerators.id AS refrigerator_id,
+           refrigerators.name AS refrigerator_name,
+           samples.compartment,
+           sub_samples.position,
+           samples.id AS parent_id,
+           samples.name AS parent_name,
+           0 AS sub_sample_count
+         FROM sub_samples
+         JOIN samples ON samples.id = sub_samples.sample_id
+         JOIN refrigerators ON refrigerators.id = samples.refrigerator_id
+         WHERE sub_samples.deleted_at IS NULL
+           AND samples.deleted_at IS NULL
+           AND refrigerators.deleted_at IS NULL
+       ) items
+       ORDER BY collected_at DESC, refrigerator_name ASC, kind ASC, id ASC`,
+    );
+
+    res.json(
+      rows.map((row) => ({
+        kind: row.kind,
+        id: row.id,
+        name: row.name,
+        type: row.type,
+        status: row.status,
+        temperature: Number(row.temperature),
+        collectedAt: formatDbDate(row.collected_at),
+        patientId: row.patient_id || '',
+        uploader: row.uploader || '',
+        createdBy: row.created_by || undefined,
+        tags: parseTags(row.tags),
+        note: row.note || '',
+        volume: row.volume || '',
+        refrigeratorId: row.refrigerator_id,
+        refrigeratorName: row.refrigerator_name,
+        compartment: row.compartment,
+        position: Number(row.position || 0),
+        parentId: row.parent_id || undefined,
+        parentName: row.parent_name || undefined,
+        subSampleCount: Number(row.sub_sample_count || 0),
+      })),
+    );
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/users', async (_req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+        u.username,
+        u.role,
+        u.created_at,
+        COALESCE(s.sample_count, 0) AS sample_count,
+        COALESCE(ss.sub_sample_count, 0) AS sub_sample_count
+       FROM users u
+       LEFT JOIN (
+         SELECT created_by, COUNT(*) AS sample_count
+         FROM samples
+         WHERE created_by IS NOT NULL AND deleted_at IS NULL
+         GROUP BY created_by
+       ) s ON s.created_by = u.username
+       LEFT JOIN (
+         SELECT created_by, COUNT(*) AS sub_sample_count
+         FROM sub_samples
+         WHERE created_by IS NOT NULL AND deleted_at IS NULL
+         GROUP BY created_by
+       ) ss ON ss.created_by = u.username
+       ORDER BY CASE WHEN u.role = 'root' THEN 0 ELSE 1 END, u.username ASC`,
+    );
+    res.json(
+      rows.map((row) => ({
+        username: row.username,
+        role: row.role,
+        createdAt: row.created_at,
+        sampleCount: Number(row.sample_count || 0),
+        subSampleCount: Number(row.sub_sample_count || 0),
+      })),
+    );
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/users', async (req, res) => {
+  try {
+    const username = normalizeUsername(req.body.username);
+    const { password } = req.body;
+    const role = req.body.role || 'user';
+    const validationError = validateCredentials(username, password);
+    if (validationError) return res.status(400).json({ error: validationError });
+    if (!['root', 'user'].includes(role)) {
+      return res.status(400).json({ error: '角色必须是 root 或 user' });
+    }
+
+    await pool.query(
+      'INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)',
+      [crypto.randomUUID(), username, hashPassword(password), role],
+    );
+    res.status(201).json({
+      username,
+      role,
+      createdAt: new Date().toISOString(),
+      sampleCount: 0,
+      subSampleCount: 0,
+    });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: '用户已存在' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch('/users/:username', async (req, res) => {
+  try {
+    const username = normalizeUsername(req.params.username);
+    const { role, password } = req.body;
+    const validationError = validateCredentials(username, password, { passwordRequired: false });
+    if (validationError) return res.status(400).json({ error: validationError });
+    if (role !== undefined && !['root', 'user'].includes(role)) {
+      return res.status(400).json({ error: '角色必须是 root 或 user' });
+    }
+
+    const [[existing]] = await pool.query('SELECT username, role FROM users WHERE username = ?', [username]);
+    if (!existing) return res.status(404).json({ error: '用户不存在' });
+
+    if (role === 'user' && existing.role === 'root') {
+      const remainingRoots = await getRootCount(username);
+      if (remainingRoots === 0) {
+        return res.status(409).json({ error: '不能降级最后一个 root 用户' });
+      }
+      if (req.user.username === username) {
+        return res.status(400).json({ error: '不能修改当前登录用户的 root 角色' });
+      }
+    }
+
+    const fields = [];
+    const values = [];
+    if (role !== undefined) {
+      fields.push('role = ?');
+      values.push(role);
+    }
+    if (password) {
+      fields.push('password_hash = ?');
+      values.push(hashPassword(password));
+    }
+    if (fields.length === 0) {
+      return res.json({ username: existing.username, role: existing.role });
+    }
+
+    values.push(username);
+    await pool.query(`UPDATE users SET ${fields.join(', ')} WHERE username = ?`, values);
+    const [[updated]] = await pool.query('SELECT username, role, created_at FROM users WHERE username = ?', [
+      username,
+    ]);
+    res.json({
+      username: updated.username,
+      role: updated.role,
+      createdAt: updated.created_at,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/users/:username', async (req, res) => {
+  try {
+    const username = normalizeUsername(req.params.username);
+    if (req.user.username === username) {
+      return res.status(400).json({ error: '不能删除当前登录用户' });
+    }
+
+    const [[existing]] = await pool.query('SELECT username, role FROM users WHERE username = ?', [username]);
+    if (!existing) return res.status(404).json({ error: '用户不存在' });
+    if (existing.role === 'root') {
+      const remainingRoots = await getRootCount(username);
+      if (remainingRoots === 0) {
+        return res.status(409).json({ error: '不能删除最后一个 root 用户' });
+      }
+    }
+
+    await pool.query('DELETE FROM users WHERE username = ?', [username]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;

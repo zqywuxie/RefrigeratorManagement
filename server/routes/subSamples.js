@@ -26,7 +26,7 @@ function rowToSubSample(row) {
 router.get('/:sampleId/sub-samples', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT * FROM sub_samples WHERE sample_id = ? ORDER BY position',
+      'SELECT * FROM sub_samples WHERE sample_id = ? AND deleted_at IS NULL ORDER BY position',
       [req.params.sampleId],
     );
     res.json(rows.map(rowToSubSample));
@@ -37,11 +37,9 @@ router.get('/:sampleId/sub-samples', async (req, res) => {
 
 // POST create sub-sample
 router.post('/:sampleId/sub-samples', authenticate, async (req, res) => {
+  let conn;
   try {
     const { sampleId } = req.params;
-    const [[sample]] = await pool.query('SELECT * FROM samples WHERE id = ?', [sampleId]);
-    if (!sample) return res.status(404).json({ error: 'Sample not found' });
-
     const {
       id, name, type, status = 'normal', temperature,
       collectedAt, patientId, uploader, tags, position, note, volume,
@@ -51,25 +49,47 @@ router.post('/:sampleId/sub-samples', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Check position not occupied
-    const [[existing]] = await pool.query(
-      'SELECT id FROM sub_samples WHERE sample_id = ? AND position = ?',
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    const [[sample]] = await conn.query(
+      'SELECT id FROM samples WHERE id = ? AND deleted_at IS NULL FOR UPDATE',
+      [sampleId],
+    );
+    if (!sample) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Sample not found' });
+    }
+
+    const [[existing]] = await conn.query(
+      'SELECT id FROM sub_samples WHERE sample_id = ? AND deleted_at IS NULL AND position = ?',
       [sampleId, position],
     );
     if (existing) {
+      await conn.rollback();
       return res.status(409).json({ error: 'Position already occupied' });
     }
 
-    await pool.query(
+    await conn.query(
       `INSERT INTO sub_samples (id, sample_id, name, type, status, temperature, collected_at, patient_id, uploader, created_by, tags, position, note, volume)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, sampleId, name, type, status, temperature, collectedAt || null, patientId || null, uploader || null, req.user.username, JSON.stringify(tags || []), position, note || null, volume || null],
     );
-    const [[row]] = await pool.query('SELECT * FROM sub_samples WHERE id = ?', [id]);
+    const [[row]] = await conn.query('SELECT * FROM sub_samples WHERE id = ?', [id]);
+    await conn.commit();
     res.status(201).json(rowToSubSample(row));
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Sub-sample ID already exists' });
+    if (conn) await conn.rollback();
+    if (err.code === 'ER_DUP_ENTRY') {
+      const message = String(err.sqlMessage || '');
+      if (message.includes('uniq_sub_samples_sample_position')) {
+        return res.status(409).json({ error: 'Position already occupied' });
+      }
+      return res.status(409).json({ error: 'Sub-sample ID already exists' });
+    }
     res.status(500).json({ error: err.message });
+  } finally {
+    if (conn) conn.release();
   }
 });
 
@@ -78,7 +98,7 @@ router.put('/:sampleId/sub-samples/:id', authenticate, requireOwner('sub_samples
   try {
     const { sampleId, id } = req.params;
     const [[existing]] = await pool.query(
-      'SELECT * FROM sub_samples WHERE id = ? AND sample_id = ?', [id, sampleId],
+      'SELECT * FROM sub_samples WHERE id = ? AND sample_id = ? AND deleted_at IS NULL', [id, sampleId],
     );
     if (!existing) return res.status(404).json({ error: 'Sub-sample not found' });
 
@@ -99,14 +119,14 @@ router.put('/:sampleId/sub-samples/:id', authenticate, requireOwner('sub_samples
     if (updates.volume !== undefined) { fields.push('volume = ?'); values.push(updates.volume); }
 
     if (fields.length === 0) {
-      const [[row]] = await pool.query('SELECT * FROM sub_samples WHERE id = ?', [id]);
+      const [[row]] = await pool.query('SELECT * FROM sub_samples WHERE id = ? AND deleted_at IS NULL', [id]);
       return res.json(rowToSubSample(row));
     }
 
     // If position changed, check conflict
     if (updates.position !== undefined) {
       const [[conflict]] = await pool.query(
-        'SELECT id FROM sub_samples WHERE sample_id = ? AND position = ? AND id != ?',
+        'SELECT id FROM sub_samples WHERE sample_id = ? AND deleted_at IS NULL AND position = ? AND id != ?',
         [sampleId, updates.position, id],
       );
       if (conflict) {
@@ -117,7 +137,7 @@ router.put('/:sampleId/sub-samples/:id', authenticate, requireOwner('sub_samples
     values.push(id);
     await pool.query(`UPDATE sub_samples SET ${fields.join(', ')} WHERE id = ?`, values);
 
-    const [[row]] = await pool.query('SELECT * FROM sub_samples WHERE id = ?', [id]);
+    const [[row]] = await pool.query('SELECT * FROM sub_samples WHERE id = ? AND deleted_at IS NULL', [id]);
     res.json(rowToSubSample(row));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -128,11 +148,14 @@ router.put('/:sampleId/sub-samples/:id', authenticate, requireOwner('sub_samples
 router.delete('/:sampleId/sub-samples/:id', authenticate, requireOwner('sub_samples', 'id'), async (req, res) => {
   try {
     const [[existing]] = await pool.query(
-      'SELECT * FROM sub_samples WHERE id = ? AND sample_id = ?',
+      'SELECT * FROM sub_samples WHERE id = ? AND sample_id = ? AND deleted_at IS NULL',
       [req.params.id, req.params.sampleId],
     );
     if (!existing) return res.status(404).json({ error: 'Sub-sample not found' });
-    await pool.query('DELETE FROM sub_samples WHERE id = ?', [req.params.id]);
+    await pool.query(
+      'UPDATE sub_samples SET deleted_at = CURRENT_TIMESTAMP, deleted_by = ? WHERE id = ?',
+      [req.user.username, req.params.id],
+    );
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

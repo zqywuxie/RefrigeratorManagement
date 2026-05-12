@@ -72,9 +72,9 @@ export function ContainerSubView({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: '4px',
-    background: disabled ? 'rgba(255,255,255,0.03)' : `${config.color}15`,
-    border: `1px solid ${disabled ? 'rgba(255,255,255,0.06)' : `${config.color}40`}`,
-    color: disabled ? '#334155' : config.color,
+    background: disabled ? 'rgba(148,163,184,0.08)' : `${config.color}15`,
+    border: `1px solid ${disabled ? 'rgba(148,163,184,0.14)' : `${config.color}40`}`,
+    color: disabled ? 'var(--app-muted)' : config.color,
     cursor: disabled ? 'default' : 'pointer',
     fontSize: '14px',
     lineHeight: '1',
@@ -87,8 +87,9 @@ export function ContainerSubView({
       <div
         className="flex items-center gap-2 px-4 py-2.5 rounded-lg w-full"
         style={{
-          background: 'rgba(10,20,40,0.8)',
-          border: '1px solid rgba(30,58,100,0.5)',
+          background: 'var(--app-card-bg)',
+          border: '1px solid var(--app-border)',
+          boxShadow: '0 12px 34px rgba(15,23,42,0.06)',
           maxWidth: '560px',
         }}
       >
@@ -119,11 +120,9 @@ export function ContainerSubView({
         className="relative rounded-2xl select-none"
         style={{
           width: '560px',
-          background: isUpper
-            ? 'linear-gradient(145deg, #0a1225 0%, #0d1a35 30%, #0f1d40 60%, #0a1225 100%)'
-            : 'linear-gradient(145deg, #081210 0%, #0b1a14 30%, #0c1f17 60%, #081210 100%)',
-          boxShadow: `inset 0 4px 20px rgba(0,0,0,0.7), 0 0 6px ${config.glowColor}40`,
-          border: `1.5px solid ${config.borderColor}30`,
+          background: isUpper ? 'var(--container-body-upper)' : 'var(--container-body-lower)',
+          boxShadow: `0 20px 58px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.82), 0 0 6px ${config.glowColor}22`,
+          border: `1.5px solid ${config.borderColor}35`,
           padding: '24px 28px 28px 24px',
         }}
       >
@@ -146,10 +145,10 @@ export function ContainerSubView({
             className="flex items-center gap-1.5 px-2.5 py-1 rounded"
             style={{
               background: hasCritical
-                ? 'rgba(153,27,27,0.4)'
+                ? 'rgba(254,226,226,0.95)'
                 : hasWarning
-                  ? 'rgba(120,60,0,0.4)'
-                  : 'rgba(10,50,20,0.4)',
+                  ? 'rgba(254,243,199,0.95)'
+                  : 'rgba(220,252,231,0.95)',
               border: `1px solid ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}40`,
             }}
           >
@@ -168,10 +167,10 @@ export function ContainerSubView({
               className="text-[12px] font-mono"
               style={{
                 color: hasCritical
-                  ? '#fca5a5'
+                  ? '#b91c1c'
                   : hasWarning
-                    ? '#fcd34d'
-                    : '#86efac',
+                    ? '#92400e'
+                    : '#166534',
               }}
             >
               {hasCritical ? 'ALERT' : hasWarning ? 'WARN' : 'OK'}
@@ -183,11 +182,9 @@ export function ContainerSubView({
         <div
           className="rounded-xl p-4 relative overflow-hidden"
           style={{
-            background: isUpper
-              ? 'linear-gradient(180deg, #060e1f 0%, #0a1830 60%, #0d2248 100%)'
-              : 'linear-gradient(180deg, #060f09 0%, #091a0e 60%, #0c2212 100%)',
-            border: `1px solid ${isUpper ? '#1a3a62' : '#1a4428'}`,
-            boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.7)',
+            background: isUpper ? 'var(--container-grid-upper)' : 'var(--container-grid-lower)',
+            border: `1px solid ${isUpper ? 'rgba(96,165,250,0.28)' : 'rgba(74,222,128,0.28)'}`,
+            boxShadow: 'var(--container-grid-shadow)',
           }}
         >
           {/* Sub-header row */}
@@ -335,7 +332,7 @@ export function ContainerSubView({
           <div className="mt-4 flex items-center gap-2">
             <div
               className="flex-1 h-1.5 rounded-full overflow-hidden"
-              style={{ background: 'rgba(255,255,255,0.06)' }}
+              style={{ background: 'rgba(148,163,184,0.22)' }}
             >
               <motion.div
                 className="h-full rounded-full"
@@ -363,9 +360,9 @@ export function ContainerSubView({
                 key={tag}
                 className="text-[12px] px-2 py-0.5 rounded"
                 style={{
-                  background: 'rgba(255,255,255,0.05)',
+                  background: 'var(--app-panel-bg)',
                   color: '#64748b',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(148,163,184,0.24)',
                 }}
               >
                 {tag}
