@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import pool from '../db.js';
-import { authenticate, requireRoot } from '../middleware/auth.js';
-import { hashPassword, signToken, verifyPassword } from '../authUtils.js';
+import { authenticate } from '../middleware/auth.js';
+import { hashPassword, signToken, verifyPassword, verifyToken } from '../authUtils.js';
 
 const router = Router();
 
@@ -40,14 +40,25 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/register', authenticate, requireRoot, async (req, res) => {
+router.post('/register', async (req, res) => {
   try {
     const username = normalizeUsername(req.body.username);
-    const { password, role = 'user' } = req.body;
+    const { password } = req.body;
+    const requestedRole = req.body.role || 'user';
     const validationError = validateCredentials(username, password);
     if (validationError) return res.status(400).json({ error: validationError });
-    if (!['root', 'user'].includes(role)) {
+    if (!['root', 'user'].includes(requestedRole)) {
       return res.status(400).json({ error: '角色必须是 root 或 user' });
+    }
+
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+    const requester = token ? verifyToken(token) : null;
+    if (token && !requester) return res.status(401).json({ error: 'Unauthorized' });
+
+    const role = requester?.role === 'root' ? requestedRole : 'user';
+    if (requestedRole === 'root' && requester?.role !== 'root') {
+      return res.status(403).json({ error: '只有 root 可以创建管理员用户' });
     }
 
     const id = crypto.randomUUID();
