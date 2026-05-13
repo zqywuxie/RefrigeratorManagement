@@ -72,6 +72,25 @@ export function positionToGrid(pos: number, cols: number): { row: number; col: n
   return { row: Math.floor(pos / cols), col: pos % cols };
 }
 
+export function formatChineseShortDate(value?: string | null): string {
+  if (!value) return '-';
+
+  const normalized = String(value).trim();
+  const match = normalized.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (match) {
+    const [, year, month, day] = match;
+    return `${year.slice(-2)}/${month.padStart(2, '0')}/${day.padStart(2, '0')}`;
+  }
+
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return normalized;
+
+  const year = String(date.getFullYear()).slice(-2);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}/${month}/${day}`;
+}
+
 export const UPPER_CAPACITY = compartmentCapacity(DEFAULT_COMPARTMENT_GRIDS.upper);
 export const LOWER_CAPACITY = compartmentCapacity(DEFAULT_COMPARTMENT_GRIDS.lower);
 

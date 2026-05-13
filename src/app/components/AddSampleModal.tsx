@@ -227,17 +227,17 @@ export function AddSampleModal({
 
   const accentColor = isSubSampleMode || editSubSample ? '#a78bfa' : '#60a5fa';
   const fieldStyle: React.CSSProperties = {
-    background: '#eef3f8',
-    border: '1px solid #cbd5e1',
-    color: '#0f172a',
+    background: 'var(--app-input-bg)',
+    border: '1px solid var(--app-input-border)',
+    color: 'var(--app-text)',
   };
   const mutedFieldStyle: React.CSSProperties = {
-    background: '#e8eef5',
-    border: '1px solid #e2e8f0',
-    color: '#475569',
+    background: 'var(--app-input-muted-bg)',
+    border: '1px solid var(--app-input-border)',
+    color: 'var(--app-subtle-text)',
   };
-  const labelStyle: React.CSSProperties = { color: '#475569' };
-  const optionStyle: React.CSSProperties = { background: '#f7f9fc', color: '#0f172a' };
+  const labelStyle: React.CSSProperties = { color: 'var(--app-subtle-text)' };
+  const optionStyle: React.CSSProperties = { background: 'var(--app-card-bg)', color: 'var(--app-text)' };
 
   return (
     <AnimatePresence>
@@ -266,7 +266,7 @@ export function AddSampleModal({
               className="rounded-2xl overflow-hidden w-full max-w-md flex flex-col"
               style={{
                 maxHeight: '90vh',
-                background: '#f7f9fc',
+                background: 'var(--app-card-bg)',
                 border: isEdit
                   ? `1.5px solid ${accentColor}55`
                   : isSubSampleMode
@@ -281,10 +281,10 @@ export function AddSampleModal({
                 className="px-5 py-4 flex items-center justify-between"
                 style={{
                   background: isEdit
-                    ? `linear-gradient(135deg, ${accentColor}22, rgba(247,249,252,0.96))`
+                    ? `linear-gradient(135deg, ${accentColor}22, var(--app-card-bg))`
                     : isSubSampleMode
-                      ? 'linear-gradient(135deg, rgba(167,139,250,0.18), rgba(247,249,252,0.96))'
-                      : 'linear-gradient(135deg, rgba(219,234,254,0.9), rgba(247,249,252,0.96))',
+                      ? 'linear-gradient(135deg, rgba(167,139,250,0.18), var(--app-card-bg))'
+                      : 'linear-gradient(135deg, rgba(219,234,254,0.18), var(--app-card-bg))',
                   borderBottom: isEdit
                     ? `1px solid ${accentColor}20`
                     : isSubSampleMode
@@ -315,9 +315,10 @@ export function AddSampleModal({
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors"
+                  className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                  style={{ color: 'var(--app-subtle-text)' }}
                 >
-                  <X size={20} color="#475569" />
+                  <X size={20} />
                 </button>
               </div>
 
@@ -383,8 +384,9 @@ export function AddSampleModal({
                             onClick={() => setShowNewType(false)}
                             className="flex-1 py-1 rounded text-[12px]"
                             style={{
-                              background: '#f1f5f9',
-                              color: '#475569',
+                              background: 'var(--app-subtle-bg)',
+                              border: '1px solid var(--app-subtle-border)',
+                              color: 'var(--app-subtle-text)',
                             }}
                           >
                             取消
@@ -415,9 +417,9 @@ export function AddSampleModal({
                           onClick={() => setShowNewType(true)}
                           className="px-2 py-2 rounded text-[14px] flex items-center justify-center"
                           style={{
-                            background: '#eef3f8',
-                            border: '1px solid #cbd5e1',
-                            color: '#475569',
+                            background: 'var(--app-input-bg)',
+                            border: '1px solid var(--app-input-border)',
+                            color: 'var(--app-subtle-text)',
                           }}
                           title="添加新类型"
                         >
@@ -443,8 +445,8 @@ export function AddSampleModal({
                       }
                       className="w-full px-3 py-2 rounded text-[16px] outline-none"
                       style={{
-                        background: '#eef3f8',
-                        border: '1px solid #cbd5e1',
+                        background: 'var(--app-input-bg)',
+                        border: '1px solid var(--app-input-border)',
                         color: STATUS_CONFIG[form.status].color,
                       }}
                     >
@@ -626,9 +628,9 @@ export function AddSampleModal({
                     onClick={onClose}
                     className="flex-1 py-2.5 rounded text-[16px] transition-colors"
                     style={{
-                      background: '#eef3f8',
-                      border: '1px solid #cbd5e1',
-                      color: '#475569',
+                      background: 'var(--app-subtle-bg)',
+                      border: '1px solid var(--app-subtle-border)',
+                      color: 'var(--app-subtle-text)',
                     }}
                   >
                     取消

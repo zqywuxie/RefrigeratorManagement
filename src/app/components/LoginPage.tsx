@@ -83,7 +83,7 @@ export function LoginPage() {
             <h1 className="text-[22px] font-semibold">
               {isRegister ? '注册冰箱管理系统' : '冰箱管理系统登录'}
             </h1>
-            <p className="text-[13px]" style={{ color: '#64748b' }}>
+            <p className="text-[13px]" style={{ color: 'var(--app-muted)' }}>
               Refrigerator Management
             </p>
           </div>
@@ -91,7 +91,7 @@ export function LoginPage() {
 
         <div
           className="grid grid-cols-2 gap-1 rounded-lg p-1 mb-5"
-          style={{ background: '#e8eef5', border: '1px solid var(--app-border)' }}
+          style={{ background: 'var(--app-input-muted-bg)', border: '1px solid var(--app-border)' }}
         >
           {(['login', 'register'] as const).map((item) => (
             <button
@@ -116,7 +116,7 @@ export function LoginPage() {
 
         <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4">
           <div>
-            <label className="block text-[13px] mb-1" style={{ color: '#475569' }}>
+            <label className="block text-[13px] mb-1" style={{ color: 'var(--app-subtle-text)' }}>
               用户名
             </label>
             <input
@@ -124,11 +124,11 @@ export function LoginPage() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder={isRegister ? '3-32 位字母、数字、_ 或 -' : '请输入用户名'}
               className="w-full rounded-lg border px-3 py-2.5 outline-none"
-              style={{ borderColor: '#cbd5e1', background: '#eef3f8' }}
+              style={{ borderColor: 'var(--app-input-border)', background: 'var(--app-input-bg)', color: 'var(--app-text)' }}
             />
           </div>
           <div>
-            <label className="block text-[13px] mb-1" style={{ color: '#475569' }}>
+            <label className="block text-[13px] mb-1" style={{ color: 'var(--app-subtle-text)' }}>
               密码
             </label>
             <input
@@ -136,12 +136,12 @@ export function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border px-3 py-2.5 outline-none"
-              style={{ borderColor: '#cbd5e1', background: '#eef3f8' }}
+              style={{ borderColor: 'var(--app-input-border)', background: 'var(--app-input-bg)', color: 'var(--app-text)' }}
             />
           </div>
           {isRegister && (
             <div>
-              <label className="block text-[13px] mb-1" style={{ color: '#475569' }}>
+              <label className="block text-[13px] mb-1" style={{ color: 'var(--app-subtle-text)' }}>
                 确认密码
               </label>
               <input
@@ -149,7 +149,7 @@ export function LoginPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full rounded-lg border px-3 py-2.5 outline-none"
-                style={{ borderColor: '#cbd5e1', background: '#eef3f8' }}
+                style={{ borderColor: 'var(--app-input-border)', background: 'var(--app-input-bg)', color: 'var(--app-text)' }}
               />
             </div>
           )}
@@ -164,7 +164,14 @@ export function LoginPage() {
         </form>
 
         {message && (
-          <div className="mt-4 rounded-lg px-3 py-2 text-[13px]" style={{ background: '#f1f5f9', color: '#475569' }}>
+          <div
+            className="mt-4 rounded-lg px-3 py-2 text-[13px]"
+            style={{
+              background: 'var(--app-subtle-bg)',
+              border: '1px solid var(--app-subtle-border)',
+              color: 'var(--app-subtle-text)',
+            }}
+          >
             {message}
           </div>
         )}

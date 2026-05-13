@@ -28,16 +28,21 @@
   cp .env.docker.example .env
   # 修改 .env 中的 MYSQL_ROOT_PASSWORD 和 JWT_SECRET
   docker compose up -d --build
-  docker compose exec -T backend npm run seed
   ```
+
+  说明：
+  后端启动时会自动执行结构迁移和 root 账号兜底创建；生产环境不要执行 `docker compose exec -T backend npm run seed`。
 
   后续更新：
 
   ```bash
   git pull origin main
   docker compose up -d --build
-  docker compose exec -T backend npm run seed
   ```
+
+  说明：
+  只要没有删除 `mysql_data` volume，`docker compose up -d --build` 不会覆盖现有数据库业务数据。
+  不要执行 `docker compose down -v`，也不要在生产环境运行 `npm run seed`。
 
   或直接执行：
 
@@ -46,6 +51,12 @@
   ```
 
   默认前端访问端口是 `80`，后端由前端 Nginx 通过 `/api` 反向代理。
+
+  仅在本地演示或测试环境需要补模拟数据时，才显式执行：
+
+  ```bash
+  docker compose exec -T -e SEED_DEMO_DATA=true backend npm run seed
+  ```
 
   ## Database backup
 

@@ -5,6 +5,7 @@ import {
   Eye,
   FlaskConical,
   KeyRound,
+  Pencil,
   Plus,
   RefreshCw,
   Shield,
@@ -19,12 +20,20 @@ import {
   AdminSampleItem,
   AdminUser,
   createAdminUser,
+  createSampleType,
   deleteAdminUser,
+  deleteSample,
+  deleteSubSample,
   fetchAdminSamples,
   fetchAdminSummary,
   fetchAdminUsers,
+  fetchSampleTypes,
   updateAdminUser,
+  updateSample,
+  updateSubSample,
 } from '../api';
+import { AddSampleModal } from './AddSampleModal';
+import { Compartment, Sample, SampleStatus, SubSample, formatChineseShortDate } from '../types';
 
 type NotifyType = 'info' | 'warn' | 'success' | 'error';
 
@@ -59,25 +68,33 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [samples, setSamples] = useState<AdminSampleItem[]>([]);
+  const [sampleTypes, setSampleTypes] = useState<string[]>([]);
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
   const [sampleQuery, setSampleQuery] = useState('');
+  const [sampleTypeFilter, setSampleTypeFilter] = useState('__all__');
+  const [editingSample, setEditingSample] = useState<AdminSampleItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyUser, setBusyUser] = useState<string | null>(null);
+  const [busySampleId, setBusySampleId] = useState<string | null>(null);
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<AuthUser['role']>('user');
   const [resetPasswords, setResetPasswords] = useState<Record<string, string>>({});
 
   const rootCount = useMemo(() => users.filter((user) => user.role === 'root').length, [users]);
-  const selectedSample = useMemo(
-    () => samples.find((sample) => sample.id === selectedSampleId) ?? samples[0] ?? null,
-    [samples, selectedSampleId],
-  );
+  const availableSampleTypes = useMemo(() => {
+    const merged = new Set<string>(sampleTypes);
+    samples.forEach((sample) => {
+      if (sample.type) merged.add(sample.type);
+    });
+    return Array.from(merged).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+  }, [sampleTypes, samples]);
   const filteredSamples = useMemo(() => {
     const query = sampleQuery.trim().toLowerCase();
-    if (!query) return samples;
-    return samples.filter((sample) =>
-      [
+    return samples.filter((sample) => {
+      if (sampleTypeFilter !== '__all__' && sample.type !== sampleTypeFilter) return false;
+      if (!query) return true;
+      return [
         sample.id,
         sample.name,
         sample.type,
@@ -92,21 +109,41 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
       ]
         .join(' ')
         .toLowerCase()
-        .includes(query),
-    );
-  }, [sampleQuery, samples]);
+        .includes(query);
+    });
+  }, [sampleQuery, sampleTypeFilter, samples]);
+  const selectedSample = useMemo(
+    () => filteredSamples.find((sample) => sample.id === selectedSampleId) ?? filteredSamples[0] ?? null,
+    [filteredSamples, selectedSampleId],
+  );
+  const editSampleData = useMemo(
+    () => (editingSample?.kind === 'sample' ? toEditableSample(editingSample) : null),
+    [editingSample],
+  );
+  const editSubSampleData = useMemo(
+    () => (editingSample?.kind === 'subsample' ? toEditableSubSample(editingSample) : null),
+    [editingSample],
+  );
 
   const loadAdminData = useCallback(async () => {
     setLoading(true);
     try {
-      const [summaryData, userData, sampleData] = await Promise.all([
+      const [summaryData, userData, sampleData, sampleTypeData] = await Promise.all([
         fetchAdminSummary(),
         fetchAdminUsers(),
         fetchAdminSamples(),
+        fetchSampleTypes().catch(() => []),
       ]);
       setSummary(summaryData);
       setUsers(userData);
       setSamples(sampleData);
+      setSampleTypes(() => {
+        const merged = new Set<string>([
+          ...sampleTypeData,
+          ...sampleData.map((sample) => sample.type),
+        ]);
+        return Array.from(merged).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+      });
       setSelectedSampleId((current) => {
         if (current && sampleData.some((sample) => sample.id === current)) return current;
         return sampleData[0]?.id ?? null;
@@ -190,6 +227,124 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
     }
   };
 
+  const handleSampleTypeCreate = useCallback(async (name: string) => {
+    const normalized = name.trim();
+    if (!normalized) return;
+    setSampleTypes((prev) =>
+      prev.includes(normalized)
+        ? prev
+        : [...prev, normalized].sort((a, b) => a.localeCompare(b, 'zh-CN')),
+    );
+    try {
+      await createSampleType(normalized);
+    } catch {
+      // ignore duplicate or unavailable endpoint
+    }
+  }, []);
+
+  const handleEditOpen = useCallback((sample: AdminSampleItem) => {
+    setEditingSample(sample);
+  }, []);
+
+  const handleEditClose = useCallback(() => {
+    setEditingSample(null);
+  }, []);
+
+  const handleUpdateSample = useCallback(async (sample: Sample) => {
+    if (!editingSample || editingSample.kind !== 'sample') return;
+    try {
+      setBusySampleId(editingSample.id);
+      await updateSample(editingSample.refrigeratorId, editingSample.id, {
+        name: sample.name,
+        type: sample.type,
+        status: sample.status,
+        collectedAt: sample.collectedAt,
+        patientId: sample.patientId,
+        uploader: sample.uploader,
+        tags: sample.tags,
+        note: sample.note,
+        volume: sample.volume,
+      });
+      await loadAdminData();
+      setSelectedSampleId(editingSample.id);
+      setEditingSample(null);
+      onNotify(`样本 ${editingSample.id} 已更新`, 'success');
+    } catch (err: any) {
+      onNotify(err.message || '更新样本失败', 'error');
+    } finally {
+      setBusySampleId(null);
+    }
+  }, [editingSample, loadAdminData, onNotify]);
+
+  const handleUpdateSubSample = useCallback(async (containerId: string, subSample: SubSample) => {
+    if (!editingSample || editingSample.kind !== 'subsample') return;
+    try {
+      setBusySampleId(editingSample.id);
+      await updateSubSample(containerId, editingSample.id, {
+        name: subSample.name,
+        type: subSample.type,
+        status: subSample.status,
+        collectedAt: subSample.collectedAt,
+        patientId: subSample.patientId,
+        uploader: subSample.uploader,
+        tags: subSample.tags,
+        note: subSample.note,
+        volume: subSample.volume,
+      });
+      await loadAdminData();
+      setSelectedSampleId(editingSample.id);
+      setEditingSample(null);
+      onNotify(`副样本 ${editingSample.id} 已更新`, 'success');
+    } catch (err: any) {
+      onNotify(err.message || '更新副样本失败', 'error');
+    } finally {
+      setBusySampleId(null);
+    }
+  }, [editingSample, loadAdminData, onNotify]);
+
+  const handleDeleteSelectedSample = useCallback(async (sample: AdminSampleItem) => {
+    const label = sample.kind === 'sample' ? '样本' : '副样本';
+    if (!window.confirm(`删除${label} ${sample.id}？`)) return;
+    try {
+      setBusySampleId(sample.id);
+      if (sample.kind === 'sample') {
+        await deleteSample(sample.refrigeratorId, sample.id);
+      } else if (sample.parentId) {
+        await deleteSubSample(sample.parentId, sample.id);
+      } else {
+        throw new Error('缺少父容器信息，无法删除副样本');
+      }
+      await loadAdminData();
+      setEditingSample((current) => (current?.id === sample.id ? null : current));
+      onNotify(`${label} ${sample.id} 已删除`, 'warn');
+    } catch (err: any) {
+      onNotify(err.message || `删除${label}失败`, 'error');
+    } finally {
+      setBusySampleId(null);
+    }
+  }, [loadAdminData, onNotify]);
+
+  const handleSampleStatusChange = useCallback(async (sample: AdminSampleItem, status: SampleStatus) => {
+    if (sample.status === status) return;
+    try {
+      setBusySampleId(sample.id);
+      if (sample.kind === 'sample') {
+        await updateSample(sample.refrigeratorId, sample.id, { status });
+      } else if (sample.parentId) {
+        await updateSubSample(sample.parentId, sample.id, { status });
+      } else {
+        throw new Error('缺少父容器信息，无法更新副样本状态');
+      }
+      await loadAdminData();
+      setSelectedSampleId(sample.id);
+      onNotify(`${sample.kind === 'sample' ? '样本' : '副样本'} ${sample.id} 状态已更新`, 'success');
+    } catch (err: any) {
+      onNotify(err.message || '更新状态失败', 'error');
+    } finally {
+      setBusySampleId(null);
+    }
+  }, [loadAdminData, onNotify]);
+
   const totalSamplesText = summary
     ? `${summary.totals.samples} / ${summary.totals.totalCapacity}`
     : '--';
@@ -243,211 +398,6 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
           </div>
         </section>
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
-          <section
-            className="rounded-xl p-4"
-            style={{
-              background: 'var(--app-card-bg)',
-              border: '1px solid var(--app-border)',
-              boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
-            }}
-          >
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>
-                  用户管理
-                </h3>
-                <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                  root {rootCount} 人 · 当前 {currentUsername}
-                </div>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[780px] border-separate border-spacing-y-2 text-left">
-                <thead>
-                  <tr className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                    <th className="px-3 py-1 font-medium">用户</th>
-                    <th className="px-3 py-1 font-medium">角色</th>
-                    <th className="px-3 py-1 font-medium">数据</th>
-                    <th className="px-3 py-1 font-medium">创建时间</th>
-                    <th className="px-3 py-1 font-medium">重置密码</th>
-                    <th className="px-3 py-1 text-right font-medium">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => {
-                    const busy = busyUser === user.username;
-                    const isCurrent = user.username === currentUsername;
-                    const canDemote = !(isCurrent && user.role === 'root') && !(user.role === 'root' && rootCount <= 1);
-                    return (
-                      <tr key={user.username}>
-                        <td
-                          className="rounded-l-lg px-3 py-3"
-                          style={{ background: 'var(--app-panel-bg)', color: 'var(--app-text)' }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <UserCog size={16} color={user.role === 'root' ? '#2563eb' : '#64748b'} />
-                            <span className="font-medium">{user.username}</span>
-                            {isCurrent && (
-                              <span className="rounded-full px-2 py-0.5 text-[11px]" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
-                                当前
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-3 py-3" style={{ background: 'var(--app-panel-bg)' }}>
-                          <select
-                            value={user.role}
-                            disabled={busy || (user.role === 'root' && !canDemote)}
-                            onChange={(e) => handleRoleChange(user, e.target.value as AuthUser['role'])}
-                            className="rounded-md px-2 py-1.5 text-[13px] outline-none"
-                            style={inputStyle}
-                          >
-                            <option value="user">普通用户</option>
-                            <option value="root">管理员 root</option>
-                          </select>
-                        </td>
-                        <td className="px-3 py-3 text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
-                          样本 {user.sampleCount} · 副样本 {user.subSampleCount}
-                        </td>
-                        <td className="px-3 py-3 text-[12px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
-                          {formatDate(user.createdAt)}
-                        </td>
-                        <td className="px-3 py-3" style={{ background: 'var(--app-panel-bg)' }}>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="password"
-                              value={resetPasswords[user.username] || ''}
-                              onChange={(e) =>
-                                setResetPasswords((prev) => ({ ...prev, [user.username]: e.target.value }))
-                              }
-                              placeholder="新密码"
-                              className="w-28 rounded-md px-2 py-1.5 text-[13px] outline-none"
-                              style={inputStyle}
-                            />
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => handleResetPassword(user)}
-                              className="rounded-md p-2"
-                              style={{ background: '#e0f2fe', color: '#0369a1' }}
-                              title="重置密码"
-                            >
-                              <KeyRound size={14} />
-                            </button>
-                          </div>
-                        </td>
-                        <td
-                          className="rounded-r-lg px-3 py-3 text-right"
-                          style={{ background: 'var(--app-panel-bg)' }}
-                        >
-                          <button
-                            type="button"
-                            disabled={busy || isCurrent || (user.role === 'root' && rootCount <= 1)}
-                            onClick={() => handleDeleteUser(user)}
-                            className="rounded-md p-2 disabled:opacity-35"
-                            style={{ background: '#fee2e2', color: '#b91c1c' }}
-                            title="删除用户"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {!loading && users.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="rounded-lg px-3 py-8 text-center text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
-                        暂无用户
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <aside className="flex flex-col gap-5">
-            <form
-              onSubmit={handleCreateUser}
-              className="rounded-xl p-4"
-              style={{
-                background: 'var(--app-card-bg)',
-                border: '1px solid var(--app-border)',
-                boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
-              }}
-            >
-              <h3 className="mb-3 text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>
-                创建用户
-              </h3>
-              <div className="space-y-3">
-                <input
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  placeholder="用户名"
-                  className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
-                  style={inputStyle}
-                />
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="密码"
-                  className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
-                  style={inputStyle}
-                />
-                <select
-                  value={newRole}
-                  onChange={(e) => setNewRole(e.target.value as AuthUser['role'])}
-                  className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
-                  style={inputStyle}
-                >
-                  <option value="user">普通用户</option>
-                  <option value="root">管理员 root</option>
-                </select>
-                <button
-                  type="submit"
-                  disabled={busyUser === '__new__'}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-[14px]"
-                  style={{ background: '#2563eb', color: '#ffffff' }}
-                >
-                  <Plus size={16} />
-                  {busyUser === '__new__' ? '创建中...' : '创建'}
-                </button>
-              </div>
-            </form>
-
-            <section
-              className="rounded-xl p-4"
-              style={{
-                background: 'var(--app-card-bg)',
-                border: '1px solid var(--app-border)',
-                boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
-              }}
-            >
-              <h3 className="mb-3 text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>
-                全局分布
-              </h3>
-              <div className="space-y-3">
-                {summary?.statusCounts.map((item) => (
-                  <DistributionRow
-                    key={item.status}
-                    label={STATUS_LABELS[item.status] || item.status}
-                    count={item.count}
-                    total={Math.max(summary.totals.totalItems, 1)}
-                  />
-                ))}
-                {summary && summary.statusCounts.length === 0 && (
-                  <div className="rounded-lg px-3 py-5 text-center text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
-                    暂无样本状态数据
-                  </div>
-                )}
-              </div>
-            </section>
-          </aside>
-        </div>
-
         <section
           className="rounded-xl p-4"
           style={{
@@ -456,87 +406,219 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
             boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
           }}
         >
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h3 className="text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>
-                样本详情
+                用户管理
               </h3>
               <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                全部冰箱 · {filteredSamples.length}/{samples.length} 条
+                root {rootCount} 人 · 当前 {currentUsername}
               </div>
             </div>
-            <input
-              value={sampleQuery}
-              onChange={(e) => setSampleQuery(e.target.value)}
-              placeholder="搜索样本、患者、上传者、标签..."
-              className="w-full rounded-lg px-3 py-2 text-[13px] outline-none sm:w-80"
-              style={inputStyle}
-            />
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
-            <div className="max-h-[520px] overflow-y-auto pr-1">
-              <div className="space-y-2">
-                {filteredSamples.map((sample) => {
-                  const selected = selectedSample?.id === sample.id;
-                  const statusColor = STATUS_COLORS[sample.status] || '#2563eb';
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[780px] border-separate border-spacing-y-2 text-left">
+              <thead>
+                <tr className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                  <th className="px-3 py-1 font-medium">用户</th>
+                  <th className="px-3 py-1 font-medium">角色</th>
+                  <th className="px-3 py-1 font-medium">数据</th>
+                  <th className="px-3 py-1 font-medium">创建时间</th>
+                  <th className="px-3 py-1 font-medium">重置密码</th>
+                  <th className="px-3 py-1 text-right font-medium">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => {
+                  const busy = busyUser === user.username;
+                  const isCurrent = user.username === currentUsername;
+                  const canDemote = !(isCurrent && user.role === 'root') && !(user.role === 'root' && rootCount <= 1);
                   return (
-                    <button
-                      key={`${sample.kind}-${sample.id}`}
-                      type="button"
-                      onClick={() => setSelectedSampleId(sample.id)}
-                      className="w-full rounded-lg p-3 text-left transition-all"
-                      style={{
-                        background: selected ? '#eff6ff' : 'var(--app-panel-bg)',
-                        border: selected ? '1px solid #93c5fd' : '1px solid var(--app-border)',
-                        color: 'var(--app-text)',
-                        boxShadow: selected ? '0 10px 28px rgba(37,99,235,0.12)' : 'none',
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
+                    <tr key={user.username}>
+                      <td
+                        className="rounded-l-lg px-3 py-3"
+                        style={{ background: 'var(--app-panel-bg)', color: 'var(--app-text)' }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <UserCog size={16} color={user.role === 'root' ? '#2563eb' : 'var(--app-muted)'} />
+                          <span className="font-medium">{user.username}</span>
+                          {isCurrent && (
                             <span
-                              className="h-2.5 w-2.5 rounded-full"
-                              style={{ background: statusColor }}
-                            />
-                            <span className="truncate text-[14px] font-medium">
-                              {sample.id} · {sample.name}
+                              className="rounded-full px-2 py-0.5 text-[11px]"
+                              style={{
+                                background: 'var(--app-info-bg)',
+                                border: '1px solid var(--app-info-border)',
+                                color: 'var(--app-info-text)',
+                              }}
+                            >
+                              当前
                             </span>
-                          </div>
-                          <div className="mt-1 truncate text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                            {sample.refrigeratorName} · {formatLocation(sample)} · {sample.type}
-                          </div>
+                          )}
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <span
-                            className="rounded-full px-2 py-0.5 text-[11px]"
-                            style={{ background: `${statusColor}18`, color: statusColor }}
+                      </td>
+                      <td className="px-3 py-3" style={{ background: 'var(--app-panel-bg)' }}>
+                        <select
+                          value={user.role}
+                          disabled={busy || (user.role === 'root' && !canDemote)}
+                          onChange={(e) => handleRoleChange(user, e.target.value as AuthUser['role'])}
+                          className="rounded-md px-2 py-1.5 text-[13px] outline-none"
+                          style={inputStyle}
+                        >
+                          <option value="user">普通用户</option>
+                          <option value="root">管理员 root</option>
+                        </select>
+                      </td>
+                      <td className="px-3 py-3 text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
+                        样本 {user.sampleCount} · 副样本 {user.subSampleCount}
+                      </td>
+                      <td className="px-3 py-3 text-[12px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
+                        {formatDate(user.createdAt)}
+                      </td>
+                      <td className="px-3 py-3" style={{ background: 'var(--app-panel-bg)' }}>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="password"
+                            value={resetPasswords[user.username] || ''}
+                            onChange={(e) =>
+                              setResetPasswords((prev) => ({ ...prev, [user.username]: e.target.value }))
+                            }
+                            placeholder="新密码"
+                            className="w-28 rounded-md px-2 py-1.5 text-[13px] outline-none"
+                            style={inputStyle}
+                          />
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => handleResetPassword(user)}
+                            className="rounded-md p-2"
+                            style={{ background: 'var(--app-info-soft-bg)', color: 'var(--app-info-soft-text)' }}
+                            title="重置密码"
                           >
-                            {STATUS_LABELS[sample.status] || sample.status}
-                          </span>
-                          <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
-                            {sample.kind === 'sample' ? `副样本 ${sample.subSampleCount}` : '副样本'}
-                          </span>
+                            <KeyRound size={14} />
+                          </button>
                         </div>
-                      </div>
-                    </button>
+                      </td>
+                      <td
+                        className="rounded-r-lg px-3 py-3 text-right"
+                        style={{ background: 'var(--app-panel-bg)' }}
+                      >
+                        <button
+                          type="button"
+                          disabled={busy || isCurrent || (user.role === 'root' && rootCount <= 1)}
+                          onClick={() => handleDeleteUser(user)}
+                          className="rounded-md p-2 disabled:opacity-35"
+                          style={{ background: 'var(--app-danger-soft-bg)', color: 'var(--app-danger-soft-text)' }}
+                          title="删除用户"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
                   );
                 })}
-                {!loading && filteredSamples.length === 0 && (
-                  <div
-                    className="rounded-lg px-3 py-8 text-center text-[13px]"
-                    style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}
-                  >
-                    暂无匹配样本
-                  </div>
+                {!loading && users.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="rounded-lg px-3 py-8 text-center text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
+                      暂无用户
+                    </td>
+                  </tr>
                 )}
-              </div>
-            </div>
-
-            <SampleDetailCard sample={selectedSample} />
+              </tbody>
+            </table>
           </div>
         </section>
+
+        <div className="grid items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
+          <form
+            onSubmit={handleCreateUser}
+            className="rounded-xl p-4"
+            style={{
+              background: 'var(--app-card-bg)',
+              border: '1px solid var(--app-border)',
+              boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
+            }}
+          >
+            <h3 className="mb-3 text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>
+              创建用户
+            </h3>
+            <div className="space-y-3">
+              <input
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                placeholder="用户名"
+                className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
+                style={inputStyle}
+              />
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="密码"
+                className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
+                style={inputStyle}
+              />
+              <select
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value as AuthUser['role'])}
+                className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
+                style={inputStyle}
+              >
+                <option value="user">普通用户</option>
+                <option value="root">管理员 root</option>
+              </select>
+              <button
+                type="submit"
+                disabled={busyUser === '__new__'}
+                className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-[14px]"
+                style={{ background: '#2563eb', color: '#ffffff' }}
+              >
+                <Plus size={16} />
+                {busyUser === '__new__' ? '创建中...' : '创建'}
+              </button>
+            </div>
+          </form>
+
+          <section
+            className="rounded-xl p-4"
+            style={{
+              background: 'var(--app-card-bg)',
+              border: '1px solid var(--app-border)',
+              boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
+            }}
+          >
+            <div className="mb-4">
+              <h3 className="text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>
+                全局分布
+              </h3>
+              <div className="mt-1 text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                状态与类别的总体视图
+              </div>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <DistributionPanel
+                title="状态分布"
+                items={(summary?.statusCounts || []).map((item) => ({
+                  key: item.status,
+                  label: STATUS_LABELS[item.status] || item.status,
+                  count: item.count,
+                }))}
+                total={Math.max(summary?.totals.totalItems || 0, 1)}
+                emptyMessage="暂无样本状态数据"
+              />
+              <DistributionPanel
+                title="样本类别"
+                items={(summary?.typeCounts || []).map((item) => ({
+                  key: item.type,
+                  label: item.type,
+                  count: item.count,
+                }))}
+                total={Math.max(summary?.totals.totalItems || 0, 1)}
+                emptyMessage="暂无样本类别数据"
+              />
+            </div>
+          </section>
+        </div>
 
         <section
           className="rounded-xl p-4"
@@ -567,7 +649,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                       {usage}%
                     </span>
                   </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full" style={{ background: '#e2e8f0' }}>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full" style={{ background: 'var(--app-progress-track)' }}>
                     <div className="h-full rounded-full" style={{ width: `${Math.min(usage, 100)}%`, background: '#2563eb' }} />
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-[12px]" style={{ color: 'var(--app-muted)' }}>
@@ -585,12 +667,216 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
             )}
           </div>
         </section>
+
+        <section
+          className="rounded-xl p-4"
+          style={{
+            background: 'var(--app-card-bg)',
+            border: '1px solid var(--app-border)',
+            boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
+          }}
+        >
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>
+                样本详情
+              </h3>
+              <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                全部冰箱 · {filteredSamples.length}/{samples.length} 条
+              </div>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <select
+                value={sampleTypeFilter}
+                onChange={(e) => setSampleTypeFilter(e.target.value)}
+                className="rounded-lg px-3 py-2 text-[13px] outline-none sm:w-44"
+                style={inputStyle}
+              >
+                <option value="__all__">全部类别</option>
+                {availableSampleTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={sampleQuery}
+                onChange={(e) => setSampleQuery(e.target.value)}
+                placeholder="搜索样本、患者、上传者、标签..."
+                className="w-full rounded-lg px-3 py-2 text-[13px] outline-none sm:w-80"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(320px,0.92fr)_minmax(420px,1.08fr)]">
+            <div
+              className="order-2 rounded-xl p-2 xl:order-1"
+              style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)' }}
+            >
+              <div className="mb-2 flex items-center justify-between px-2 pt-2">
+                <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                  样本列表
+                </div>
+                <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
+                  已筛选 {filteredSamples.length} 条
+                </div>
+              </div>
+              <div className="max-h-[620px] overflow-y-auto pr-1 xl:max-h-[calc(100vh-250px)]">
+                <div className="space-y-2">
+                  {filteredSamples.map((sample) => {
+                    const selected = selectedSample?.id === sample.id;
+                    const statusColor = STATUS_COLORS[sample.status] || '#2563eb';
+                    const busy = busySampleId === sample.id;
+                    return (
+                      <div
+                        key={`${sample.kind}-${sample.id}`}
+                        className="rounded-lg p-2 transition-all"
+                        style={{
+                          background: selected ? 'var(--app-selected-bg)' : 'var(--app-card-bg)',
+                          border: selected ? '1px solid var(--app-selected-border)' : '1px solid var(--app-border)',
+                          color: 'var(--app-text)',
+                          boxShadow: selected ? '0 10px 28px rgba(37,99,235,0.12)' : 'none',
+                        }}
+                      >
+                        <div className="flex items-start gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSampleId(sample.id)}
+                            className="min-w-0 flex-1 rounded-md p-1 text-left"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className="h-2.5 w-2.5 rounded-full"
+                                    style={{ background: statusColor }}
+                                  />
+                                  <span className="truncate text-[14px] font-medium">
+                                    {sample.id} · {sample.name}
+                                  </span>
+                                </div>
+                                <div className="mt-1 truncate text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                                  {sample.refrigeratorName} · {formatLocation(sample)} · {sample.type}
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-1">
+                                <span
+                                  className="rounded-full px-2 py-0.5 text-[11px]"
+                                  style={{ background: `${statusColor}18`, color: statusColor }}
+                                >
+                                  {STATUS_LABELS[sample.status] || sample.status}
+                                </span>
+                                <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
+                                  {sample.kind === 'sample' ? `副样本 ${sample.subSampleCount}` : '副样本'}
+                                </span>
+                              </div>
+                            </div>
+                          </button>
+                          <div className="flex flex-col gap-1 pt-1">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => handleEditOpen(sample)}
+                              className="rounded-md p-2 disabled:opacity-50"
+                              style={{ background: 'var(--app-info-soft-bg)', color: 'var(--app-info-soft-text)' }}
+                              title="编辑样本"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => handleDeleteSelectedSample(sample)}
+                              className="rounded-md p-2 disabled:opacity-50"
+                              style={{ background: 'var(--app-danger-soft-bg)', color: 'var(--app-danger-soft-text)' }}
+                              title="删除样本"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {!loading && filteredSamples.length === 0 && (
+                    <div
+                      className="rounded-lg px-3 py-8 text-center text-[13px]"
+                      style={{ background: 'var(--app-card-bg)', color: 'var(--app-muted)' }}
+                    >
+                      暂无匹配样本
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="order-1 rounded-xl p-2 xl:order-2 xl:sticky xl:top-4"
+              style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)' }}
+            >
+              <div className="mb-2 flex items-center justify-between px-2 pt-2">
+                <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                  当前详情
+                </div>
+                <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
+                  当前选中样本
+                </div>
+              </div>
+              <div className="max-h-[620px] overflow-y-auto pr-1 xl:max-h-[calc(100vh-250px)]">
+                <SampleDetailCard
+                  sample={selectedSample}
+                  busy={busySampleId === selectedSample?.id}
+                  onEdit={handleEditOpen}
+                  onDelete={handleDeleteSelectedSample}
+                  onStatusChange={handleSampleStatusChange}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
       </div>
+
+      {editingSample && (
+        <AddSampleModal
+          isOpen
+          targetCompartment={editingSample.compartment as Compartment}
+          targetPosition={editingSample.position}
+          onClose={handleEditClose}
+          onAdd={() => {}}
+          existingIds={samples.map((sample) => sample.id)}
+          containers={[]}
+          upperTemperature={editingSample.temperature}
+          lowerTemperature={editingSample.temperature}
+          currentUsername={currentUsername}
+          isSubSampleMode={editingSample.kind === 'subsample'}
+          parentContainerId={editingSample.parentId}
+          editSample={editSampleData}
+          editSubSample={editSubSampleData}
+          onEditSample={handleUpdateSample}
+          onEditSubSample={handleUpdateSubSample}
+          sampleTypes={availableSampleTypes}
+          onAddSampleType={handleSampleTypeCreate}
+        />
+      )}
     </main>
   );
 }
 
-function SampleDetailCard({ sample }: { sample: AdminSampleItem | null }) {
+function SampleDetailCard({
+  sample,
+  busy,
+  onEdit,
+  onDelete,
+  onStatusChange,
+}: {
+  sample: AdminSampleItem | null;
+  busy: boolean;
+  onEdit: (sample: AdminSampleItem) => void;
+  onDelete: (sample: AdminSampleItem) => void;
+  onStatusChange: (sample: AdminSampleItem, status: SampleStatus) => void;
+}) {
   if (!sample) {
     return (
       <div
@@ -631,15 +917,66 @@ function SampleDetailCard({ sample }: { sample: AdminSampleItem | null }) {
         </div>
       </div>
 
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onEdit(sample)}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-[13px] disabled:opacity-50"
+          style={{ background: 'var(--app-info-soft-bg)', color: 'var(--app-info-soft-text)' }}
+        >
+          <Pencil size={14} />
+          修改
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onDelete(sample)}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-[13px] disabled:opacity-50"
+          style={{ background: 'var(--app-danger-soft-bg)', color: 'var(--app-danger-soft-text)' }}
+        >
+          <Trash2 size={14} />
+          删除
+        </button>
+      </div>
+
       <div className="mt-4 grid grid-cols-2 gap-2">
         <DetailChip label="状态" value={STATUS_LABELS[sample.status] || sample.status} color={statusColor} />
         <DetailChip label="类型" value={sample.type} />
         <DetailChip label="温度" value={`${sample.temperature}°C`} />
-        <DetailChip label="采集日期" value={sample.collectedAt || '-'} />
+        <DetailChip label="采集日期" value={formatChineseShortDate(sample.collectedAt)} />
         <DetailChip label="患者编号" value={sample.patientId || '-'} />
         <DetailChip label="容量" value={sample.volume || '-'} />
         <DetailChip label="上传者" value={sample.uploader || '-'} />
         <DetailChip label="创建用户" value={sample.createdBy || 'legacy'} />
+      </div>
+
+      <div className="mt-3 rounded-lg p-3" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}>
+        <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
+          快速改状态
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {(Object.keys(STATUS_LABELS) as SampleStatus[]).map((status) => {
+            const active = sample.status === status;
+            const color = STATUS_COLORS[status] || '#2563eb';
+            return (
+              <button
+                key={status}
+                type="button"
+                disabled={busy || active}
+                onClick={() => onStatusChange(sample, status)}
+                className="rounded-full px-3 py-1.5 text-[12px] disabled:opacity-50"
+                style={{
+                  background: active ? `${color}20` : 'var(--app-subtle-bg)',
+                  border: `1px solid ${active ? color : 'var(--app-subtle-border)'}`,
+                  color: active ? color : 'var(--app-subtle-text)',
+                }}
+              >
+                {STATUS_LABELS[status]}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mt-3 rounded-lg p-3" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}>
@@ -663,7 +1000,15 @@ function SampleDetailCard({ sample }: { sample: AdminSampleItem | null }) {
         <div className="mt-2 flex flex-wrap gap-2">
           {sample.tags.length > 0 ? (
             sample.tags.map((tag) => (
-              <span key={tag} className="rounded-full px-2 py-1 text-[12px]" style={{ background: '#eff6ff', color: '#1d4ed8' }}>
+              <span
+                key={tag}
+                className="rounded-full px-2 py-1 text-[12px]"
+                style={{
+                  background: 'var(--app-info-bg)',
+                  border: '1px solid var(--app-info-border)',
+                  color: 'var(--app-info-text)',
+                }}
+              >
                 {tag}
               </span>
             ))
@@ -734,9 +1079,68 @@ function DistributionRow({ label, count, total }: { label: string; count: number
           {count}
         </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full" style={{ background: '#e2e8f0' }}>
+      <div className="h-2 overflow-hidden rounded-full" style={{ background: 'var(--app-progress-track)' }}>
         <div className="h-full rounded-full" style={{ width: `${Math.min(percent, 100)}%`, background: '#2563eb' }} />
       </div>
+    </div>
+  );
+}
+
+function DistributionPanel({
+  title,
+  items,
+  total,
+  emptyMessage,
+}: {
+  title: string;
+  items: Array<{ key: string; label: string; count: number }>;
+  total: number;
+  emptyMessage: string;
+}) {
+  return (
+    <div
+      className="rounded-lg p-3"
+      style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)' }}
+    >
+      <div className="mb-3 text-[12px] font-medium" style={{ color: 'var(--app-muted)' }}>
+        {title}
+      </div>
+      <div className="space-y-3">
+        {items.length > 0 ? (
+          items.map((item) => (
+            <DistributionRow
+              key={item.key}
+              label={item.label}
+              count={item.count}
+              total={total}
+            />
+          ))
+        ) : (
+          <DistributionEmpty message={emptyMessage} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DistributionSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <div className="text-[12px] font-medium" style={{ color: 'var(--app-muted)' }}>
+        {title}
+      </div>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function DistributionEmpty({ message }: { message: string }) {
+  return (
+    <div
+      className="rounded-lg px-3 py-5 text-center text-[13px]"
+      style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}
+    >
+      {message}
     </div>
   );
 }
@@ -752,4 +1156,44 @@ function formatLocation(sample: AdminSampleItem) {
   const compartment = sample.compartment === 'upper' ? '上层' : '下层';
   if (sample.kind === 'subsample') return `${compartment} · 子格 ${sample.position + 1}`;
   return `${compartment} · 格位 ${sample.position + 1}`;
+}
+
+function toEditableSample(item: AdminSampleItem): Sample {
+  return {
+    id: item.id,
+    name: item.name,
+    type: item.type,
+    status: item.status as SampleStatus,
+    temperature: item.temperature,
+    collectedAt: item.collectedAt,
+    patientId: item.patientId,
+    uploader: item.uploader,
+    createdBy: item.createdBy,
+    tags: item.tags,
+    compartment: item.compartment,
+    position: item.position,
+    note: item.note || undefined,
+    volume: item.volume || undefined,
+    gridRows: 2,
+    gridCols: 2,
+    subSamples: [],
+  };
+}
+
+function toEditableSubSample(item: AdminSampleItem): SubSample {
+  return {
+    id: item.id,
+    name: item.name,
+    type: item.type,
+    status: item.status as SampleStatus,
+    temperature: item.temperature,
+    collectedAt: item.collectedAt,
+    patientId: item.patientId,
+    uploader: item.uploader,
+    createdBy: item.createdBy,
+    tags: item.tags,
+    position: item.position,
+    note: item.note || undefined,
+    volume: item.volume || undefined,
+  };
 }

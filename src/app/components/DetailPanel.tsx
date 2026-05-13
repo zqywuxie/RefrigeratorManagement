@@ -13,7 +13,7 @@ import {
   Pencil,
   Upload,
 } from 'lucide-react';
-import { Sample, SubSample, STATUS_CONFIG, SampleStatus } from '../types';
+import { Sample, SubSample, STATUS_CONFIG, SampleStatus, formatChineseShortDate } from '../types';
 
 export type DetailItem =
   | { kind: 'sample'; data: Sample }
@@ -95,7 +95,7 @@ export function DetailPanel({
               onClick={onClose}
               className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
             >
-              <X size={18} color="#64748b" />
+              <X size={18} color="var(--app-muted)" />
             </button>
           </div>
         </div>
@@ -120,7 +120,7 @@ export function DetailPanel({
           </div>
           <span
             className="text-[14px] px-2.5 py-1 rounded"
-            style={{ background: '#f1f5f9', color: '#475569' }}
+            style={{ background: 'var(--app-subtle-bg)', color: 'var(--app-subtle-text)' }}
           >
             {data.type}
           </span>
@@ -141,7 +141,7 @@ export function DetailPanel({
               className="text-[13px] px-2 py-1 rounded"
               style={{
                 background: 'rgba(148,163,184,0.14)',
-                color: '#64748b',
+                color: 'var(--app-muted)',
                 border: '1px solid rgba(148,163,184,0.2)',
               }}
             >
@@ -161,7 +161,7 @@ export function DetailPanel({
           <DetailRow
             icon={<Calendar size={16} color="#a78bfa" />}
             label="采集日期"
-            value={data.collectedAt}
+            value={formatChineseShortDate(data.collectedAt)}
           />
           <DetailRow
             icon={<User size={16} color="#34d399" />}
@@ -221,7 +221,7 @@ export function DetailPanel({
           {data.note && (
             <div className="flex items-start gap-2">
               <FileText size={16} color="#94a3b8" className="mt-0.5 flex-shrink-0" />
-              <span className="text-[14px]" style={{ color: '#64748b' }}>
+              <span className="text-[14px]" style={{ color: 'var(--app-muted)' }}>
                 {data.note}
               </span>
             </div>
@@ -231,7 +231,7 @@ export function DetailPanel({
         {/* Status change */}
         {canEdit && (
           <div className="px-5 pt-2 pb-1">
-            <div className="text-[13px] mb-2" style={{ color: '#475569' }}>
+            <div className="text-[13px] mb-2" style={{ color: 'var(--app-subtle-text)' }}>
               更改状态
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -244,9 +244,9 @@ export function DetailPanel({
                     background:
                       data.status === s
                         ? STATUS_CONFIG[s].bgColor
-                        : '#f8fafc',
-                    border: `1px solid ${data.status === s ? STATUS_CONFIG[s].borderColor : '#e2e8f0'}`,
-                    color: data.status === s ? STATUS_CONFIG[s].color : '#64748b',
+                        : 'var(--app-subtle-bg)',
+                    border: `1px solid ${data.status === s ? STATUS_CONFIG[s].borderColor : 'var(--app-subtle-border)'}`,
+                    color: data.status === s ? STATUS_CONFIG[s].color : 'var(--app-muted)',
                     boxShadow:
                       data.status === s
                         ? `0 0 3px ${STATUS_CONFIG[s].glowColor}`
@@ -300,13 +300,13 @@ function DetailRow({
       <div className="flex-shrink-0">{icon}</div>
       <span
         className="text-[14px] flex-shrink-0"
-        style={{ color: '#475569', minWidth: '70px' }}
+        style={{ color: 'var(--app-subtle-text)', minWidth: '70px' }}
       >
         {label}
       </span>
       <span
         className="text-[14px] font-mono"
-        style={{ color: highlight ? '#dc2626' : '#334155' }}
+        style={{ color: highlight ? '#dc2626' : 'var(--app-text)' }}
       >
         {value}
       </span>

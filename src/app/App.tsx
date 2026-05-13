@@ -936,7 +936,7 @@ function AppContent() {
                 width: '560px',
               }}
             >
-              <Search size={20} color={searchQuery ? '#2563eb' : '#64748b'} />
+              <Search size={20} color={searchQuery ? '#2563eb' : 'var(--app-muted)'} />
               <input
                 type="text"
                 placeholder="搜索样本 ID、类型、患者编号、上传者、标签..."
@@ -1171,9 +1171,9 @@ function AppContent() {
                         className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
                         title={tag}
                         style={{
-                          background: '#eff6ff',
-                          border: '1px solid #bfdbfe',
-                          color: '#1d4ed8',
+                          background: 'var(--app-info-bg)',
+                          border: '1px solid var(--app-info-border)',
+                          color: 'var(--app-info-text)',
                         }}
                       >
                         {tag}
@@ -1196,8 +1196,8 @@ function AppContent() {
                 <div
                   className="rounded-lg px-3 py-4 text-center text-[13px]"
                   style={{
-                    background: '#f8fafc',
-                    border: '1px dashed rgba(148,163,184,0.35)',
+                    background: 'var(--app-subtle-bg)',
+                    border: '1px dashed var(--app-subtle-border)',
                     color: 'var(--app-muted)',
                   }}
                 >
@@ -1291,7 +1291,7 @@ function StatChip({
     <div className="flex items-center gap-2">
       <span style={{ color }}>{icon}</span>
       <div>
-        <div className="text-[12px]" style={{ color: '#475569' }}>
+        <div className="text-[12px]" style={{ color: 'var(--app-subtle-text)' }}>
           {label}
         </div>
         <div className="text-[14px] font-mono" style={{ color }}>

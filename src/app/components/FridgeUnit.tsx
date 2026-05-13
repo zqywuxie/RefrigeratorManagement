@@ -87,9 +87,9 @@ function GridControls({
   });
 
   return (
-    <div className="flex items-center gap-4 mb-2">
+      <div className="flex items-center gap-4 mb-2">
       <div className="flex items-center gap-1">
-        <span className="text-[12px]" style={{ color: '#475569' }}>
+        <span className="text-[12px]" style={{ color: 'var(--app-subtle-text)' }}>
           Rows
         </span>
         <button
@@ -114,7 +114,7 @@ function GridControls({
         </button>
       </div>
       <div className="flex items-center gap-1">
-        <span className="text-[12px]" style={{ color: '#475569' }}>
+        <span className="text-[12px]" style={{ color: 'var(--app-subtle-text)' }}>
           Cols
         </span>
         <button
@@ -220,11 +220,9 @@ export function FridgeUnit({
           style={{
             width: '14px',
             height: '120px',
-            background:
-              'linear-gradient(90deg, #7a8c9a, #b8c8d4, #9aaab8, #b8c8d4, #7a8c9a)',
+            background: 'var(--fridge-handle-bg)',
             borderRadius: '7px',
-            boxShadow:
-              '3px 2px 6px rgba(0,0,0,0.35), inset 1px 0 2px rgba(255,255,255,0.3)',
+            boxShadow: 'var(--fridge-handle-shadow)',
           }}
         />
 
@@ -248,10 +246,10 @@ export function FridgeUnit({
               className="flex items-center gap-1.5 px-2.5 py-1 rounded"
               style={{
                 background: hasCritical
-                  ? 'rgba(254,226,226,0.9)'
+                  ? 'rgba(239,68,68,0.18)'
                   : hasWarning
-                    ? 'rgba(254,243,199,0.9)'
-                    : 'rgba(220,252,231,0.9)',
+                    ? 'rgba(245,158,11,0.18)'
+                    : 'rgba(34,197,94,0.18)',
                 border: `1px solid ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}40`,
               }}
             >
@@ -287,8 +285,8 @@ export function FridgeUnit({
           <TabsList
             className="self-center mb-1"
             style={{
-              background: '#eef2ff',
-              border: '1px solid #c7d2fe',
+              background: 'var(--app-subtle-bg)',
+              border: '1px solid var(--app-subtle-border)',
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.85)',
             }}
           >
@@ -335,7 +333,7 @@ export function FridgeUnit({
                   >
                     {upperTemp}°C
                   </span>
-                  <span className="text-[13px]" style={{ color: '#475569' }}>
+                  <span className="text-[13px]" style={{ color: 'var(--app-subtle-text)' }}>
                     {upperSamples.length}/{upperCapacity}
                   </span>
                 </div>
@@ -396,7 +394,7 @@ export function FridgeUnit({
               <div className="mt-4 flex items-center gap-2">
                 <div
                   className="flex-1 h-1.5 rounded-full overflow-hidden"
-                  style={{ background: 'rgba(148,163,184,0.18)' }}
+                  style={{ background: 'var(--app-progress-track)' }}
                 >
                   <motion.div
                     className="h-full rounded-full"
@@ -409,7 +407,7 @@ export function FridgeUnit({
                     transition={{ duration: 0.6, ease: 'easeOut' }}
                   />
                 </div>
-                <span className="text-[13px] font-mono" style={{ color: '#475569' }}>
+                <span className="text-[13px] font-mono" style={{ color: 'var(--app-subtle-text)' }}>
                   {Math.round((upperSamples.length / upperCapacity) * 100)}%
                 </span>
               </div>
@@ -420,10 +418,8 @@ export function FridgeUnit({
         <div
           className="h-5 mx-2 mb-2 rounded flex items-center justify-center overflow-hidden relative"
           style={{
-            background:
-              'linear-gradient(180deg, #d6e0ea 0%, #f8fafc 45%, #d6e0ea 100%)',
-            boxShadow:
-              '0 2px 8px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.8)',
+            background: 'var(--fridge-shelf-bg)',
+            boxShadow: 'var(--fridge-shelf-shadow)',
           }}
         >
           {[20, 50, 80].map((pct) => (
@@ -433,9 +429,9 @@ export function FridgeUnit({
               style={{
                 left: `${pct}%`,
                 transform: 'translateX(-50%)',
-                background: 'linear-gradient(135deg, #8090a0, #c0d0de)',
+                background: 'var(--fridge-shelf-bolt-bg)',
                 boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.3)',
-                border: '0.5px solid #6080a0',
+                border: '0.5px solid var(--fridge-shelf-bolt-border)',
               }}
             />
           ))}
@@ -472,7 +468,7 @@ export function FridgeUnit({
               >
                 {lowerTemp}°C
               </span>
-              <span className="text-[13px]" style={{ color: '#475569' }}>
+              <span className="text-[13px]" style={{ color: 'var(--app-subtle-text)' }}>
                 {lowerSamples.length}/{lowerCapacity}
               </span>
             </div>
@@ -533,7 +529,7 @@ export function FridgeUnit({
           <div className="mt-4 flex items-center gap-2">
             <div
               className="flex-1 h-1.5 rounded-full overflow-hidden"
-              style={{ background: 'rgba(148,163,184,0.18)' }}
+              style={{ background: 'var(--app-progress-track)' }}
             >
               <motion.div
                 className="h-full rounded-full"
@@ -546,7 +542,7 @@ export function FridgeUnit({
                 transition={{ duration: 0.6, ease: 'easeOut' }}
               />
             </div>
-            <span className="text-[13px] font-mono" style={{ color: '#475569' }}>
+            <span className="text-[13px] font-mono" style={{ color: 'var(--app-subtle-text)' }}>
               {Math.round((lowerSamples.length / lowerCapacity) * 100)}%
             </span>
           </div>
@@ -570,7 +566,7 @@ export function FridgeUnit({
                       background: STATUS_CONFIG[status].borderColor,
                     }}
                   />
-                  <span className="text-[13px]" style={{ color: '#64748b' }}>
+                  <span className="text-[13px]" style={{ color: 'var(--app-muted)' }}>
                     {STATUS_CONFIG[status].label} ×{count}
                   </span>
                 </div>
@@ -578,8 +574,8 @@ export function FridgeUnit({
             })}
           </div>
           <div className="flex items-center gap-1.5">
-            <Droplets size={14} color="#64748b" />
-            <Zap size={14} color="#64748b" />
+            <Droplets size={14} color="var(--app-muted)" />
+            <Zap size={14} color="var(--app-muted)" />
           </div>
         </div>
       </div>

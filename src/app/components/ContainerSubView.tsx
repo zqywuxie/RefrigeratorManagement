@@ -101,13 +101,13 @@ export function ContainerSubView({
           <ArrowLeft size={18} />
           冰箱
         </button>
-        <span className="text-[13px]" style={{ color: '#475569' }}>
+        <span className="text-[13px]" style={{ color: 'var(--app-subtle-text)' }}>
           /
         </span>
-        <span className="text-[14px]" style={{ color: '#64748b' }}>
+        <span className="text-[14px]" style={{ color: 'var(--app-muted)' }}>
           {isUpper ? '上层' : '下层'}
         </span>
-        <span className="text-[13px]" style={{ color: '#475569' }}>
+        <span className="text-[13px]" style={{ color: 'var(--app-subtle-text)' }}>
           /
         </span>
         <span className="text-[14px]" style={{ color: config.color }}>
@@ -134,7 +134,7 @@ export function ContainerSubView({
               <div className="text-[20px]" style={{ color: config.color }}>
                 {container.name}
               </div>
-              <div className="text-[13px]" style={{ color: '#475569' }}>
+              <div className="text-[13px]" style={{ color: 'var(--app-subtle-text)' }}>
                 {container.type} · {container.volume || '未知量'}
               </div>
             </div>
@@ -143,14 +143,14 @@ export function ContainerSubView({
           {/* Status LED */}
           <div
             className="flex items-center gap-1.5 px-2.5 py-1 rounded"
-            style={{
-              background: hasCritical
-                ? 'rgba(254,226,226,0.95)'
+              style={{
+                background: hasCritical
+                ? 'rgba(239,68,68,0.18)'
                 : hasWarning
-                  ? 'rgba(254,243,199,0.95)'
-                  : 'rgba(220,252,231,0.95)',
-              border: `1px solid ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}40`,
-            }}
+                  ? 'rgba(245,158,11,0.18)'
+                  : 'rgba(34,197,94,0.18)',
+                border: `1px solid ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}40`,
+              }}
           >
             <div
               className="w-2 h-2 rounded-full"
@@ -163,17 +163,13 @@ export function ContainerSubView({
                 boxShadow: `0 0 2px ${hasCritical ? '#ef4444' : hasWarning ? '#f59e0b' : '#22c55e'}`,
               }}
             />
-            <span
-              className="text-[12px] font-mono"
-              style={{
-                color: hasCritical
-                  ? '#b91c1c'
-                  : hasWarning
-                    ? '#92400e'
-                    : '#166534',
-              }}
-            >
-              {hasCritical ? 'ALERT' : hasWarning ? 'WARN' : 'OK'}
+              <span
+                className="text-[12px] font-mono"
+                style={{
+                  color: hasCritical ? '#fca5a5' : hasWarning ? '#fcd34d' : '#86efac',
+                }}
+              >
+                {hasCritical ? 'ALERT' : hasWarning ? 'WARN' : 'OK'}
             </span>
           </div>
         </div>
@@ -212,7 +208,7 @@ export function ContainerSubView({
               >
                 {containerTemp}°C
               </span>
-              <span className="text-[13px]" style={{ color: '#475569' }}>
+              <span className="text-[13px]" style={{ color: 'var(--app-subtle-text)' }}>
                 {filledCount}/{capacity}
               </span>
             </div>
@@ -221,7 +217,7 @@ export function ContainerSubView({
           {/* Grid controls */}
           <div className="flex items-center gap-4 mb-3">
             <div className="flex items-center gap-1">
-              <span className="text-[12px]" style={{ color: '#475569' }}>
+              <span className="text-[12px]" style={{ color: 'var(--app-subtle-text)' }}>
                 Rows
               </span>
               <button
@@ -258,7 +254,7 @@ export function ContainerSubView({
               </button>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-[12px]" style={{ color: '#475569' }}>
+              <span className="text-[12px]" style={{ color: 'var(--app-subtle-text)' }}>
                 Cols
               </span>
               <button
@@ -332,7 +328,7 @@ export function ContainerSubView({
           <div className="mt-4 flex items-center gap-2">
             <div
               className="flex-1 h-1.5 rounded-full overflow-hidden"
-              style={{ background: 'rgba(148,163,184,0.22)' }}
+              style={{ background: 'var(--app-progress-track)' }}
             >
               <motion.div
                 className="h-full rounded-full"
@@ -343,7 +339,7 @@ export function ContainerSubView({
                 transition={{ duration: 0.6, ease: 'easeOut' }}
               />
             </div>
-            <span className="text-[13px] font-mono" style={{ color: '#475569' }}>
+            <span className="text-[13px] font-mono" style={{ color: 'var(--app-subtle-text)' }}>
               {Math.round((filledCount / capacity) * 100)}%
             </span>
           </div>
@@ -352,7 +348,7 @@ export function ContainerSubView({
         {/* Bottom strip */}
         <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-2">
-            <span className="text-[12px]" style={{ color: '#475569' }}>
+            <span className="text-[12px]" style={{ color: 'var(--app-subtle-text)' }}>
               标签:
             </span>
             {container.tags.map((tag) => (
@@ -360,9 +356,9 @@ export function ContainerSubView({
                 key={tag}
                 className="text-[12px] px-2 py-0.5 rounded"
                 style={{
-                  background: 'var(--app-panel-bg)',
-                  color: '#64748b',
-                  border: '1px solid rgba(148,163,184,0.24)',
+                  background: 'var(--app-subtle-bg)',
+                  color: 'var(--app-subtle-text)',
+                  border: '1px solid var(--app-subtle-border)',
                 }}
               >
                 {tag}
@@ -370,7 +366,7 @@ export function ContainerSubView({
             ))}
           </div>
           {container.note && (
-            <span className="text-[12px]" style={{ color: '#475569' }}>
+            <span className="text-[12px]" style={{ color: 'var(--app-subtle-text)' }}>
               {container.note.slice(0, 24)}
               {container.note.length > 24 ? '...' : ''}
             </span>

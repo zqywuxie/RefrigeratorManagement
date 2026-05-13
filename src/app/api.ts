@@ -29,6 +29,7 @@ export interface AdminSummary {
     abnormal: number;
   };
   statusCounts: Array<{ status: string; count: number }>;
+  typeCounts: Array<{ type: string; count: number }>;
   refrigerators: Array<{
     id: string;
     name: string;

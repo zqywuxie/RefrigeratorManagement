@@ -60,6 +60,7 @@ router.get('/summary', async (_req, res) => {
       [[sampleTotals]],
       [[subSampleTotals]],
       [statusRows],
+      [typeRows],
       [fridgeRows],
       [ownerRows],
     ] = await Promise.all([
@@ -95,6 +96,16 @@ router.get('/summary', async (_req, res) => {
          ) combined
          GROUP BY status
          ORDER BY status`,
+      ),
+      pool.query(
+        `SELECT type, SUM(cnt) AS count
+         FROM (
+           SELECT type, COUNT(*) AS cnt FROM samples WHERE deleted_at IS NULL GROUP BY type
+           UNION ALL
+           SELECT type, COUNT(*) AS cnt FROM sub_samples WHERE deleted_at IS NULL GROUP BY type
+         ) combined
+         GROUP BY type
+         ORDER BY count DESC, type ASC`,
       ),
       pool.query(
         `SELECT
@@ -175,6 +186,10 @@ router.get('/summary', async (_req, res) => {
       },
       statusCounts: statusRows.map((row) => ({
         status: row.status,
+        count: Number(row.count || 0),
+      })),
+      typeCounts: typeRows.map((row) => ({
+        type: row.type || '未分类',
         count: Number(row.count || 0),
       })),
       refrigerators: fridgeRows.map((row) => ({

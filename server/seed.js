@@ -4,6 +4,11 @@ import mysql from 'mysql2/promise';
 import pool from './db.js';
 import { hashPassword } from './authUtils.js';
 
+if (process.env.NODE_ENV === 'production' && process.env.SEED_DEMO_DATA !== 'true') {
+  console.log('Seed skipped in production. Set SEED_DEMO_DATA=true only for demo/test environments.');
+  process.exit(0);
+}
+
 const SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(36) PRIMARY KEY,

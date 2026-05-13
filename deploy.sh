@@ -7,5 +7,4 @@ cd "$(dirname "$0")"
 
 git pull --ff-only origin "$BRANCH"
 docker compose up -d --build
-docker compose exec -T backend npm run seed
 docker compose ps
