@@ -5,3 +5,5 @@ dist/
 server/.env
 server/node_modules/
 backups/
+test-results/
+playwright-report/
