@@ -36,6 +36,29 @@ services:
     expose:
       - "3001"
 
+  mysql-backup:
+    image: mysql:8.0
+    container_name: biofridge-mysql-backup
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/scripts/mysql-backup.sh"]
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-biofridge_password}
+      DB_NAME: ${MYSQL_DATABASE:-biofridge}
+      BACKUP_DIR: /backups
+      BACKUP_AT_HOUR: ${BACKUP_AT_HOUR:-3}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      RUN_ON_START: ${BACKUP_RUN_ON_START:-true}
+      TZ: Asia/Shanghai
+    volumes:
+      - ./scripts/mysql-backup.sh:/scripts/mysql-backup.sh:ro
+      - ./backups/mysql:/backups
+    depends_on:
+      mysql:
+        condition: service_healthy
+
   frontend:
     build:
       context: .
