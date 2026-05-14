@@ -1,0 +1,64 @@
+import React from 'react';
+import { motion } from 'motion/react';
+import { useDrag } from 'react-dnd';
+import { Package, User } from 'lucide-react';
+import { UpperItem, ITEM_TYPE_CONFIG } from '../types';
+
+interface ItemCardProps {
+  item: UpperItem;
+  isHighlighted: boolean;
+  onClick: () => void;
+}
+
+export function ItemCard({ item, isHighlighted, onClick }: ItemCardProps) {
+  const typeConfig = ITEM_TYPE_CONFIG[item.item_type] || ITEM_TYPE_CONFIG['样本'];
+
+  const [{ isDragging }, drag] = useDrag({
+    type: 'UPPER_ITEM',
+    item: { id: item.id },
+    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+  });
+
+  return (
+    <motion.button
+      ref={drag}
+      onClick={onClick}
+      whileHover={{ scale: 1.03, y: -2 }}
+      whileTap={{ scale: 0.97 }}
+      animate={{ opacity: isDragging ? 0.4 : 1 }}
+      className="flex-shrink-0 rounded-xl px-4 py-3 text-left cursor-pointer transition-shadow"
+      style={{
+        width: '200px',
+        background: 'var(--app-card-bg)',
+        border: isHighlighted
+          ? '2px solid #3b82f6'
+          : '1.5px solid var(--app-border)',
+        boxShadow: isHighlighted ? '0 0 12px rgba(59,130,246,0.3)' : '0 4px 16px rgba(15,23,42,0.06)',
+      }}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <Package size={16} color={typeConfig.color} />
+        <span className="text-[14px] font-medium truncate" style={{ color: 'var(--app-text)' }}>
+          {item.name}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span
+          className="text-[11px] px-2 py-0.5 rounded-full"
+          style={{ background: typeConfig.bgColor, color: typeConfig.color }}
+        >
+          {typeConfig.label}
+        </span>
+        <span className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
+          ×{item.quantity}
+        </span>
+      </div>
+      {item.owner && (
+        <div className="flex items-center gap-1 mt-1.5 text-[11px]" style={{ color: 'var(--app-muted)' }}>
+          <User size={11} />
+          <span>{item.owner}</span>
+        </div>
+      )}
+    </motion.button>
+  );
+}
