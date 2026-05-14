@@ -213,6 +213,13 @@ export function FridgeSelector({
                   }}
                 >
                   <span className="text-[14px] truncate flex-1">{r.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{
+                    background: r.fridge_type === 'drawer' ? '#dbeafe' : '#dcfce7',
+                    color: r.fridge_type === 'drawer' ? '#1d4ed8' : '#15803d',
+                    border: `1px solid ${r.fridge_type === 'drawer' ? '#93c5fd' : '#86efac'}`,
+                  }}>
+                    {r.fridge_type === 'drawer' ? '抽屉' : '层架'}
+                  </span>
                   <span className="text-[11px] font-mono mr-1" style={{ color: 'var(--app-muted)' }}>
                     {r.upperTemperature}°/{r.lowerTemperature}°
                   </span>

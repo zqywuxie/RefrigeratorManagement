@@ -31,6 +31,7 @@ import {
   STATUS_CONFIG,
   DEFAULT_COMPARTMENT_GRIDS,
   compartmentCapacity,
+  FridgeType,
 } from './types';
 import {
   fetchRefrigerators,
@@ -53,6 +54,7 @@ import { DetailPanel, DetailItem } from './components/DetailPanel';
 import { AddSampleModal } from './components/AddSampleModal';
 import { RootAdminPanel } from './components/RootAdminPanel';
 import { AuthProvider, useAuth } from './AuthContext';
+import { DrawerFridgeView } from './components/DrawerFridgeView';
 import { LoginPage } from './components/LoginPage';
 
 type UploadedSampleItem = {
@@ -139,6 +141,7 @@ function AppContent() {
             upperCols: r.upper_cols,
             lowerRows: r.lower_rows,
             lowerCols: r.lower_cols,
+            fridge_type: (r.fridge_type as FridgeType) || 'drawer',
             upperTemperature: Number(r.upper_temperature ?? -20),
             lowerTemperature: Number(r.lower_temperature ?? 4),
           })),
@@ -323,6 +326,7 @@ function AppContent() {
           lowerCols: data.lower_cols,
           upperTemperature: Number(data.upper_temperature ?? upperTemperature),
           lowerTemperature: Number(data.lower_temperature ?? lowerTemperature),
+          fridge_type: (data.fridge_type as FridgeType) || 'shelf',
         };
         setRefrigerators((prev) => [...prev, newFridge]);
         setSelectedFridgeId(newFridge.id);
@@ -992,29 +996,33 @@ function AppContent() {
             )}
 
             {/* The fridge */}
-            {(!loading || viewingContainer) && selectedFridgeId && (
-              <FridgeUnit
-                samples={samples}
-                selectedSampleId={selectedSampleId}
-                matchedIds={matchedIds}
-                searchQuery={searchQuery}
-                compartmentGrids={compartmentGrids}
-                upperTemperature={selectedFridge?.upperTemperature ?? -20}
-                lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
-                canManageFridge={isRoot}
-                viewingContainer={viewingContainer}
-                onDropSample={handleDrop}
-                onSelectSample={setSelectedSampleId}
-                onDeleteSample={handleDeleteSample}
-                onSlotClick={handleSlotClick}
-                onEnterContainer={handleEnterContainer}
-                onExitContainer={handleExitContainer}
-                onDropSubSample={handleDropSubSample}
-                onAddSubSample={handleOpenAddSubSample}
-                onDeleteSubSample={handleDeleteSubSample}
-                onUpdateCompartmentGrid={handleUpdateCompartmentGrid}
-                onUpdateContainerGrid={handleUpdateContainerGrid}
-              />
+            {(!loading || viewingContainer) && selectedFridgeId && selectedFridge && (
+              selectedFridge.fridge_type === 'drawer' ? (
+                <DrawerFridgeView fridge={selectedFridge} currentUser={user!.username} />
+              ) : (
+                <FridgeUnit
+                  samples={samples}
+                  selectedSampleId={selectedSampleId}
+                  matchedIds={matchedIds}
+                  searchQuery={searchQuery}
+                  compartmentGrids={compartmentGrids}
+                  upperTemperature={selectedFridge?.upperTemperature ?? -20}
+                  lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
+                  canManageFridge={isRoot}
+                  viewingContainer={viewingContainer}
+                  onDropSample={handleDrop}
+                  onSelectSample={setSelectedSampleId}
+                  onDeleteSample={handleDeleteSample}
+                  onSlotClick={handleSlotClick}
+                  onEnterContainer={handleEnterContainer}
+                  onExitContainer={handleExitContainer}
+                  onDropSubSample={handleDropSubSample}
+                  onAddSubSample={handleOpenAddSubSample}
+                  onDeleteSubSample={handleDeleteSubSample}
+                  onUpdateCompartmentGrid={handleUpdateCompartmentGrid}
+                  onUpdateContainerGrid={handleUpdateContainerGrid}
+                />
+              )
             )}
 
             {/* No fridge state */}

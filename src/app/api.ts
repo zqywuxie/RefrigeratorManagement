@@ -6,6 +6,7 @@ export interface RefrigeratorResponse {
   id: string;
   name: string;
   description: string | null;
+  fridge_type: string | null;
   upper_rows: number;
   upper_cols: number;
   lower_rows: number;
