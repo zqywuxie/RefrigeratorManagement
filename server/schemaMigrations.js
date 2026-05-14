@@ -137,6 +137,37 @@ export async function runSchemaMigrations() {
     ) ENGINE=InnoDB
   `);
 
+  // Backfill existing fridges to 'drawer' type if not set
+  await pool.query(
+    "UPDATE refrigerators SET fridge_type = 'drawer' WHERE fridge_type IS NULL"
+  );
+
+  // Auto-generate drawers for existing drawer-type fridges that have none
+  const [fridgeRows] = await pool.query(
+    "SELECT id FROM refrigerators WHERE fridge_type = 'drawer' AND deleted_at IS NULL"
+  );
+  for (const fridge of fridgeRows) {
+    const [existing] = await pool.query('SELECT COUNT(*) as cnt FROM drawers WHERE refrigerator_id = ?', [fridge.id]);
+    if (existing[0].cnt === 0) {
+      const LAYOUTS = [
+        { layer: 1, rows: 2, cols: 3, labels: [['A1','A2','A3'], ['B1','B2','B3']] },
+        { layer: 2, rows: 5, cols: 3, labels: [['C1','C2','C3'], ['D1','D2','D3'], ['E1','E2','E3'], ['F1','F2','F3'], ['G1','G2','G3']] },
+      ];
+      for (const layout of LAYOUTS) {
+        for (let r = 0; r < layout.rows; r++) {
+          for (let c = 0; c < layout.cols; c++) {
+            const id = `drawer-${fridge.id}-L${layout.layer}-R${r}C${c}`;
+            await pool.query(
+              `INSERT IGNORE INTO drawers (id, refrigerator_id, layer, row_pos, col_pos, label)
+               VALUES (?, ?, ?, ?, ?, ?)`,
+              [id, fridge.id, layout.layer, r, c, layout.labels[r][c]]
+            );
+          }
+        }
+      }
+    }
+  }
+
   const [[root]] = await pool.query('SELECT username FROM users WHERE username = ?', ['root']);
   if (!root) {
     await pool.query(
