@@ -1,5 +1,6 @@
 import type { AuthUser } from './AuthContext';
 import { Sample, SubSample } from './types';
+import type { UpperItem, Drawer, Box, BoxCell } from './types';
 
 export interface RefrigeratorResponse {
   id: string;
@@ -287,4 +288,82 @@ export async function createSampleType(name: string): Promise<{ name: string }> 
     method: 'POST',
     body: JSON.stringify({ name }),
   });
+}
+
+// ── Upper Items ──
+
+export async function fetchUpperItems(fridgeId: string): Promise<UpperItem[]> {
+  return fetchJSON(`${BASE}/refrigerators/${encodeURIComponent(fridgeId)}/upper-items`);
+}
+
+export async function createUpperItem(fridgeId: string, data: Partial<UpperItem>): Promise<UpperItem> {
+  return fetchJSON(`${BASE}/refrigerators/${encodeURIComponent(fridgeId)}/upper-items`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateUpperItem(itemId: string, data: Partial<UpperItem>): Promise<UpperItem> {
+  return fetchJSON(`${BASE}/upper-items/${encodeURIComponent(itemId)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteUpperItem(itemId: string): Promise<void> {
+  await fetchJSON(`${BASE}/upper-items/${encodeURIComponent(itemId)}`, { method: 'DELETE' });
+}
+
+// ── Drawers ──
+
+export async function fetchDrawers(fridgeId: string): Promise<Drawer[]> {
+  return fetchJSON(`${BASE}/refrigerators/${encodeURIComponent(fridgeId)}/drawers`);
+}
+
+// ── Boxes ──
+
+export async function fetchBoxes(drawerId: string): Promise<Box[]> {
+  return fetchJSON(`${BASE}/drawers/${encodeURIComponent(drawerId)}/boxes`);
+}
+
+export async function createBox(drawerId: string, data: Partial<Box>): Promise<Box> {
+  return fetchJSON(`${BASE}/drawers/${encodeURIComponent(drawerId)}/boxes`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateBox(boxId: string, data: Partial<Box>): Promise<Box> {
+  return fetchJSON(`${BASE}/boxes/${encodeURIComponent(boxId)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteBox(boxId: string): Promise<void> {
+  await fetchJSON(`${BASE}/boxes/${encodeURIComponent(boxId)}`, { method: 'DELETE' });
+}
+
+// ── Box Cells ──
+
+export async function fetchBoxCells(boxId: string): Promise<BoxCell[]> {
+  return fetchJSON(`${BASE}/boxes/${encodeURIComponent(boxId)}/cells`);
+}
+
+export async function createBoxCell(boxId: string, data: Partial<BoxCell>): Promise<BoxCell> {
+  return fetchJSON(`${BASE}/boxes/${encodeURIComponent(boxId)}/cells`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateBoxCell(cellId: string, data: Partial<BoxCell>): Promise<BoxCell> {
+  return fetchJSON(`${BASE}/cells/${encodeURIComponent(cellId)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteBoxCell(cellId: string): Promise<void> {
+  await fetchJSON(`${BASE}/cells/${encodeURIComponent(cellId)}`, { method: 'DELETE' });
 }
