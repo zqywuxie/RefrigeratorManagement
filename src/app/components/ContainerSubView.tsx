@@ -82,15 +82,14 @@ export function ContainerSubView({
   });
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex w-full max-w-[560px] flex-col items-center gap-4">
       {/* Breadcrumb */}
       <div
-        className="flex items-center gap-2 px-4 py-2.5 rounded-lg w-full"
+        className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5"
         style={{
           background: 'var(--app-card-bg)',
           border: '1px solid var(--app-border)',
           boxShadow: '0 12px 34px rgba(15,23,42,0.06)',
-          maxWidth: '560px',
         }}
       >
         <button
@@ -117,9 +116,8 @@ export function ContainerSubView({
 
       {/* Container interior */}
       <div
-        className="relative rounded-2xl select-none"
+        className="relative w-full rounded-2xl select-none"
         style={{
-          width: '560px',
           background: isUpper ? 'var(--container-body-upper)' : 'var(--container-body-lower)',
           boxShadow: `0 20px 58px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.82), 0 0 6px ${config.glowColor}22`,
           border: `1.5px solid ${config.borderColor}35`,

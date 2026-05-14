@@ -150,14 +150,50 @@ router.post('/:fridgeId/samples', authenticate, async (req, res) => {
     sample.subSamples = [];
     res.status(201).json(sample);
   } catch (err) {
-    if (conn) await conn.rollback();
-    if (err.code === 'ER_DUP_ENTRY') {
+    if (err.code === 'ER_DUP_ENTRY' && conn) {
       const message = String(err.sqlMessage || '');
       if (message.includes('uniq_samples_fridge_compartment_position')) {
+        await conn.rollback();
         return res.status(409).json({ error: 'Position already occupied' });
       }
+      // Check if colliding record is soft-deleted — if so, reactivate it
+      // Use req.body fields since destructured vars are scoped to try block
+      const body = req.body;
+      const [[deletedRec]] = await conn.query(
+        'SELECT id FROM samples WHERE id = ? AND deleted_at IS NOT NULL',
+        [body.id],
+      );
+      if (deletedRec) {
+        try {
+          await conn.query(
+            `UPDATE samples SET name=?, type=?, status=?, temperature=?,
+             collected_at=?, patient_id=?, uploader=?, created_by=?,
+             tags=?, compartment=?, position=?, note=?, volume=?,
+             grid_rows=?, grid_cols=?, refrigerator_id=?,
+             deleted_at=NULL, deleted_by=NULL, updated_at=CURRENT_TIMESTAMP
+             WHERE id=?`,
+            [body.name, body.type, body.status || 'normal', body.temperature,
+             body.collectedAt || null, body.patientId || null,
+             body.uploader || null, req.user.username,
+             JSON.stringify(body.tags || []), body.compartment, body.position,
+             body.note || null, body.volume || null,
+             body.gridRows ?? 2, body.gridCols ?? 2,
+             req.params.fridgeId, body.id],
+          );
+          await conn.commit();
+          const [[row]] = await conn.query('SELECT * FROM samples WHERE id = ?', [body.id]);
+          const sample = rowToSample(row);
+          sample.subSamples = [];
+          return res.status(201).json(sample);
+        } catch (updateErr) {
+          await conn.rollback();
+          return res.status(500).json({ error: updateErr.message });
+        }
+      }
+      await conn.rollback();
       return res.status(409).json({ error: 'Sample ID already exists' });
     }
+    if (conn) await conn.rollback();
     res.status(500).json({ error: err.message });
   } finally {
     if (conn) conn.release();

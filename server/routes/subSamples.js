@@ -79,14 +79,45 @@ router.post('/:sampleId/sub-samples', authenticate, async (req, res) => {
     await conn.commit();
     res.status(201).json(rowToSubSample(row));
   } catch (err) {
-    if (conn) await conn.rollback();
-    if (err.code === 'ER_DUP_ENTRY') {
+    if (err.code === 'ER_DUP_ENTRY' && conn) {
       const message = String(err.sqlMessage || '');
       if (message.includes('uniq_sub_samples_sample_position')) {
+        await conn.rollback();
         return res.status(409).json({ error: 'Position already occupied' });
       }
+      // Check if colliding record is soft-deleted — if so, reactivate it
+      const body = req.body;
+      const [[deletedRec]] = await conn.query(
+        'SELECT id FROM sub_samples WHERE id = ? AND deleted_at IS NOT NULL',
+        [body.id],
+      );
+      if (deletedRec) {
+        try {
+          await conn.query(
+            `UPDATE sub_samples SET name=?, type=?, status=?, temperature=?,
+             collected_at=?, patient_id=?, uploader=?, created_by=?,
+             tags=?, position=?, note=?, volume=?,
+             sample_id=?, deleted_at=NULL, deleted_by=NULL, updated_at=CURRENT_TIMESTAMP
+             WHERE id=?`,
+            [body.name, body.type, body.status || 'normal', body.temperature,
+             body.collectedAt || null, body.patientId || null,
+             body.uploader || null, req.user.username,
+             JSON.stringify(body.tags || []), body.position,
+             body.note || null, body.volume || null,
+             req.params.sampleId, body.id],
+          );
+          await conn.commit();
+          const [[row]] = await conn.query('SELECT * FROM sub_samples WHERE id = ?', [body.id]);
+          return res.status(201).json(rowToSubSample(row));
+        } catch (updateErr) {
+          await conn.rollback();
+          return res.status(500).json({ error: updateErr.message });
+        }
+      }
+      await conn.rollback();
       return res.status(409).json({ error: 'Sub-sample ID already exists' });
     }
+    if (conn) await conn.rollback();
     res.status(500).json({ error: err.message });
   } finally {
     if (conn) conn.release();

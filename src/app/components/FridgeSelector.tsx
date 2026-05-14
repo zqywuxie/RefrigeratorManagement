@@ -116,7 +116,7 @@ export function FridgeSelector({
   };
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className={`relative ${open ? 'z-50' : 'z-10'}`} ref={menuRef}>
       <button
         onClick={() => { setOpen(!open); setAdding(false); setEditingId(null); }}
         className="flex items-center gap-2 px-3 py-2 rounded-lg text-[14px] transition-all"
@@ -134,7 +134,7 @@ export function FridgeSelector({
 
       {open && (
         <div
-          className="absolute top-full mt-1 left-0 w-72 rounded-xl overflow-hidden z-30"
+          className="absolute top-full left-0 z-50 mt-1 w-72 overflow-hidden rounded-xl"
           style={{
             background: 'var(--app-header-bg)',
             border: '1px solid var(--app-border)',

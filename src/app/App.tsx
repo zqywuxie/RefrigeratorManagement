@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { motion, AnimatePresence } from 'motion/react';
@@ -490,9 +490,26 @@ function AppContent() {
   const handleSlotClick = useCallback(
     (compartment: Compartment, position: number, containerId?: string) => {
       setAddTarget({ compartment, position, isSubSample: !!containerId, containerId });
+      setEditItem(null);
       setShowAddModal(true);
     },
     [],
+  );
+
+  const handleOpenAddSubSample = useCallback(
+    (containerId: string, position: number) => {
+      const container = samples.find((sample) => sample.id === containerId);
+      if (!container) return;
+      setAddTarget({
+        compartment: container.compartment,
+        position,
+        isSubSample: true,
+        containerId,
+      });
+      setEditItem(null);
+      setShowAddModal(true);
+    },
+    [samples],
   );
 
   const handleAddButtonClick = () => {
@@ -742,6 +759,7 @@ function AppContent() {
   );
 
   const handleOpenEdit = useCallback((item: DetailItem) => {
+    setAddTarget(null);
     setEditItem(item);
     setShowAddModal(true);
   }, []);
@@ -810,7 +828,7 @@ function AppContent() {
       >
         {/* ── HEADER ── */}
         <header
-          className="flex items-center justify-between px-6 py-4 flex-shrink-0"
+          className="relative z-40 flex items-center justify-between px-6 py-4 flex-shrink-0"
           style={{
             background: 'var(--app-header-bg)',
             borderBottom: '1px solid var(--app-border)',
@@ -925,17 +943,16 @@ function AppContent() {
           />
 
           {/* Left: Fridge */}
-          <div className="flex flex-col gap-5">
+          <div className="flex w-full max-w-[560px] flex-col gap-5">
             {/* Search bar */}
-            <div
-              className="flex items-center gap-3 px-4 py-3 rounded-xl"
-              style={{
-                background: 'var(--app-card-bg)',
-                border: `1px solid ${searchQuery ? 'rgba(37,99,235,0.35)' : 'var(--app-border)'}`,
-                boxShadow: searchQuery ? '0 12px 34px rgba(37,99,235,0.08)' : '0 12px 34px rgba(15,23,42,0.06)',
-                width: '560px',
-              }}
-            >
+              <div
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-3"
+                style={{
+                  background: 'var(--app-card-bg)',
+                  border: `1px solid ${searchQuery ? 'rgba(37,99,235,0.35)' : 'var(--app-border)'}`,
+                  boxShadow: searchQuery ? '0 12px 34px rgba(37,99,235,0.08)' : '0 12px 34px rgba(15,23,42,0.06)',
+                }}
+              >
               <Search size={20} color={searchQuery ? '#2563eb' : 'var(--app-muted)'} />
               <input
                 type="text"
@@ -964,10 +981,8 @@ function AppContent() {
             {/* Loading state */}
             {loading && !viewingContainer && (
               <div
-                className="flex items-center justify-center rounded-2xl"
+                className="flex h-[200px] w-full items-center justify-center rounded-2xl"
                 style={{
-                  width: '560px',
-                  height: '200px',
                   background: 'var(--app-card-bg)',
                   border: '1px solid var(--app-border)',
                 }}
@@ -995,7 +1010,7 @@ function AppContent() {
                 onEnterContainer={handleEnterContainer}
                 onExitContainer={handleExitContainer}
                 onDropSubSample={handleDropSubSample}
-                onAddSubSample={handleAddSubSample}
+                onAddSubSample={handleOpenAddSubSample}
                 onDeleteSubSample={handleDeleteSubSample}
                 onUpdateCompartmentGrid={handleUpdateCompartmentGrid}
                 onUpdateContainerGrid={handleUpdateContainerGrid}
@@ -1005,10 +1020,8 @@ function AppContent() {
             {/* No fridge state */}
             {!loading && !selectedFridgeId && (
               <div
-                className="flex flex-col items-center justify-center gap-4 rounded-2xl"
+                className="flex h-[200px] w-full flex-col items-center justify-center gap-4 rounded-2xl"
                 style={{
-                  width: '560px',
-                  height: '200px',
                   background: 'var(--app-card-bg)',
                   border: '1px solid var(--app-border)',
                 }}
@@ -1035,8 +1048,8 @@ function AppContent() {
 
           {/* Right: Control Panel */}
           <div
-            className="flex flex-col gap-4"
-            style={{ minWidth: '340px', maxWidth: '400px' }}
+            className="flex w-full flex-col gap-4"
+            style={{ maxWidth: '400px' }}
           >
             {/* Add button */}
             <motion.button
@@ -1238,7 +1251,11 @@ function AppContent() {
           isOpen={showAddModal}
           targetCompartment={addTarget?.compartment ?? null}
           targetPosition={addTarget?.position ?? null}
-          onClose={() => { setShowAddModal(false); setEditItem(null); }}
+          onClose={() => {
+            setShowAddModal(false);
+            setEditItem(null);
+            setAddTarget(null);
+          }}
           onAdd={handleAddSample}
           onAddSubSample={handleAddSubSample}
           existingIds={samples.map((s) => s.id)}
@@ -1326,6 +1343,33 @@ function UserMenu({
   const [message, setMessage] = useState('');
   const [registering, setRegistering] = useState(false);
   const [showUploads, setShowUploads] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showUploads && !showRegister) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowUploads(false);
+        setShowRegister(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setShowUploads(false);
+        setShowRegister(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showRegister, showUploads]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1355,7 +1399,10 @@ function UserMenu({
   };
 
   return (
-    <div className="relative flex items-center gap-2">
+    <div
+      className={`relative flex items-center gap-2 ${showUploads || showRegister ? 'z-50' : 'z-10'}`}
+      ref={menuRef}
+    >
       <button
         onClick={() => setTheme(isDark ? 'light' : 'dark')}
         className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
@@ -1426,7 +1473,7 @@ function UserMenu({
       </button>
       {showUploads && (
         <div
-          className="absolute right-0 top-11 w-80 rounded-xl p-3 z-50"
+          className="absolute right-0 top-11 z-50 w-80 rounded-xl p-3"
           style={{
             background: 'var(--app-header-bg)',
             border: '1px solid var(--app-border)',
@@ -1523,7 +1570,7 @@ function UserMenu({
       {showRegister && (
         <form
           onSubmit={handleRegister}
-          className="absolute right-0 top-11 w-64 rounded-xl p-3 space-y-2 z-40"
+          className="absolute right-0 top-11 z-50 w-64 space-y-2 rounded-xl p-3"
           style={{
             background: 'var(--app-header-bg)',
             border: '1px solid var(--app-border)',

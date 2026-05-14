@@ -59,7 +59,8 @@ export function DetailPanel({
           background: 'var(--app-card-bg)',
           border: `1.5px solid ${config.borderColor}40`,
           boxShadow: `0 18px 50px rgba(15,23,42,0.08), 0 0 0 1px ${config.glowColor}`,
-          minWidth: '340px',
+          width: '100%',
+          maxWidth: '400px',
         }}
       >
         {/* Header */}

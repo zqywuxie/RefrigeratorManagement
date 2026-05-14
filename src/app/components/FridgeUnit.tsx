@@ -202,12 +202,11 @@ export function FridgeUnit({
     samples.find((s) => s.compartment === comp && s.position === pos);
 
   return (
-    <div className="flex flex-col items-center gap-5">
+    <div className="flex w-full max-w-[560px] flex-col items-center gap-5">
       {/* Fridge Outer Body */}
       <div
-        className="relative rounded-3xl select-none"
+        className="relative w-full rounded-3xl select-none"
         style={{
-          width: '560px',
           background: 'var(--fridge-body)',
           boxShadow: 'var(--fridge-shadow)',
           border: '1.5px solid var(--fridge-border)',
