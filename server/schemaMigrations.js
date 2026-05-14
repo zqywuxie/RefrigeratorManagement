@@ -64,6 +64,79 @@ export async function runSchemaMigrations() {
   await ensureIndex('samples', 'idx_samples_active_position', '`refrigerator_id`, `deleted_at`, `compartment`, `position`');
   await ensureIndex('sub_samples', 'idx_sub_samples_active_position', '`sample_id`, `deleted_at`, `position`');
 
+  // Drawer Freezer support
+  await ensureColumn('refrigerators', 'fridge_type', "`fridge_type` ENUM('drawer','shelf') DEFAULT 'drawer' AFTER `lower_temperature`");
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS upper_items (
+      id VARCHAR(36) PRIMARY KEY,
+      refrigerator_id VARCHAR(36) NOT NULL,
+      \`row_number\` INT NOT NULL,
+      name VARCHAR(200) NOT NULL,
+      item_type ENUM('试剂','样本','耗材','临时物品') NOT NULL DEFAULT '样本',
+      quantity INT DEFAULT 1,
+      owner VARCHAR(100),
+      tags JSON,
+      note TEXT,
+      image_url VARCHAR(500),
+      qr_code VARCHAR(200),
+      sort_order INT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      deleted_at TIMESTAMP NULL,
+      FOREIGN KEY (refrigerator_id) REFERENCES refrigerators(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS drawers (
+      id VARCHAR(36) PRIMARY KEY,
+      refrigerator_id VARCHAR(36) NOT NULL,
+      layer INT NOT NULL,
+      row_pos INT NOT NULL,
+      col_pos INT NOT NULL,
+      label VARCHAR(50),
+      max_boxes INT DEFAULT 10,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (refrigerator_id) REFERENCES refrigerators(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS boxes (
+      id VARCHAR(36) PRIMARY KEY,
+      drawer_id VARCHAR(36) NOT NULL,
+      name VARCHAR(200) NOT NULL,
+      mode ENUM('precise','simple') DEFAULT 'simple',
+      grid_rows INT DEFAULT NULL,
+      grid_cols INT DEFAULT NULL,
+      sample_type VARCHAR(100),
+      project_name VARCHAR(200),
+      quantity INT DEFAULT 0,
+      owner VARCHAR(100),
+      tags JSON,
+      note TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      deleted_at TIMESTAMP NULL,
+      FOREIGN KEY (drawer_id) REFERENCES drawers(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS box_cells (
+      id VARCHAR(36) PRIMARY KEY,
+      box_id VARCHAR(36) NOT NULL,
+      position INT NOT NULL,
+      barcode VARCHAR(100),
+      sample_name VARCHAR(200),
+      sample_status ENUM('normal','warning','critical','used','pending') DEFAULT 'normal',
+      note TEXT,
+      FOREIGN KEY (box_id) REFERENCES boxes(id) ON DELETE CASCADE,
+      UNIQUE KEY uniq_box_position (box_id, position)
+    ) ENGINE=InnoDB
+  `);
+
   const [[root]] = await pool.query('SELECT username FROM users WHERE username = ?', ['root']);
   if (!root) {
     await pool.query(

@@ -5,6 +5,31 @@ import { authenticate, requireRoot } from '../middleware/auth.js';
 
 const router = Router();
 
+const DRAWER_LAYOUTS = [
+  { layer: 1, rows: 2, cols: 3 },
+  { layer: 2, rows: 5, cols: 3 },
+];
+const LAYER1_LABELS = [['A1','A2','A3'], ['B1','B2','B3']];
+const LAYER2_LABELS = [
+  ['C1','C2','C3'], ['D1','D2','D3'], ['E1','E2','E3'], ['F1','F2','F3'], ['G1','G2','G3']
+];
+
+async function createDrawersForFridge(conn, fridgeId) {
+  for (const layout of DRAWER_LAYOUTS) {
+    const labels = layout.layer === 1 ? LAYER1_LABELS : LAYER2_LABELS;
+    for (let r = 0; r < layout.rows; r++) {
+      for (let c = 0; c < layout.cols; c++) {
+        const id = `drawer-${fridgeId}-L${layout.layer}-R${r}C${c}`;
+        await conn.query(
+          `INSERT INTO drawers (id, refrigerator_id, layer, row_pos, col_pos, label)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [id, fridgeId, layout.layer, r, c, labels[r][c]]
+        );
+      }
+    }
+  }
+}
+
 router.get('/', async (_req, res) => {
   try {
     const [rows] = await pool.query(
@@ -40,14 +65,18 @@ router.post('/', authenticate, requireRoot, async (req, res) => {
       lowerCols = 2,
       upperTemperature = -20,
       lowerTemperature = 4,
+      fridgeType = 'drawer',
     } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     const id = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO refrigerators (id, name, description, upper_rows, upper_cols, lower_rows, lower_cols, upper_temperature, lower_temperature)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, name, description || null, upperRows, upperCols, lowerRows, lowerCols, upperTemperature, lowerTemperature],
+      `INSERT INTO refrigerators (id, name, description, upper_rows, upper_cols, lower_rows, lower_cols, upper_temperature, lower_temperature, fridge_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, name, description || null, upperRows, upperCols, lowerRows, lowerCols, upperTemperature, lowerTemperature, fridgeType],
     );
+    if (fridgeType === 'drawer') {
+      await createDrawersForFridge(pool, id);
+    }
     const [[row]] = await pool.query('SELECT * FROM refrigerators WHERE id = ?', [id]);
     res.status(201).json(row);
   } catch (err) {
@@ -130,6 +159,15 @@ router.delete('/:id', authenticate, requireRoot, async (req, res) => {
        SET sub_samples.deleted_at = CURRENT_TIMESTAMP, sub_samples.deleted_by = ?
        WHERE samples.refrigerator_id = ? AND sub_samples.deleted_at IS NULL`,
       [req.user.username, req.params.id],
+    );
+    await pool.query(
+      'UPDATE upper_items SET deleted_at = CURRENT_TIMESTAMP WHERE refrigerator_id = ? AND deleted_at IS NULL',
+      [req.params.id],
+    );
+    await pool.query(
+      `UPDATE boxes SET deleted_at = CURRENT_TIMESTAMP
+       WHERE drawer_id IN (SELECT id FROM drawers WHERE refrigerator_id = ?) AND deleted_at IS NULL`,
+      [req.params.id],
     );
     res.json({ success: true });
   } catch (err) {
