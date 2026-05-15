@@ -35,6 +35,8 @@ interface DrawerFridgeViewProps {
   onAddSampleType: (name: string) => void;
   itemTypes: string[];
   onAddItemType: (name: string) => void;
+  navigateToDrawer?: { drawerId: string; drawerLabel: string } | null;
+  onNavigated?: () => void;
 }
 
 export function DrawerFridgeView({
@@ -44,6 +46,8 @@ export function DrawerFridgeView({
   onAddSampleType,
   itemTypes,
   onAddItemType,
+  navigateToDrawer,
+  onNavigated,
 }: DrawerFridgeViewProps) {
   const [viewLevel, setViewLevel] = useState<ViewLevel>('fridge');
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('upper');
@@ -90,6 +94,25 @@ export function DrawerFridgeView({
   // Batch edit modal
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [batchSampleIds, setBatchSampleIds] = useState<string[]>([]);
+
+  // Handle external navigation from side map
+  useEffect(() => {
+    if (!navigateToDrawer) return;
+    const drawer = drawers.find((d) => d.id === navigateToDrawer.drawerId);
+    if (drawer) {
+      setSelectedDrawerId(navigateToDrawer.drawerId);
+      setSelectedDrawerLabel(navigateToDrawer.drawerLabel);
+      setSelectedBoxId(null);
+      setSelectedBox(null);
+      setViewLevel('drawer');
+      setSearchCellQuery('');
+      setTargetBoxPosition(null);
+      // Switch to the correct tab
+      const layer = drawer.layer;
+      setActiveMainTab(layer === 1 ? 'lowerTop' : 'lowerBottom');
+    }
+    onNavigated?.();
+  }, [navigateToDrawer, drawers, onNavigated]);
 
   useEffect(() => {
     setLoading(true);

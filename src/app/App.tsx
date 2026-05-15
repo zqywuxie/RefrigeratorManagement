@@ -19,6 +19,8 @@ import {
   ChevronDown,
   FlaskConical,
   Shield,
+  PanelLeftClose,
+  PanelLeft,
 } from 'lucide-react';
 
 import {
@@ -59,6 +61,7 @@ import { RootAdminPanel } from './components/RootAdminPanel';
 import { AuthProvider, useAuth } from './AuthContext';
 import { DrawerFridgeView } from './components/DrawerFridgeView';
 import { ShelfFridgeView } from './components/ShelfFridgeView';
+import { FridgeSideMap } from './components/FridgeSideMap';
 import { LoginPage } from './components/LoginPage';
 
 type UploadedSampleItem = {
@@ -127,6 +130,10 @@ function AppContent() {
   const [editItem, setEditItem] = useState<DetailItem | null>(null);
   const [sampleTypes, setSampleTypes] = useState<string[]>(['血清', '血浆', '尿液', 'DNA', '组织', '全血']);
   const [itemTypes, setItemTypes] = useState<string[]>(DEFAULT_ITEM_TYPES);
+
+  // Side map state
+  const [showSideMap, setShowSideMap] = useState(true);
+  const [sideMapNavTarget, setSideMapNavTarget] = useState<{ drawerId: string; drawerLabel: string } | null>(null);
 
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 5000);
@@ -952,6 +959,19 @@ function AppContent() {
           <RootAdminPanel currentUsername={user!.username} onNotify={showNotif} />
         ) : (
         <main className="flex-1 flex gap-6 p-6 overflow-auto items-start justify-center flex-wrap">
+          {/* ── Far Left: 2D Fridge Map ── */}
+          {selectedFridge && selectedFridge.fridge_type === 'drawer' && (
+            <FridgeSideMap
+              fridgeId={selectedFridge.id}
+              fridgeName={selectedFridge.name}
+              upperTemperature={selectedFridge.upperTemperature}
+              lowerTemperature={selectedFridge.lowerTemperature}
+              onDrawerClick={(drawerId, drawerLabel) => {
+                setSideMapNavTarget({ drawerId, drawerLabel });
+              }}
+            />
+          )}
+
           {/* Detail panel — left of fridge */}
           <DetailPanel
             item={selectedDetailItem}
@@ -969,7 +989,7 @@ function AppContent() {
             isRoot={isRoot}
           />
 
-          {/* Left: Fridge */}
+          {/* Center: Fridge */}
           <div className="flex w-full max-w-[560px] flex-col gap-5">
             {/* Search bar */}
               <div
@@ -1028,6 +1048,8 @@ function AppContent() {
                   onAddSampleType={handleAddSampleType}
                   itemTypes={itemTypes}
                   onAddItemType={handleAddItemType}
+                  navigateToDrawer={sideMapNavTarget}
+                  onNavigated={() => setSideMapNavTarget(null)}
                 />
               ) : selectedFridge.fridge_type === 'shelf' && !viewingContainer ? (
                 <ShelfFridgeView
