@@ -684,8 +684,7 @@ export function DrawerFridgeView({
                     onDeleteItem={async (id) => {
                       try {
                         await deleteUpperItem(id);
-                        const items = await fetchUpperItems(fridge.id);
-                        setUpperItems(items);
+                        setUpperItems((prev) => prev.filter((i) => i.id !== id));
                         onDataChanged?.();
                       } catch (err) { console.error('Delete item failed:', err); }
                     }}
