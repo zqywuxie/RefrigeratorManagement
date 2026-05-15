@@ -27,8 +27,8 @@ export function UpperOpenStorage({
 }: UpperOpenStorageProps) {
   const [filterType, setFilterType] = useState<ItemType | 'all'>('all');
   const visibleItemTypes = React.useMemo(
-    () => Array.from(new Set([...itemTypes, ...items.map((item) => item.item_type)].filter(Boolean))),
-    [itemTypes, items],
+    () => Array.from(new Set(items.map((item) => item.item_type).filter(Boolean))),
+    [items],
   );
 
   const filtered = items.filter((item) => {
