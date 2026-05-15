@@ -127,6 +127,33 @@ router.post('/', async (req, res) => {
   }
 });
 
+// PUT /api/sample-records/batch — batch update fields (must be before /:id)
+router.put('/batch', async (req, res) => {
+  try {
+    const { ids, updates } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0 || !updates) {
+      return res.status(400).json({ error: 'ids array and updates object required' });
+    }
+    const fields = [];
+    const values = [];
+    if (updates.source !== undefined) { fields.push('source = ?'); values.push(updates.source); }
+    if (updates.sample_type !== undefined) { fields.push('sample_type = ?'); values.push(updates.sample_type); }
+    if (updates.collection_stage !== undefined) { fields.push('collection_stage = ?'); values.push(updates.collection_stage); }
+    if (updates.collected_at !== undefined) { fields.push('collected_at = ?'); values.push(updates.collected_at); }
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No updatable fields provided' });
+    }
+    values.push(ids);
+    await pool.query(
+      `UPDATE sample_records SET ${fields.join(', ')} WHERE id IN (?) AND deleted_at IS NULL`,
+      values
+    );
+    res.json({ ok: true, updated: ids.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/sample-records/:id
 router.put('/:id', authenticate, requireResourceOwner('sample_records', 'id', 'uploader'), async (req, res) => {
   try {
@@ -209,34 +236,5 @@ router.post('/:id/tubes', async (req, res) => {
   }
 });
 
-// PUT /api/sample-records/batch — batch update fields
-router.put('/batch', async (req, res) => {
-  try {
-    const { ids, updates } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0 || !updates) {
-      return res.status(400).json({ error: 'ids array and updates object required' });
-    }
-
-    const fields = [];
-    const values = [];
-    if (updates.source !== undefined) { fields.push('source = ?'); values.push(updates.source); }
-    if (updates.sample_type !== undefined) { fields.push('sample_type = ?'); values.push(updates.sample_type); }
-    if (updates.collection_stage !== undefined) { fields.push('collection_stage = ?'); values.push(updates.collection_stage); }
-    if (updates.collected_at !== undefined) { fields.push('collected_at = ?'); values.push(updates.collected_at); }
-
-    if (fields.length === 0) {
-      return res.status(400).json({ error: 'No updatable fields provided' });
-    }
-
-    values.push(ids);
-    await pool.query(
-      `UPDATE sample_records SET ${fields.join(', ')} WHERE id IN (?) AND deleted_at IS NULL`,
-      values
-    );
-    res.json({ ok: true, updated: ids.length });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 export default router;

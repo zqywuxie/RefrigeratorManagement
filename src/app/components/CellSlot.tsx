@@ -95,7 +95,7 @@ export function CellSlot({
             {label}
           </span>
           {displayName && (
-            <span className="text-[7px] truncate max-w-full px-0.5 leading-tight" style={{ color: 'var(--app-muted)' }}>
+            <span className="text-[9px] font-bold truncate max-w-full px-0.5 leading-tight" style={{ color: 'var(--app-text)' }}>
               {displayName}
             </span>
           )}

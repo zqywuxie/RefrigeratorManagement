@@ -996,18 +996,25 @@ function AppContent() {
           <RootAdminPanel currentUsername={user!.username} onNotify={showNotif} />
         ) : (
     <main className="flex-1 flex gap-3 lg:gap-6 p-3 lg:p-6 overflow-auto items-start">
-          {/* ── Far Left: 2D Fridge Map ── */}
+          {/* ── Far Left: 2D Fridge Map + Pending Samples ── */}
           {selectedFridge && selectedFridge.fridge_type === 'drawer' && showSideMap && (
-            <FridgeSideMap
-              fridgeId={selectedFridge.id}
-              fridgeName={selectedFridge.name}
-              upperTemperature={selectedFridge.upperTemperature}
-              lowerTemperature={selectedFridge.lowerTemperature}
-              onDrawerClick={(drawerId, drawerLabel) => {
-                setSideMapNavTarget({ drawerId, drawerLabel });
-              }}
-              refreshKey={sideMapRefreshKey}
-            />
+            <div className="flex flex-col gap-3 flex-shrink-0">
+              <FridgeSideMap
+                fridgeId={selectedFridge.id}
+                fridgeName={selectedFridge.name}
+                upperTemperature={selectedFridge.upperTemperature}
+                lowerTemperature={selectedFridge.lowerTemperature}
+                onDrawerClick={(drawerId, drawerLabel) => {
+                  setSideMapNavTarget({ drawerId, drawerLabel });
+                }}
+                refreshKey={sideMapRefreshKey}
+              />
+              <PendingSamplesPanel
+                samples={pendingSamples}
+                onSelectSample={() => {}}
+                onClear={() => setPendingSamples([])}
+              />
+            </div>
           )}
 
           <div className="flex-1 flex flex-col lg:flex-row gap-3 lg:gap-5 items-start justify-center min-w-0">
@@ -1331,13 +1338,6 @@ function AppContent() {
                 </div>
               )}
             </div>
-
-            {/* Pending imported samples — drag to positions */}
-            <PendingSamplesPanel
-              samples={pendingSamples}
-              onSelectSample={() => {}}
-              onClear={() => setPendingSamples([])}
-            />
 
           </div>
           </div>
