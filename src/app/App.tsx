@@ -137,6 +137,7 @@ function AppContent() {
   // Side map state
   const [showSideMap, setShowSideMap] = useState(true);
   const [sideMapNavTarget, setSideMapNavTarget] = useState<{ drawerId: string; drawerLabel: string } | null>(null);
+  const [sideMapRefreshKey, setSideMapRefreshKey] = useState(0);
 
   // Pending imported samples (shared with DrawerFridgeView)
   const [pendingSamples, setPendingSamples] = useState<SampleRecord[]>([]);
@@ -991,6 +992,7 @@ function AppContent() {
               lowerTemperature={selectedFridge.lowerTemperature}
               onDrawerClick={(drawerId, drawerLabel) => {
                 setSideMapNavTarget({ drawerId, drawerLabel });
+              refreshKey={sideMapRefreshKey}
               }}
             />
           )}
@@ -1077,6 +1079,7 @@ function AppContent() {
                   pendingSamples={pendingSamples}
                   onPendingSamplesChange={setPendingSamples}
                   onImportComplete={handleImportComplete}
+                  onDataChanged={() => setSideMapRefreshKey((k) => k + 1)}
                 />
               ) : selectedFridge.fridge_type === 'shelf' && !viewingContainer ? (
                 <ShelfFridgeView

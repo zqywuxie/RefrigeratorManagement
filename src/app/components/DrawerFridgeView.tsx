@@ -40,6 +40,7 @@ interface DrawerFridgeViewProps {
   pendingSamples?: SampleRecord[];
   onPendingSamplesChange?: (samples: SampleRecord[]) => void;
   onImportComplete?: (sampleIds: string[]) => void;
+  onDataChanged?: () => void;
 }
 
 export function DrawerFridgeView({
@@ -54,6 +55,7 @@ export function DrawerFridgeView({
   pendingSamples = [],
   onPendingSamplesChange,
   onImportComplete,
+  onDataChanged,
 }: DrawerFridgeViewProps) {
   const [viewLevel, setViewLevel] = useState<ViewLevel>('fridge');
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('upper');
@@ -234,6 +236,11 @@ export function DrawerFridgeView({
   }, []);
 
   const handleBackToDrawer = useCallback(() => {
+    // If we came from an upper item box, go back to fridge level
+    if (!selectedDrawerId) {
+      handleBackToFridge();
+      return;
+    }
     setViewLevel('drawer');
     setSelectedBoxId(null);
     setSelectedBox(null);
@@ -241,7 +248,7 @@ export function DrawerFridgeView({
     setMultiSelectMode(false);
     setSelectedPositions(new Set());
     setHoveredSampleId(null);
-  }, []);
+  }, [selectedDrawerId, handleBackToFridge]);
 
   const breadcrumbNodes: BreadcrumbNode[] = [{ label: fridge.name }];
   if (viewLevel === 'drawer' || viewLevel === 'box') {
@@ -260,6 +267,7 @@ export function DrawerFridgeView({
       }
       const items = await fetchUpperItems(fridge.id);
       setUpperItems(items);
+      onDataChanged?.();
     } catch (err) {
       console.error('Failed to save item:', err);
     }
@@ -315,10 +323,11 @@ export function DrawerFridgeView({
       setBoxes(updatedBoxes);
       const drawerData = await fetchDrawers(fridge.id);
       setDrawers(drawerData);
+      onDataChanged?.();
     } catch (err) {
       console.error('Failed to save box:', err);
     }
-  }, [selectedDrawerId, editBox, fridge.id]);
+  }, [selectedDrawerId, editBox, fridge.id, onDataChanged]);
 
   const handleDeleteBox = useCallback(async (boxId: string) => {
     try {
@@ -326,10 +335,11 @@ export function DrawerFridgeView({
       setBoxes((prev) => prev.filter((b) => b.id !== boxId));
       const drawerData = await fetchDrawers(fridge.id);
       setDrawers(drawerData);
+      onDataChanged?.();
     } catch (err) {
       console.error('Failed to delete box:', err);
     }
-  }, [fridge.id]);
+  }, [fridge.id, onDataChanged]);
 
   // Handle clicking a position in box grid
   const handleCellClick = useCallback((position: number) => {

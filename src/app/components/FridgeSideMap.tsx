@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { Thermometer, Package, Loader2 } from 'lucide-react';
 import {
   UpperItem, Drawer, getOccupancyRate, getOccupancyColor,
   DRAWER_LAYER1, DRAWER_LAYER2, getItemTypeConfig,
 } from '../types';
-import { fetchUpperItems, fetchDrawers } from '../api';
+import { fetchUpperItems, fetchDrawers, fetchBoxes } from '../api';
 
 interface FridgeSideMapProps {
   fridgeId: string;
@@ -13,6 +13,7 @@ interface FridgeSideMapProps {
   upperTemperature: number;
   lowerTemperature: number;
   selectedDrawerId?: string | null;
+  refreshKey?: number;
   onDrawerClick: (drawerId: string, drawerLabel: string) => void;
   onUpperItemClick?: (itemId: string) => void;
 }
@@ -31,35 +32,93 @@ function MiniDrawerBlock({
   const boxCount = drawer.box_count ?? 0;
   const rate = getOccupancyRate(boxCount, drawer.max_boxes);
   const oc = getOccupancyColor(rate);
+  const [isHovered, setIsHovered] = useState(false);
+  const [hoverBoxes, setHoverBoxes] = useState<{ name: string; sample_type: string | null }[]>([]);
+
+  const handleMouseEnter = useCallback(async () => {
+    setIsHovered(true);
+    if (boxCount > 0 && hoverBoxes.length === 0) {
+      try {
+        const boxes = await fetchBoxes(drawer.id);
+        setHoverBoxes(boxes.map((b: any) => ({ name: b.name, sample_type: b.sample_type })));
+      } catch { setHoverBoxes([]); }
+    }
+  }, [drawer.id, boxCount, hoverBoxes.length]);
+
+  // Aggregate sample types from hoverBoxes
+  const typeCounts: Record<string, number> = {};
+  for (const b of hoverBoxes) {
+    const t = b.sample_type || '未分类';
+    typeCounts[t] = (typeCounts[t] || 0) + 1;
+  }
 
   return (
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={onClick}
-      className="relative rounded cursor-pointer overflow-hidden"
-      style={{
-        aspectRatio,
-        background: oc.bg,
-        border: isSelected ? '2px solid #22d3ee' : `1px solid ${oc.border}`,
-        boxShadow: isSelected ? `0 0 8px ${oc.border}60` : 'none',
-      }}
-      title={`${drawer.label} · ${boxCount}/${drawer.max_boxes} 盒 · ${rate}%`}
-    >
-      <div
-        className="absolute bottom-0 left-0 right-0"
+    <div className="relative">
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={onClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={() => setIsHovered(false)}
+        className="relative rounded cursor-pointer overflow-hidden w-full"
         style={{
-          height: `${Math.max(rate, boxCount > 0 ? 8 : 0)}%`,
-          background: oc.border + '40',
+          aspectRatio,
+          background: oc.bg,
+          border: isSelected ? '2px solid #22d3ee' : `1px solid ${oc.border}`,
+          boxShadow: isSelected ? `0 0 8px ${oc.border}60` : 'none',
         }}
-      />
-      <span
-        className="relative z-10 font-mono font-bold flex items-center justify-center h-full"
-        style={{ color: isSelected ? '#0891b2' : 'var(--app-text)', fontSize: '11px' }}
       >
-        {drawer.label}
-      </span>
-    </motion.button>
+        <div
+          className="absolute bottom-0 left-0 right-0"
+          style={{
+            height: `${Math.max(rate, boxCount > 0 ? 8 : 0)}%`,
+            background: oc.border + '40',
+          }}
+        />
+        <span
+          className="relative z-10 font-mono font-bold flex items-center justify-center h-full"
+          style={{ color: isSelected ? '#0891b2' : 'var(--app-text)', fontSize: '11px' }}
+        >
+          {drawer.label}
+        </span>
+      </motion.button>
+
+      {/* Hover tooltip */}
+      {isHovered && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 z-50 rounded-lg px-3 py-2 pointer-events-none whitespace-nowrap"
+          style={{
+            background: 'var(--app-header-bg)',
+            border: '1px solid var(--app-border)',
+            boxShadow: '0 12px 36px rgba(15,23,42,0.2)',
+            backdropFilter: 'blur(8px)',
+            minWidth: '160px',
+          }}
+        >
+          <div className="text-[12px] font-medium mb-1" style={{ color: 'var(--app-text)' }}>
+            抽屉 {drawer.label} · {boxCount}/{drawer.max_boxes} 盒
+          </div>
+          {hoverBoxes.length > 0 ? (
+            <div className="text-[10px] space-y-0.5" style={{ color: 'var(--app-muted)' }}>
+              {Object.entries(typeCounts).map(([type, cnt]) => (
+                <div key={type} className="flex items-center justify-between gap-3">
+                  <span>{type}</span>
+                  <span className="font-mono" style={{ color: '#2563eb' }}>×{cnt}</span>
+                </div>
+              ))}
+            </div>
+          ) : boxCount > 0 ? (
+            <div className="text-[10px]" style={{ color: 'var(--app-muted)' }}>加载中...</div>
+          ) : (
+            <div className="text-[10px]" style={{ color: 'var(--app-muted)' }}>空抽屉</div>
+          )}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 top-full -mt-1 w-2 h-2 rotate-45"
+            style={{ background: 'var(--app-header-bg)', borderRight: '1px solid var(--app-border)', borderBottom: '1px solid var(--app-border)' }}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -69,6 +128,7 @@ export function FridgeSideMap({
   upperTemperature,
   lowerTemperature,
   selectedDrawerId,
+  refreshKey = 0,
   onDrawerClick,
   onUpperItemClick,
 }: FridgeSideMapProps) {
@@ -88,7 +148,7 @@ export function FridgeSideMap({
       setLayer2Drawers(drawerData.filter((d: Drawer) => d.layer === 2));
       setLoading(false);
     });
-  }, [fridgeId]);
+  }, [fridgeId, refreshKey]);
 
   const totalBoxes = [...layer1Drawers, ...layer2Drawers].reduce((s, d) => s + (d.box_count ?? 0), 0);
   const totalCapacity = [...layer1Drawers, ...layer2Drawers].reduce((s, d) => s + (d.max_boxes || 5), 0);
