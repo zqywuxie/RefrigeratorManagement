@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import pool from '../db.js';
+import { authenticate, requireResourceOwner } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -142,7 +143,7 @@ router.put('/:itemId', async (req, res) => {
   }
 });
 
-router.delete('/:itemId', async (req, res) => {
+router.delete('/:itemId', authenticate, requireResourceOwner('upper_items', 'itemId', 'owner'), async (req, res) => {
   try {
     await pool.query('UPDATE upper_items SET deleted_at = NOW() WHERE id = ?', [req.params.itemId]);
     res.json({ ok: true });

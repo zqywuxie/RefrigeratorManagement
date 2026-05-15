@@ -681,7 +681,16 @@ export function DrawerFridgeView({
                     onSearchChange={setSearchQuery}
                     onItemClick={handleItemClick}
                     onAddItem={(row) => { setEditItem(null); setDefaultItemRow(row); setShowItemModal(true); }}
+                    onDeleteItem={async (id) => {
+                      try {
+                        await deleteUpperItem(id);
+                        const items = await fetchUpperItems(fridge.id);
+                        setUpperItems(items);
+                        onDataChanged?.();
+                      } catch (err) { console.error('Delete item failed:', err); }
+                    }}
                     itemTypes={itemTypes}
+                    currentUser={currentUser}
                   />
                 </motion.div>
               )}

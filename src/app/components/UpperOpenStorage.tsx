@@ -10,7 +10,9 @@ interface UpperOpenStorageProps {
   onSearchChange: (q: string) => void;
   onItemClick: (id: string) => void;
   onAddItem: (rowNumber: number) => void;
+  onDeleteItem?: (id: string) => void;
   itemTypes: string[];
+  currentUser?: string;
 }
 
 export function UpperOpenStorage({
@@ -19,7 +21,9 @@ export function UpperOpenStorage({
   onSearchChange,
   onItemClick,
   onAddItem,
+  onDeleteItem,
   itemTypes,
+  currentUser,
 }: UpperOpenStorageProps) {
   const [filterType, setFilterType] = useState<ItemType | 'all'>('all');
   const visibleItemTypes = React.useMemo(
@@ -118,6 +122,8 @@ export function UpperOpenStorage({
                   item={item}
                   isHighlighted={searchQuery.length > 0}
                   onClick={() => onItemClick(item.id)}
+                  onDelete={onDeleteItem}
+                  canDelete={!item.owner || item.owner === currentUser}
                 />
             ))}
             <motion.button

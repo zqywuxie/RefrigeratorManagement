@@ -1,16 +1,18 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { useDrag } from 'react-dnd';
-import { Package, User, Grid3X3 } from 'lucide-react';
+import { Package, User, Grid3X3, Trash2 } from 'lucide-react';
 import { UpperItem, getItemTypeConfig } from '../types';
 
 interface ItemCardProps {
   item: UpperItem;
   isHighlighted: boolean;
   onClick: () => void;
+  onDelete?: (id: string) => void;
+  canDelete?: boolean;
 }
 
-export function ItemCard({ item, isHighlighted, onClick }: ItemCardProps) {
+export function ItemCard({ item, isHighlighted, onClick, onDelete, canDelete = false }: ItemCardProps) {
   const typeConfig = getItemTypeConfig(item.item_type);
 
   const [{ isDragging }, drag] = useDrag({
@@ -26,7 +28,7 @@ export function ItemCard({ item, isHighlighted, onClick }: ItemCardProps) {
       whileHover={{ scale: 1.03, y: -2 }}
       whileTap={{ scale: 0.97 }}
       animate={{ opacity: isDragging ? 0.4 : 1 }}
-      className="flex-shrink-0 rounded-xl px-4 py-3 text-left cursor-pointer transition-shadow"
+      className="relative flex-shrink-0 rounded-xl px-4 py-3 text-left cursor-pointer transition-shadow"
       style={{
         width: '200px',
         background: 'var(--app-card-bg)',
@@ -36,6 +38,16 @@ export function ItemCard({ item, isHighlighted, onClick }: ItemCardProps) {
         boxShadow: isHighlighted ? '0 0 12px rgba(59,130,246,0.3)' : '0 4px 16px rgba(15,23,42,0.06)',
       }}
     >
+      {canDelete && onDelete && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+          className="absolute top-2 right-2 w-6 h-6 rounded flex items-center justify-center hover:bg-red-50 transition-colors z-10"
+          style={{ color: '#f87171' }}
+          title="删除物品"
+        >
+          <Trash2 size={12} />
+        </button>
+      )}
       <div className="flex items-center gap-2 mb-2">
         <Package size={16} color={typeConfig.color} />
         <span className="text-[14px] font-medium truncate" style={{ color: 'var(--app-text)' }}>
