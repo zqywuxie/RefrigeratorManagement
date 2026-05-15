@@ -77,8 +77,19 @@ export async function runSchemaMigrations() {
     ) ENGINE=InnoDB
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS sample_types (
+      name VARCHAR(100) PRIMARY KEY,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB
+  `);
+
   for (const name of ['试剂', '样本', '耗材', '临时物品']) {
     await pool.query('INSERT IGNORE INTO item_types (name) VALUES (?)', [name]);
+  }
+
+  for (const name of ['血清', '血浆', '尿液', 'DNA', '组织', '全血']) {
+    await pool.query('INSERT IGNORE INTO sample_types (name) VALUES (?)', [name]);
   }
 
   await pool.query(`
