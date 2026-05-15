@@ -224,36 +224,56 @@ export function ExcelImportModal({
             {step === 'mapping' && parsed && (
               <div className="space-y-3">
                 <p className="text-[13px]" style={{ color: 'var(--app-muted)' }}>
-                  请确认字段映射关系（系统已自动匹配）：
+                  为每个系统字段选择对应的 Excel 列（已自动匹配）：
                 </p>
                 <div className="rounded-xl border divide-y" style={{ borderColor: 'var(--app-border)' }}>
                   {/* Header */}
                   <div className="grid grid-cols-3 gap-3 px-4 py-2 text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                    <span>Excel 列名</span>
-                    <span>映射到系统字段</span>
+                    <span>系统字段</span>
+                    <span>对应 Excel 列</span>
                     <span>预览（首行）</span>
                   </div>
-                  {/* Mapping rows */}
-                  {parsed.headers.map((header) => (
-                    <div key={header} className="grid grid-cols-3 gap-3 px-4 py-2 items-center">
-                      <span className="text-[13px] font-medium truncate" style={{ color: 'var(--app-text)' }}>
-                        {header}
-                      </span>
-                      <select
-                        value={fieldMapping[header] || ''}
-                        onChange={(e) => setFieldMapping((prev) => ({ ...prev, [header]: e.target.value }))}
-                        className="px-2 py-1.5 rounded-lg text-[13px] outline-none"
-                        style={fieldStyle}
-                      >
-                        {SYSTEM_FIELDS.map((f) => (
-                          <option key={f.key} value={f.key}>{f.label}</option>
-                        ))}
-                      </select>
-                      <span className="text-[12px] truncate" style={{ color: 'var(--app-muted)' }}>
-                        {String(parsed.rows[0]?.[header] ?? '')}
-                      </span>
-                    </div>
-                  ))}
+                  {/* Mapping rows: one per system field */}
+                  {SYSTEM_FIELDS.filter((f) => f.key !== '').map((sysField) => {
+                    // Find which Excel header maps to this system field
+                    const mappedHeader = Object.entries(fieldMapping).find(([, v]) => v === sysField.key)?.[0] || '';
+                    return (
+                      <div key={sysField.key} className="grid grid-cols-3 gap-3 px-4 py-2 items-center">
+                        <span className="text-[13px] font-medium truncate" style={{ color: 'var(--app-text)' }}>
+                          {sysField.label.replace(' (必填)', '')}
+                          {sysField.key === 'patient_name' || sysField.key === 'sample_code' ? (
+                            <span style={{ color: '#ef4444' }}> *</span>
+                          ) : null}
+                        </span>
+                        <select
+                          value={mappedHeader}
+                          onChange={(e) => {
+                            const newHeader = e.target.value;
+                            setFieldMapping((prev) => {
+                              const next = { ...prev };
+                              // Remove this system field from any previous header
+                              for (const h of Object.keys(next)) {
+                                if (next[h] === sysField.key) next[h] = '';
+                              }
+                              // Set new mapping
+                              if (newHeader) next[newHeader] = sysField.key;
+                              return next;
+                            });
+                          }}
+                          className="px-2 py-1.5 rounded-lg text-[13px] outline-none"
+                          style={fieldStyle}
+                        >
+                          <option value="">— 不映射 —</option>
+                          {parsed.headers.map((h) => (
+                            <option key={h} value={h}>{h}</option>
+                          ))}
+                        </select>
+                        <span className="text-[12px] truncate" style={{ color: 'var(--app-muted)' }}>
+                          {mappedHeader ? String(parsed.rows[0]?.[mappedHeader] ?? '') : '—'}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {(!patientNameMapped || !sampleCodeMapped) && (

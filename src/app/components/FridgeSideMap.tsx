@@ -55,7 +55,7 @@ function MiniDrawerBlock({
       />
       <span
         className="relative z-10 font-mono font-bold flex items-center justify-center h-full"
-        style={{ color: isSelected ? '#0891b2' : 'var(--app-text)', fontSize: '9px' }}
+        style={{ color: isSelected ? '#0891b2' : 'var(--app-text)', fontSize: '11px' }}
       >
         {drawer.label}
       </span>
@@ -151,8 +151,8 @@ export function FridgeSideMap({
             color: '#f1f5f9',
           }}
         >
-          <span className="text-[11px] font-medium truncate flex-1">{fridgeName}</span>
-          <span className="text-[10px] font-mono">{overallRate}%</span>
+          <span className="text-[13px] font-medium truncate flex-1">{fridgeName}</span>
+          <span className="text-[12px] font-mono">{overallRate}%</span>
         </div>
 
         {/* Upper storage zone — freezer area */}
@@ -164,34 +164,34 @@ export function FridgeSideMap({
           }}
         >
           <div className="flex items-center justify-between px-1">
-            <span className="text-[10px] font-medium" style={{ color: '#0369a1' }}>
+            <span className="text-[12px] font-medium" style={{ color: '#0369a1' }}>
               上层 · {upperTemperature}°C
             </span>
-            <span className="text-[9px] font-mono" style={{ color: '#0284c7' }}>
+            <span className="text-[11px] font-mono" style={{ color: '#0284c7' }}>
               {upperItems.length} 件
             </span>
           </div>
           {/* Row items as colored dots */}
           {[row1Items, row2Items].map((rowItems, ri) => (
             <div key={ri} className="flex items-center gap-1 flex-wrap px-1">
-              <span className="text-[8px]" style={{ color: '#94a3b8' }}>R{ri + 1}</span>
+              <span className="text-[10px]" style={{ color: '#94a3b8' }}>R{ri + 1}</span>
               {rowItems.slice(0, 6).map((item) => {
                 const cfg = getItemTypeConfig(item.item_type);
                 return (
                   <button
                     key={item.id}
                     onClick={() => onUpperItemClick?.(item.id)}
-                    className="w-3.5 h-3.5 rounded-full cursor-pointer"
+                    className="w-4 h-4 rounded-full cursor-pointer"
                     style={{ background: cfg.color }}
                     title={item.name}
                   />
                 );
               })}
               {rowItems.length > 6 && (
-                <span className="text-[7px]" style={{ color: '#94a3b8' }}>+{rowItems.length - 6}</span>
+                <span className="text-[9px]" style={{ color: '#94a3b8' }}>+{rowItems.length - 6}</span>
               )}
               {rowItems.length === 0 && (
-                <span className="text-[7px]" style={{ color: '#cbd5e1' }}>空</span>
+                <span className="text-[9px]" style={{ color: '#cbd5e1' }}>空</span>
               )}
             </div>
           ))}
@@ -209,10 +209,10 @@ export function FridgeSideMap({
           }}
         >
           <div className="flex items-center justify-between px-1">
-            <span className="text-[10px] font-medium" style={{ color: '#15803d' }}>
+            <span className="text-[12px] font-medium" style={{ color: '#15803d' }}>
               第一层 · {lowerTemperature}°C
             </span>
-            <span className="text-[9px] font-mono" style={{ color: '#16a34a' }}>
+            <span className="text-[11px] font-mono" style={{ color: '#16a34a' }}>
               {layer1Drawers.length} 抽屉
             </span>
           </div>
@@ -244,10 +244,10 @@ export function FridgeSideMap({
           }}
         >
           <div className="flex items-center justify-between px-1">
-            <span className="text-[10px] font-medium" style={{ color: '#15803d' }}>
+            <span className="text-[12px] font-medium" style={{ color: '#15803d' }}>
               第二层 · {lowerTemperature}°C
             </span>
-            <span className="text-[9px] font-mono" style={{ color: '#16a34a' }}>
+            <span className="text-[11px] font-mono" style={{ color: '#16a34a' }}>
               {layer2Drawers.length} 抽屉
             </span>
           </div>

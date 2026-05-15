@@ -10,7 +10,7 @@ import {
   addTubesToSample, deleteTube, batchUpdateSampleRecords,
   fetchSampleRecord,
 } from '../api';
-import { FolderOpen, FileSpreadsheet, Map as MapIcon } from 'lucide-react';
+import { FolderOpen, FileSpreadsheet } from 'lucide-react';
 import { BreadcrumbNav, BreadcrumbNode } from './BreadcrumbNav';
 import { UpperOpenStorage } from './UpperOpenStorage';
 import { DrawerLayer } from './DrawerLayer';
@@ -23,7 +23,6 @@ import { AddSampleRecordModal } from './AddSampleRecordModal';
 import { ExcelImportModal } from './ExcelImportModal';
 import { SampleListPanel } from './SampleListPanel';
 import { BatchEditModal } from './BatchEditModal';
-import { FridgeMapView } from './FridgeMapView';
 
 type ViewLevel = 'fridge' | 'drawer' | 'box';
 type MainTab = 'upper' | 'lowerTop' | 'lowerBottom';
@@ -87,9 +86,6 @@ export function DrawerFridgeView({
 
   // Excel import modal
   const [showImportModal, setShowImportModal] = useState(false);
-
-  // Map view toggle
-  const [isMapView, setIsMapView] = useState(false);
 
   // Batch edit modal
   const [showBatchModal, setShowBatchModal] = useState(false);
@@ -335,13 +331,12 @@ export function DrawerFridgeView({
     // If using tubes (new system), open sample record modal
     const tube = tubes.find((t) => t.position === position);
     if (tube) {
-      // Load the sample record and open edit modal
-      setEditSampleRecord(null); // Will be fetched via tube's sample_id
-      setPreselectedWells([position]);
-      // For now, open modal with pre-populated tube info
-      setTargetCellPosition(position);
-      setEditCell(null);
-      setShowSampleModal(true);
+      // Fetch full sample record and open edit modal
+      fetchSampleRecord(tube.sample_id).then((record) => {
+        setEditSampleRecord(record);
+        setPreselectedWells([]);
+        setShowSampleModal(true);
+      }).catch(console.error);
       return;
     }
 
@@ -605,51 +600,11 @@ export function DrawerFridgeView({
   }
 
   return (
-    <div className="flex flex-col gap-5 w-full" style={{ maxWidth: isMapView ? 'none' : 'none' }}>
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <BreadcrumbNav nodes={breadcrumbNodes} />
-        </div>
-        {viewLevel === 'fridge' && (
-          <button
-            type="button"
-            onClick={() => setIsMapView((v) => !v)}
-            className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] flex-shrink-0 transition-all"
-            style={{
-              background: isMapView ? '#2563eb' : 'var(--app-panel-bg)',
-              border: isMapView ? '1px solid #3b82f6' : '1px solid var(--app-border)',
-              color: isMapView ? '#fff' : 'var(--app-muted)',
-            }}
-          >
-            <MapIcon size={15} />
-            {isMapView ? '列表视图' : '映射视图'}
-          </button>
-        )}
-      </div>
+    <div className="flex flex-col gap-5 w-full" style={{ maxWidth: '720px' }}>
+      <BreadcrumbNav nodes={breadcrumbNodes} />
 
       <AnimatePresence mode="wait">
-        {viewLevel === 'fridge' && isMapView && (
-          <motion.div
-            key="map"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-          >
-            <FridgeMapView
-              fridgeName={fridge.name}
-              upperItems={upperItems}
-              layer1Drawers={layer1Drawers}
-              layer2Drawers={layer2Drawers}
-              upperTemperature={fridge.upperTemperature}
-              lowerTemperature={fridge.lowerTemperature}
-              onDrawerClick={handleDrawerClick}
-              onUpperItemClick={handleItemClick}
-              onViewFridge={() => setIsMapView(false)}
-            />
-          </motion.div>
-        )}
-
-        {viewLevel === 'fridge' && !isMapView && (
+        {viewLevel === 'fridge' && (
           <motion.div
             key="fridge"
             initial={{ opacity: 0, x: -20 }}
