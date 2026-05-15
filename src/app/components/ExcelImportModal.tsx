@@ -8,6 +8,8 @@ interface ExcelImportModalProps {
   boxId: string;
   boxName: string;
   gridCols: number;
+  capacity: number;
+  occupiedPositions: Set<number>;
   currentUser: string;
   onClose: () => void;
   onImported: () => void;
@@ -30,6 +32,8 @@ export function ExcelImportModal({
   boxId,
   boxName,
   gridCols,
+  capacity,
+  occupiedPositions,
   currentUser,
   onClose,
   onImported,
@@ -62,6 +66,12 @@ export function ExcelImportModal({
     if (!parsed) return;
     setStep('importing');
 
+    // Find empty positions to auto-assign
+    const emptyPositions: number[] = [];
+    for (let pos = 0; pos < capacity; pos++) {
+      if (!occupiedPositions.has(pos)) emptyPositions.push(pos);
+    }
+
     const samples: ImportAssignment[] = [];
     for (const row of parsed.rows) {
       const patientName = row[findMappedHeader('patient_name')]?.toString().trim();
@@ -76,6 +86,9 @@ export function ExcelImportModal({
       const tagsStr = row[findMappedHeader('tags')]?.toString().trim() || '';
       const tags = tagsStr ? tagsStr.split(/[,，;；\s]+/).filter(Boolean) : [];
 
+      // Auto-assign one empty position per sample
+      const position = emptyPositions.shift();
+
       samples.push({
         patient_name: patientName,
         sample_code: sampleCode,
@@ -86,7 +99,7 @@ export function ExcelImportModal({
         tags,
         note,
         uploader: currentUser,
-        positions: [],
+        positions: position != null ? [position] : [],
       });
     }
 

@@ -9,6 +9,7 @@ interface AddBoxModalProps {
   drawerLabel?: string;
   targetPosition?: number | null;
   sampleTypes: string[];
+  currentUsername: string;
   onClose: () => void;
   onAddSampleType: (name: string) => void;
   onSave: (data: Partial<Box>) => void;
@@ -20,6 +21,7 @@ export function AddBoxModal({
   drawerLabel,
   targetPosition,
   sampleTypes,
+  currentUsername,
   onClose,
   onAddSampleType,
   onSave,
@@ -45,7 +47,7 @@ export function AddBoxModal({
     setCustomCols(editBox?.grid_cols || 10);
     setSampleType(editBox?.sample_type || sampleTypes[0] || '');
     setProjectName(editBox?.project_name || '');
-    setOwner(editBox?.owner || '');
+    setOwner(editBox?.owner || (editBox ? '' : currentUsername));
     setNote(editBox?.note || '');
     setDataPath(editBox?.data_path || '');
     setShowNewType(false);

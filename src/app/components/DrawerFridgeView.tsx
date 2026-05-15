@@ -957,6 +957,7 @@ export function DrawerFridgeView({
         drawerLabel={selectedDrawerLabel}
         targetPosition={targetBoxPosition ?? editBox?.position ?? null}
         sampleTypes={sampleTypes}
+        currentUsername={currentUser}
         onAddSampleType={onAddSampleType}
         onClose={() => { setShowBoxModal(false); setEditBox(null); setTargetBoxPosition(null); }}
         onSave={handleSaveBox}
@@ -997,6 +998,8 @@ export function DrawerFridgeView({
           boxId={selectedBox.id}
           boxName={selectedBox.name}
           gridCols={selectedBox.grid_cols || 10}
+          capacity={(selectedBox.grid_rows || 10) * (selectedBox.grid_cols || 10)}
+          occupiedPositions={new Set(tubes.map((t) => t.position))}
           currentUser={currentUser}
           onClose={() => setShowImportModal(false)}
           onImported={() => {
