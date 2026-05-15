@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { useDrag } from 'react-dnd';
-import { Package, User } from 'lucide-react';
-import { UpperItem, ITEM_TYPE_CONFIG } from '../types';
+import { Package, User, Grid3X3 } from 'lucide-react';
+import { UpperItem, getItemTypeConfig } from '../types';
 
 interface ItemCardProps {
   item: UpperItem;
@@ -11,7 +11,7 @@ interface ItemCardProps {
 }
 
 export function ItemCard({ item, isHighlighted, onClick }: ItemCardProps) {
-  const typeConfig = ITEM_TYPE_CONFIG[item.item_type] || ITEM_TYPE_CONFIG['样本'];
+  const typeConfig = getItemTypeConfig(item.item_type);
 
   const [{ isDragging }, drag] = useDrag({
     type: 'UPPER_ITEM',
@@ -41,6 +41,15 @@ export function ItemCard({ item, isHighlighted, onClick }: ItemCardProps) {
         <span className="text-[14px] font-medium truncate" style={{ color: 'var(--app-text)' }}>
           {item.name}
         </span>
+        {item.box_mode === 'precise' && item.grid_rows && item.grid_cols && (
+          <span
+            className="text-[11px] px-1.5 py-0.5 rounded flex items-center gap-0.5 flex-shrink-0"
+            style={{ background: '#dbeafe', color: '#1d4ed8' }}
+          >
+            <Grid3X3 size={10} />
+            {item.grid_rows}×{item.grid_cols}
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <span

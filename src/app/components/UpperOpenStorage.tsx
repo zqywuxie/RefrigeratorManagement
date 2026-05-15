@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Search, Plus } from 'lucide-react';
-import { UpperItem, ITEM_TYPE_CONFIG, ItemType } from '../types';
+import { UpperItem, getItemTypeConfig, ItemType } from '../types';
 import { ItemCard } from './ItemCard';
 
 interface UpperOpenStorageProps {
@@ -10,9 +10,8 @@ interface UpperOpenStorageProps {
   onSearchChange: (q: string) => void;
   onItemClick: (id: string) => void;
   onAddItem: (rowNumber: number) => void;
+  itemTypes: string[];
 }
-
-const ALL_ITEM_TYPES: (ItemType | 'all')[] = ['all', '试剂', '样本', '耗材', '临时物品'];
 
 export function UpperOpenStorage({
   items,
@@ -20,8 +19,13 @@ export function UpperOpenStorage({
   onSearchChange,
   onItemClick,
   onAddItem,
+  itemTypes,
 }: UpperOpenStorageProps) {
   const [filterType, setFilterType] = useState<ItemType | 'all'>('all');
+  const visibleItemTypes = React.useMemo(
+    () => Array.from(new Set([...itemTypes, ...items.map((item) => item.item_type)].filter(Boolean))),
+    [itemTypes, items],
+  );
 
   const filtered = items.filter((item) => {
     if (filterType !== 'all' && item.item_type !== filterType) return false;
@@ -45,7 +49,9 @@ export function UpperOpenStorage({
           上层开放存储
         </h3>
         <div className="flex items-center gap-2">
-          {ALL_ITEM_TYPES.map((t) => (
+          {(['all', ...visibleItemTypes] as (ItemType | 'all')[]).map((t) => {
+            const typeConfig = t === 'all' ? null : getItemTypeConfig(t);
+            return (
             <button
               key={t}
               onClick={() => setFilterType(t)}
@@ -54,19 +60,19 @@ export function UpperOpenStorage({
                 background: filterType === t
                   ? t === 'all'
                     ? '#e2e8f0'
-                    : ITEM_TYPE_CONFIG[t]?.bgColor || '#e2e8f0'
+                    : typeConfig?.bgColor || '#e2e8f0'
                   : 'var(--app-subtle-bg)',
                 border: filterType === t ? '1px solid var(--app-border)' : '1px solid transparent',
                 color: filterType === t
                   ? t === 'all'
                     ? '#475569'
-                    : ITEM_TYPE_CONFIG[t]?.color
+                    : typeConfig?.color
                   : 'var(--app-muted)',
               }}
             >
-              {t === 'all' ? '全部' : ITEM_TYPE_CONFIG[t]?.label || t}
+              {t === 'all' ? '全部' : typeConfig?.label || t}
             </button>
-          ))}
+          )})}
         </div>
       </div>
 
@@ -106,32 +112,29 @@ export function UpperOpenStorage({
             </button>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2">
-            {rowItems.length === 0 ? (
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                onClick={() => onAddItem(row)}
-                className="flex-shrink-0 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 cursor-pointer"
-                style={{
-                  width: '200px',
-                  height: '88px',
-                  borderColor: 'var(--slot-empty-border)',
-                  background: 'var(--slot-empty-bg)',
-                  color: 'var(--app-muted)',
-                }}
-              >
-                <Plus size={18} />
-                <span className="text-[13px]">添加物品</span>
-              </motion.button>
-            ) : (
-              rowItems.map((item) => (
+            {rowItems.map((item) => (
                 <ItemCard
                   key={item.id}
                   item={item}
                   isHighlighted={searchQuery.length > 0}
                   onClick={() => onItemClick(item.id)}
                 />
-              ))
-            )}
+            ))}
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              onClick={() => onAddItem(row)}
+              className="flex-shrink-0 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 cursor-pointer"
+              style={{
+                width: '200px',
+                height: '88px',
+                borderColor: 'var(--slot-empty-border)',
+                background: 'var(--slot-empty-bg)',
+                color: 'var(--app-muted)',
+              }}
+            >
+              <Plus size={18} />
+              <span className="text-[13px]">添加物品</span>
+            </motion.button>
           </div>
         </div>
       ))}

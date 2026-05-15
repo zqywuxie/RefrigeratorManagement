@@ -6,10 +6,61 @@ const router = Router();
 // PUT /api/boxes/:boxId
 router.put('/:boxId', async (req, res) => {
   try {
-    const { name, mode, gridRows, gridCols, sampleType, projectName, quantity, owner, tags, note } = req.body;
+    const {
+      name,
+      mode,
+      gridRows,
+      grid_rows,
+      gridCols,
+      grid_cols,
+      position,
+      sampleType,
+      sample_type,
+      projectName,
+      project_name,
+      quantity = 0,
+      owner,
+      tags,
+      note,
+      dataPath,
+      data_path,
+    } = req.body;
+    const [[existing]] = await pool.query('SELECT * FROM boxes WHERE id = ? AND deleted_at IS NULL', [req.params.boxId]);
+    if (!existing) return res.status(404).json({ error: 'Box not found' });
+
+    const finalPosition = position == null ? existing.position : Number(position);
+    if (finalPosition != null && (!Number.isInteger(finalPosition) || finalPosition < 0)) {
+      return res.status(400).json({ error: 'position must be a non-negative integer' });
+    }
+    if (finalPosition != null) {
+      const [[drawer]] = await pool.query('SELECT max_boxes FROM drawers WHERE id = ?', [existing.drawer_id]);
+      if (drawer && finalPosition >= Number(drawer.max_boxes || 0)) {
+        return res.status(409).json({ error: 'position is outside drawer capacity' });
+      }
+    }
+
+    const finalGridRows = gridRows ?? grid_rows ?? null;
+    const finalGridCols = gridCols ?? grid_cols ?? null;
+    const finalSampleType = sampleType ?? sample_type ?? null;
+    const finalProjectName = projectName ?? project_name ?? null;
+    const finalDataPath = dataPath ?? data_path ?? null;
     await pool.query(
-      `UPDATE boxes SET name=?, mode=?, grid_rows=?, grid_cols=?, sample_type=?, project_name=?, quantity=?, owner=?, tags=?, note=? WHERE id=?`,
-      [name, mode, gridRows || null, gridCols || null, sampleType || null, projectName || null, quantity, owner || null, JSON.stringify(tags || []), note || null, req.params.boxId]
+      `UPDATE boxes SET name=?, mode=?, grid_rows=?, grid_cols=?, position=?, sample_type=?, project_name=?, quantity=?, owner=?, tags=?, note=?, data_path=? WHERE id=?`,
+      [
+        name,
+        mode,
+        finalGridRows || null,
+        finalGridCols || null,
+        finalPosition,
+        finalSampleType || null,
+        finalProjectName || null,
+        quantity,
+        owner || null,
+        JSON.stringify(tags || []),
+        note || null,
+        finalDataPath,
+        req.params.boxId,
+      ]
     );
     const [[box]] = await pool.query('SELECT * FROM boxes WHERE id = ?', [req.params.boxId]);
     res.json(box);
@@ -44,12 +95,32 @@ router.get('/:boxId/cells', async (req, res) => {
 // POST /api/boxes/:boxId/cells
 router.post('/:boxId/cells', async (req, res) => {
   try {
-    const { id, position, barcode, sampleName, sampleStatus = 'normal', note } = req.body;
+    const {
+      id,
+      position,
+      barcode,
+      sampleName,
+      sample_name,
+      sampleVolume,
+      sample_volume,
+      sampleStatus = 'normal',
+      sample_status,
+      note,
+    } = req.body;
     const cellId = id || `cell-${Date.now()}`;
     await pool.query(
-      `INSERT INTO box_cells (id, box_id, position, barcode, sample_name, sample_status, note)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [cellId, req.params.boxId, position, barcode || null, sampleName || null, sampleStatus, note || null]
+      `INSERT INTO box_cells (id, box_id, position, barcode, sample_name, sample_volume, sample_status, note)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        cellId,
+        req.params.boxId,
+        position,
+        barcode || null,
+        sampleName ?? sample_name ?? null,
+        sampleVolume ?? sample_volume ?? null,
+        sampleStatus ?? sample_status,
+        note || null,
+      ]
     );
     const [[cell]] = await pool.query('SELECT * FROM box_cells WHERE id = ?', [cellId]);
     res.status(201).json(cell);
@@ -61,10 +132,17 @@ router.post('/:boxId/cells', async (req, res) => {
 // PUT /api/cells/:cellId
 router.put('/cells/:cellId', async (req, res) => {
   try {
-    const { barcode, sampleName, sampleStatus, note } = req.body;
+    const { barcode, sampleName, sample_name, sampleVolume, sample_volume, sampleStatus, sample_status, note } = req.body;
     await pool.query(
-      `UPDATE box_cells SET barcode=?, sample_name=?, sample_status=?, note=? WHERE id=?`,
-      [barcode || null, sampleName || null, sampleStatus, note || null, req.params.cellId]
+      `UPDATE box_cells SET barcode=?, sample_name=?, sample_volume=?, sample_status=?, note=? WHERE id=?`,
+      [
+        barcode || null,
+        sampleName ?? sample_name ?? null,
+        sampleVolume ?? sample_volume ?? null,
+        sampleStatus ?? sample_status,
+        note || null,
+        req.params.cellId,
+      ]
     );
     const [[cell]] = await pool.query('SELECT * FROM box_cells WHERE id = ?', [req.params.cellId]);
     res.json(cell);

@@ -1,28 +1,79 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X } from 'lucide-react';
-import { UpperItem, ItemType, ITEM_TYPE_CONFIG } from '../types';
+import { Plus, X } from 'lucide-react';
+import { UpperItem, ItemType, BoxMode, BOX_GRID_PRESETS } from '../types';
 
 interface AddItemModalProps {
   isOpen: boolean;
   editItem?: UpperItem | null;
   defaultRow: number;
+  maxRows?: number;
+  currentUsername: string;
+  itemTypes: string[];
+  onAddItemType: (name: string) => void;
   onClose: () => void;
   onSave: (data: Partial<UpperItem>) => void;
 }
 
-export function AddItemModal({ isOpen, editItem, defaultRow, onClose, onSave }: AddItemModalProps) {
-  const [name, setName] = useState(editItem?.name || '');
-  const [itemType, setItemType] = useState<ItemType>(editItem?.item_type || '样本');
-  const [quantity, setQuantity] = useState(editItem?.quantity || 1);
-  const [owner, setOwner] = useState(editItem?.owner || '');
-  const [note, setNote] = useState(editItem?.note || '');
-  const [rowNumber, setRowNumber] = useState(editItem?.row_number || defaultRow);
+export function AddItemModal({
+  isOpen,
+  editItem,
+  defaultRow,
+  currentUsername,
+  itemTypes,
+  onAddItemType,
+  onClose,
+  onSave,
+}: AddItemModalProps) {
+  const [name, setName] = useState('');
+  const [itemType, setItemType] = useState<ItemType>('样本');
+  const [quantity, setQuantity] = useState(1);
+  const [owner, setOwner] = useState('');
+  const [note, setNote] = useState('');
+  const [rowNumber, setRowNumber] = useState(defaultRow);
+  const [showNewType, setShowNewType] = useState(false);
+  const [newTypeName, setNewTypeName] = useState('');
+  const [boxMode, setBoxMode] = useState<BoxMode>('simple');
+  const [gridPreset, setGridPreset] = useState(0);
+  const [customRows, setCustomRows] = useState(10);
+  const [customCols, setCustomCols] = useState(10);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setName(editItem?.name || '');
+    setItemType(editItem?.item_type || itemTypes[0] || '样本');
+    setQuantity(editItem?.quantity || 1);
+    setOwner(editItem?.owner || currentUsername);
+    setNote(editItem?.note || '');
+    setRowNumber(editItem?.row_number || defaultRow);
+    setShowNewType(false);
+    setNewTypeName('');
+    setBoxMode(editItem?.box_mode || 'simple');
+    setGridPreset(0);
+    setCustomRows(editItem?.grid_rows || 10);
+    setCustomCols(editItem?.grid_cols || 10);
+  }, [isOpen, editItem, defaultRow, currentUsername, itemTypes]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave({ id: editItem?.id, name: name.trim(), item_type: itemType, quantity, owner: owner || null, note: note || null, row_number: rowNumber, tags: editItem?.tags || [] });
+    const isBox = boxMode === 'precise';
+    const preset = BOX_GRID_PRESETS[gridPreset];
+    const finalRows = isBox ? (preset.rows || customRows) : null;
+    const finalCols = isBox ? (preset.cols || customCols) : null;
+    onSave({
+      id: editItem?.id,
+      name: name.trim(),
+      item_type: itemType,
+      box_mode: boxMode,
+      grid_rows: finalRows,
+      grid_cols: finalCols,
+      quantity,
+      owner: owner || null,
+      note: note || null,
+      row_number: rowNumber,
+      tags: editItem?.tags || [],
+    });
     onClose();
   };
 
@@ -75,25 +126,69 @@ export function AddItemModal({ isOpen, editItem, defaultRow, onClose, onSave }: 
             />
 
             <div className="grid grid-cols-2 gap-3">
-              <select
-                value={itemType}
-                onChange={(e) => setItemType(e.target.value as ItemType)}
-                className="px-3 py-2 rounded-lg text-[14px] outline-none"
-                style={fieldStyle}
+              {showNewType ? (
+                <div className="flex gap-1">
+                  <input
+                    value={newTypeName}
+                    onChange={(e) => setNewTypeName(e.target.value)}
+                    placeholder="新物品类型"
+                    autoFocus
+                    className="min-w-0 flex-1 px-3 py-2 rounded-lg text-[14px] outline-none"
+                    style={fieldStyle}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextType = newTypeName.trim();
+                      if (!nextType) return;
+                      onAddItemType(nextType);
+                      setItemType(nextType);
+                      setNewTypeName('');
+                      setShowNewType(false);
+                    }}
+                    className="px-2 rounded-lg text-[12px]"
+                    style={{ background: '#2563eb', color: '#fff' }}
+                  >
+                    添加
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-1">
+                  <select
+                    value={itemType}
+                    onChange={(e) => setItemType(e.target.value as ItemType)}
+                    className="min-w-0 flex-1 px-3 py-2 rounded-lg text-[14px] outline-none"
+                    style={fieldStyle}
+                  >
+                    {itemTypes.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewType(true)}
+                    className="px-2 rounded-lg"
+                    title="添加物品类型"
+                    style={{
+                      background: 'var(--app-panel-bg)',
+                      border: '1px solid var(--app-border)',
+                      color: '#2563eb',
+                    }}
+                  >
+                    <Plus size={15} />
+                  </button>
+                </div>
+              )}
+              <div
+                className="px-3 py-2 rounded-lg text-[14px]"
+                style={{
+                  background: 'var(--app-input-muted-bg)',
+                  border: '1px solid var(--app-input-border)',
+                  color: 'var(--app-subtle-text)',
+                }}
               >
-                {Object.entries(ITEM_TYPE_CONFIG).map(([key, cfg]) => (
-                  <option key={key} value={key}>{cfg.label}</option>
-                ))}
-              </select>
-              <select
-                value={rowNumber}
-                onChange={(e) => setRowNumber(Number(e.target.value))}
-                className="px-3 py-2 rounded-lg text-[14px] outline-none"
-                style={fieldStyle}
-              >
-                <option value={1}>第 1 行</option>
-                <option value={2}>第 2 行</option>
-              </select>
+                第 {rowNumber} 行
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -123,6 +218,57 @@ export function AddItemModal({ isOpen, editItem, defaultRow, onClose, onSave }: 
               className="w-full px-3 py-2 rounded-lg text-[14px] outline-none resize-none"
               style={fieldStyle}
             />
+
+            {/* Box mode: option only for sample-type items */}
+            <div className="border-t pt-3" style={{ borderColor: 'var(--app-border)' }}>
+              <label className="text-[12px] block mb-2" style={{ color: 'var(--app-muted)' }}>
+                盒模式（可选）— 启用后可在上层大空间中使用盒子孔位管理
+              </label>
+              <div className="flex gap-2 mb-2">
+                {(['simple', 'precise'] as BoxMode[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setBoxMode(m)}
+                    className="flex-1 py-2 rounded-lg text-[13px] transition-all"
+                    style={{
+                      background: boxMode === m ? '#2563eb' : 'var(--app-panel-bg)',
+                      color: boxMode === m ? '#fff' : 'var(--app-muted)',
+                      border: boxMode === m ? '1px solid #3b82f6' : '1px solid var(--app-border)',
+                    }}
+                  >
+                    {m === 'precise' ? '孔位模式' : '普通模式'}
+                  </button>
+                ))}
+              </div>
+              {boxMode === 'precise' && (
+                <div className="flex gap-2 flex-wrap">
+                  {BOX_GRID_PRESETS.map((preset, i) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setGridPreset(i)}
+                      className="text-[11px] px-3 py-1 rounded-lg transition-all"
+                      style={{
+                        background: gridPreset === i ? '#dbeafe' : 'var(--app-panel-bg)',
+                        color: gridPreset === i ? '#1d4ed8' : 'var(--app-muted)',
+                        border: gridPreset === i ? '1px solid #3b82f6' : '1px solid var(--app-border)',
+                      }}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                  {BOX_GRID_PRESETS[gridPreset].label === '自定义' && (
+                    <div className="flex gap-2 w-full mt-1">
+                      <input type="number" min={1} max={20} value={customRows} onChange={(e) => setCustomRows(Number(e.target.value))}
+                        placeholder="行" className="flex-1 px-2 py-1 rounded text-[13px] outline-none" style={fieldStyle} />
+                      <input type="number" min={1} max={20} value={customCols} onChange={(e) => setCustomCols(Number(e.target.value))}
+                        placeholder="列" className="flex-1 px-2 py-1 rounded text-[13px] outline-none" style={fieldStyle} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="flex gap-2 justify-end">
               <button

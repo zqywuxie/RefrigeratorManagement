@@ -141,7 +141,7 @@ export const STATUS_CONFIG: Record<
 // ── Drawer Freezer Types ──
 
 export type FridgeType = 'drawer' | 'shelf';
-export type ItemType = '试剂' | '样本' | '耗材' | '临时物品';
+export type ItemType = string;
 export type BoxMode = 'precise' | 'simple';
 
 export interface UpperItem {
@@ -150,6 +150,9 @@ export interface UpperItem {
   row_number: number;
   name: string;
   item_type: ItemType;
+  box_mode: BoxMode | null;
+  grid_rows: number | null;
+  grid_cols: number | null;
   quantity: number;
   owner: string | null;
   tags: string[];
@@ -180,12 +183,14 @@ export interface Box {
   mode: BoxMode;
   grid_rows: number | null;
   grid_cols: number | null;
+  position: number | null;
   sample_type: string | null;
   project_name: string | null;
   quantity: number;
   owner: string | null;
   tags: string[];
   note: string | null;
+  data_path: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -196,16 +201,23 @@ export interface BoxCell {
   position: number;
   barcode: string | null;
   sample_name: string | null;
+  sample_volume: string | null;
   sample_status: SampleStatus;
   note: string | null;
 }
 
-export const ITEM_TYPE_CONFIG: Record<ItemType, { label: string; color: string; bgColor: string }> = {
+export const DEFAULT_ITEM_TYPES: ItemType[] = ['试剂', '样本', '耗材', '临时物品'];
+
+export const ITEM_TYPE_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   '试剂': { label: '试剂', color: '#1d4ed8', bgColor: '#dbeafe' },
   '样本': { label: '样本', color: '#15803d', bgColor: '#dcfce7' },
   '耗材': { label: '耗材', color: '#92400e', bgColor: '#fef3c7' },
   '临时物品': { label: '临时', color: '#6d28d9', bgColor: '#ede9fe' },
 };
+
+export function getItemTypeConfig(type: string): { label: string; color: string; bgColor: string } {
+  return ITEM_TYPE_CONFIG[type] || { label: type, color: '#475569', bgColor: '#e2e8f0' };
+}
 
 export function getOccupancyRate(used: number, total: number): number {
   if (total === 0) return 0;
@@ -230,6 +242,62 @@ export const BOX_GRID_PRESETS = [
   { label: '8×12', rows: 8, cols: 12 },
   { label: '自定义', rows: 0, cols: 0 },
 ];
+
+export interface SampleRecord {
+  id: string;
+  patient_name: string;
+  sample_code: string;
+  source: string | null;
+  sample_type: string | null;
+  collection_stage: string | null;
+  collected_at: string | null;
+  tags: string[];
+  note: string | null;
+  group_color: string;
+  uploader: string | null;
+  tube_count?: number;
+  tubes: Tube[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Tube {
+  id: string;
+  sample_id: string;
+  tube_label: string;
+  box_id: string;
+  position: number;
+  barcode: string | null;
+  volume: string | null;
+  status: SampleStatus;
+  note: string | null;
+  // Joined fields
+  patient_name?: string;
+  sample_code?: string;
+  group_color?: string;
+  box_name?: string;
+  grid_cols?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const GROUP_COLORS = [
+  '#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6',
+  '#ec4899','#06b6d4','#f97316','#84cc16','#14b8a6',
+  '#e11d48','#6366f1',
+];
+
+export function getGroupColorStyle(color: string): { bg: string; border: string; glow: string } {
+  return {
+    bg: `${color}18`,
+    border: `${color}80`,
+    glow: `${color}30`,
+  };
+}
+
+export function boxPositionToLabel(pos: number): string {
+  return `内部位置 ${pos + 1}`;
+}
 
 export function cellPositionToLabel(pos: number, cols: number): string {
   const row = Math.floor(pos / cols);

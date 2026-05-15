@@ -6,12 +6,14 @@ import { Drawer, getOccupancyRate, getOccupancyColor } from '../types';
 interface DrawerSlotProps {
   drawer: Drawer;
   onClick: () => void;
+  variant?: 'standard' | 'compact';
 }
 
-export function DrawerSlot({ drawer, onClick }: DrawerSlotProps) {
+export function DrawerSlot({ drawer, onClick, variant = 'standard' }: DrawerSlotProps) {
   const boxCount = drawer.box_count ?? 0;
   const rate = getOccupancyRate(boxCount, drawer.max_boxes);
   const oc = getOccupancyColor(rate);
+  const isCompact = variant === 'compact';
 
   const statusLabel =
     rate > 80 ? '满载' : rate > 50 ? '过半' : rate > 25 ? '使用中' : boxCount > 0 ? '少量' : '空闲';
@@ -25,10 +27,11 @@ export function DrawerSlot({ drawer, onClick }: DrawerSlotProps) {
       onClick={onClick}
       className="relative rounded-xl flex flex-col items-center justify-center gap-1.5 cursor-pointer overflow-hidden"
       style={{
-        aspectRatio: '1 / 1',
+        aspectRatio: isCompact ? '2.35 / 1' : '1 / 1',
         background: oc.bg,
         border: `1.5px solid ${oc.border}`,
         boxShadow: '0 4px 16px rgba(15,23,42,0.06)',
+        minHeight: isCompact ? 54 : 92,
       }}
     >
       <div
@@ -38,16 +41,19 @@ export function DrawerSlot({ drawer, onClick }: DrawerSlotProps) {
           background: `linear-gradient(0deg, ${oc.border}40, transparent)`,
         }}
       />
-      <span className="relative z-10 text-[20px] font-mono font-bold" style={{ color: 'var(--app-text)' }}>
+      <span
+        className="relative z-10 font-mono font-bold"
+        style={{ color: 'var(--app-text)', fontSize: isCompact ? 16 : 20 }}
+      >
         {drawer.label}
       </span>
       <div className="relative z-10 flex items-center gap-1">
-        <Package size={13} color={statusColor} />
-        <span className="text-[13px] font-mono" style={{ color: statusColor }}>
+        <Package size={isCompact ? 11 : 13} color={statusColor} />
+        <span className="font-mono" style={{ color: statusColor, fontSize: isCompact ? 11 : 13 }}>
           {boxCount}/{drawer.max_boxes}
         </span>
       </div>
-      <span className="relative z-10 text-[11px]" style={{ color: statusColor }}>
+      <span className="relative z-10" style={{ color: statusColor, fontSize: isCompact ? 10 : 11 }}>
         {statusLabel}
       </span>
     </motion.button>

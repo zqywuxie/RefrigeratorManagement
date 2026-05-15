@@ -9,9 +9,10 @@ interface DrawerLayerProps {
   cols: number;
   drawers: Drawer[];
   onDrawerClick: (drawerId: string) => void;
+  variant?: 'standard' | 'compact';
 }
 
-export function DrawerLayer({ label, rows, cols, drawers, onDrawerClick }: DrawerLayerProps) {
+export function DrawerLayer({ label, rows, cols, drawers, onDrawerClick, variant = 'standard' }: DrawerLayerProps) {
   const grid: (Drawer | undefined)[][] = [];
   for (let r = 0; r < rows; r++) {
     grid[r] = [];
@@ -37,6 +38,7 @@ export function DrawerLayer({ label, rows, cols, drawers, onDrawerClick }: Drawe
             <DrawerSlot
               key={drawer.id}
               drawer={drawer}
+              variant={variant}
               onClick={() => onDrawerClick(drawer.id)}
             />
           ) : (

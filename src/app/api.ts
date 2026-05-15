@@ -1,6 +1,6 @@
 import type { AuthUser } from './AuthContext';
 import { Sample, SubSample } from './types';
-import type { UpperItem, Drawer, Box, BoxCell } from './types';
+import type { UpperItem, Drawer, Box, BoxCell, SampleRecord, Tube } from './types';
 
 export interface RefrigeratorResponse {
   id: string;
@@ -181,6 +181,7 @@ export async function createRefrigerator(
     lowerCols?: number;
     upperTemperature?: number;
     lowerTemperature?: number;
+    fridgeType?: string;
   },
 ): Promise<RefrigeratorResponse> {
   return fetchJSON(`${BASE}/refrigerators`, {
@@ -291,6 +292,19 @@ export async function createSampleType(name: string): Promise<{ name: string }> 
   });
 }
 
+// ── Item Types ──
+
+export async function fetchItemTypes(): Promise<string[]> {
+  return fetchJSON(`${BASE}/item-types`);
+}
+
+export async function createItemType(name: string): Promise<{ name: string }> {
+  return fetchJSON(`${BASE}/item-types`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
 // ── Upper Items ──
 
 export async function fetchUpperItems(fridgeId: string): Promise<UpperItem[]> {
@@ -319,6 +333,21 @@ export async function deleteUpperItem(itemId: string): Promise<void> {
 
 export async function fetchDrawers(fridgeId: string): Promise<Drawer[]> {
   return fetchJSON(`${BASE}/refrigerators/${encodeURIComponent(fridgeId)}/drawers`);
+}
+
+export async function updateDrawer(drawerId: string, data: Partial<Drawer>): Promise<Drawer> {
+  try {
+    return await fetchJSON(`${BASE}/drawers/${encodeURIComponent(drawerId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  } catch (err: any) {
+    if (!String(err?.message || '').includes('404')) throw err;
+    return fetchJSON(`${BASE}/drawers/${encodeURIComponent(drawerId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // ── Boxes ──
@@ -359,12 +388,129 @@ export async function createBoxCell(boxId: string, data: Partial<BoxCell>): Prom
 }
 
 export async function updateBoxCell(cellId: string, data: Partial<BoxCell>): Promise<BoxCell> {
-  return fetchJSON(`${BASE}/cells/${encodeURIComponent(cellId)}`, {
+  return fetchJSON(`${BASE}/boxes/cells/${encodeURIComponent(cellId)}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 }
 
 export async function deleteBoxCell(cellId: string): Promise<void> {
-  await fetchJSON(`${BASE}/cells/${encodeURIComponent(cellId)}`, { method: 'DELETE' });
+  await fetchJSON(`${BASE}/boxes/cells/${encodeURIComponent(cellId)}`, { method: 'DELETE' });
+}
+
+// ── Sample Records ──
+
+export async function fetchSampleRecords(params?: { box_id?: string; search?: string }): Promise<SampleRecord[]> {
+  const qs = new URLSearchParams();
+  if (params?.box_id) qs.set('box_id', params.box_id);
+  if (params?.search) qs.set('search', params.search);
+  const q = qs.toString();
+  return fetchJSON(`${BASE}/sample-records${q ? `?${q}` : ''}`);
+}
+
+export async function fetchSampleRecord(id: string): Promise<SampleRecord> {
+  return fetchJSON(`${BASE}/sample-records/${encodeURIComponent(id)}`);
+}
+
+export async function createSampleRecord(data: {
+  patient_name: string;
+  sample_code: string;
+  source?: string;
+  sample_type?: string;
+  collection_stage?: string;
+  collected_at?: string;
+  tags?: string[];
+  note?: string;
+  uploader?: string;
+  tubes?: Array<{ box_id: string; position: number; volume?: string; barcode?: string; status?: string }>;
+}): Promise<SampleRecord> {
+  return fetchJSON(`${BASE}/sample-records`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSampleRecord(id: string, data: Partial<SampleRecord>): Promise<SampleRecord> {
+  return fetchJSON(`${BASE}/sample-records/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSampleRecord(id: string): Promise<void> {
+  await fetchJSON(`${BASE}/sample-records/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export async function addTubesToSample(sampleId: string, tubes: Array<{ box_id: string; position: number; volume?: string; barcode?: string; status?: string }>): Promise<{ tubes: Tube[] }> {
+  return fetchJSON(`${BASE}/sample-records/${encodeURIComponent(sampleId)}/tubes`, {
+    method: 'POST',
+    body: JSON.stringify({ tubes }),
+  });
+}
+
+export async function updateTube(tubeId: string, data: Partial<Tube>): Promise<Tube> {
+  return fetchJSON(`${BASE}/tubes/${encodeURIComponent(tubeId)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTube(tubeId: string): Promise<void> {
+  await fetchJSON(`${BASE}/tubes/${encodeURIComponent(tubeId)}`, { method: 'DELETE' });
+}
+
+export async function fetchBoxTubes(boxId: string): Promise<Tube[]> {
+  return fetchJSON(`${BASE}/boxes/${encodeURIComponent(boxId)}/tubes`);
+}
+
+export async function batchUpdateSampleRecords(ids: string[], updates: Partial<SampleRecord>): Promise<{ ok: boolean; updated: number }> {
+  return fetchJSON(`${BASE}/sample-records/batch`, {
+    method: 'PUT',
+    body: JSON.stringify({ ids, updates }),
+  });
+}
+
+// ── Excel Import ──
+
+export interface ParsedExcel {
+  headers: string[];
+  rows: Record<string, any>[];
+  total: number;
+  fieldSuggestions: Record<string, string>;
+}
+
+export async function parseExcel(file: File): Promise<ParsedExcel> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const token = localStorage.getItem('biofridge_token');
+  const res = await fetch(`${BASE}/import/parse-excel`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export interface ImportAssignment {
+  patient_name: string;
+  sample_code: string;
+  source?: string;
+  sample_type?: string;
+  collection_stage?: string;
+  collected_at?: string;
+  tags?: string[];
+  note?: string;
+  uploader?: string;
+  positions: number[];
+}
+
+export async function assignImportedSamples(boxId: string, samples: ImportAssignment[]): Promise<{ assigned: number; results: any[] }> {
+  return fetchJSON(`${BASE}/import/assign`, {
+    method: 'POST',
+    body: JSON.stringify({ box_id: boxId, samples }),
+  });
 }

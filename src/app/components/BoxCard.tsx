@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Box as BoxIcon, User, Calendar, Grid3X3 } from 'lucide-react';
-import { Box, formatChineseShortDate } from '../types';
+import { useDrag } from 'react-dnd';
+import { Box as BoxIcon, User, Calendar, Grid3X3, FolderOpen, Copy } from 'lucide-react';
+import { Box, boxPositionToLabel, formatChineseShortDate } from '../types';
 
 interface BoxCardProps {
   box: Box;
@@ -14,17 +15,33 @@ export function BoxCard({ box, onClick, onDelete }: BoxCardProps) {
   const gridLabel = isPrecise && box.grid_rows && box.grid_cols
     ? `${box.grid_rows}×${box.grid_cols}`
     : null;
+  const tags = Array.isArray(box.tags) ? box.tags : [];
+  const [{ isDragging }, drag] = useDrag({
+    type: 'BOX',
+    item: { id: box.id, position: box.position },
+    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+  });
 
   return (
-    <motion.button
+    <motion.div
+      ref={drag}
+      role="button"
+      tabIndex={0}
       whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className="relative w-full rounded-xl px-4 py-3.5 text-left cursor-pointer"
       style={{
         background: 'var(--app-card-bg)',
         border: '1.5px solid var(--app-border)',
         boxShadow: '0 4px 16px rgba(15,23,42,0.06)',
+        opacity: isDragging ? 0.45 : 1,
       }}
     >
       <div className="flex items-start justify-between">
@@ -47,7 +64,7 @@ export function BoxCard({ box, onClick, onDelete }: BoxCardProps) {
           <div className="flex items-center gap-3 mt-1.5 text-[12px]" style={{ color: 'var(--app-muted)' }}>
             {box.sample_type && <span>{box.sample_type}</span>}
             {box.project_name && <span>{box.project_name}</span>}
-            <span>×{box.quantity}</span>
+            {box.position != null && <span>{boxPositionToLabel(box.position)}</span>}
           </div>
           <div className="flex items-center gap-3 mt-1.5 text-[11px]" style={{ color: 'var(--app-muted)' }}>
             {box.owner && (
@@ -70,9 +87,9 @@ export function BoxCard({ box, onClick, onDelete }: BoxCardProps) {
         </button>
       </div>
 
-      {box.tags.length > 0 && (
+      {tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
-          {box.tags.map((tag) => (
+          {tags.map((tag) => (
             <span
               key={tag}
               className="text-[11px] px-1.5 py-0.5 rounded"
@@ -93,6 +110,26 @@ export function BoxCard({ box, onClick, onDelete }: BoxCardProps) {
           {box.note}
         </p>
       )}
-    </motion.button>
+
+      {box.data_path && (
+        <div
+          className="flex items-center gap-1.5 mt-2 text-[11px] rounded px-2 py-1 cursor-pointer hover:opacity-80"
+          style={{
+            background: 'var(--app-input-bg)',
+            border: '1px solid var(--app-input-border)',
+            color: 'var(--app-muted)',
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(box.data_path!);
+          }}
+          title="点击复制路径"
+        >
+          <FolderOpen size={12} color="#60a5fa" />
+          <span className="truncate flex-1">{box.data_path}</span>
+          <Copy size={11} />
+        </div>
+      )}
+    </motion.div>
   );
 }

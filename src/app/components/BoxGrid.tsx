@@ -1,26 +1,83 @@
-import React from 'react';
-import { ArrowLeft, Grid3X3 } from 'lucide-react';
-import { Box, BoxCell, STATUS_CONFIG } from '../types';
+import React, { useState, useCallback } from 'react';
+import { ArrowLeft, Grid3X3, CheckSquare, Square } from 'lucide-react';
+import { Box, BoxCell, Tube, STATUS_CONFIG } from '../types';
 import { CellSlot } from './CellSlot';
 
 interface BoxGridProps {
   box: Box;
-  cells: BoxCell[];
-  matchedCellIds: Set<string>;
+  cells?: BoxCell[];
+  tubes?: Tube[];
+  matchedIds: Set<string>;
+  multiSelect?: boolean;
+  selectedPositions?: Set<number>;
+  hoveredSampleId?: string | null;
   onBack: () => void;
   onCellClick: (position: number) => void;
+  onMultiSelectToggle?: (position: number) => void;
+  onMultiSelectConfirm?: (positions: number[]) => void;
+  onTubeHover?: (sampleId: string | null) => void;
 }
 
-export function BoxGrid({ box, cells, matchedCellIds, onBack, onCellClick }: BoxGridProps) {
+export function BoxGrid({
+  box,
+  cells,
+  tubes,
+  matchedIds,
+  multiSelect = false,
+  selectedPositions = new Set(),
+  hoveredSampleId,
+  onBack,
+  onCellClick,
+  onMultiSelectToggle,
+  onMultiSelectConfirm,
+  onTubeHover,
+}: BoxGridProps) {
   const rows = box.grid_rows || 10;
   const cols = box.grid_cols || 10;
   const capacity = rows * cols;
-  const filledCount = cells.length;
 
-  const getCellAt = (pos: number) => cells.find((c) => c.position === pos);
+  // Build tube or cell lookup by position
+  const tubeByPosition = React.useMemo(() => {
+    if (!tubes) return new Map();
+    const map = new Map<number, Tube>();
+    for (const t of tubes) map.set(t.position, t);
+    return map;
+  }, [tubes]);
 
-  const statusCounts = cells.reduce((acc, c) => {
-    acc[c.sample_status] = (acc[c.sample_status] || 0) + 1;
+  const cellByPosition = React.useMemo(() => {
+    if (!cells) return new Map();
+    const map = new Map<number, BoxCell>();
+    for (const c of cells) map.set(c.position, c);
+    return map;
+  }, [cells]);
+
+  const entities = tubes || cells || [];
+  const filledCount = tubes
+    ? new Set(tubes.map((t) => t.position)).size
+    : cells
+      ? cells.length
+      : 0;
+
+  // Group tubes by sample_id for highlighting
+  const tubeSampleMap = React.useMemo(() => {
+    if (!tubes) return new Map<string, Set<number>>();
+    const map = new Map<string, Set<number>>();
+    for (const t of tubes) {
+      if (!map.has(t.sample_id)) map.set(t.sample_id, new Set());
+      map.get(t.sample_id)!.add(t.position);
+    }
+    return map;
+  }, [tubes]);
+
+  // Positions that should be highlighted as part of hovered sample group
+  const groupedPositions = React.useMemo(() => {
+    if (!hoveredSampleId || !tubeSampleMap.has(hoveredSampleId)) return new Set<number>();
+    return tubeSampleMap.get(hoveredSampleId)!;
+  }, [hoveredSampleId, tubeSampleMap]);
+
+  const statusCounts = entities.reduce((acc, e) => {
+    const s = 'status' in e ? (e as Tube).status : (e as BoxCell).sample_status;
+    acc[s] = (acc[s] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
@@ -50,15 +107,15 @@ export function BoxGrid({ box, cells, matchedCellIds, onBack, onCellClick }: Box
         {Object.keys(STATUS_CONFIG).map((status) => {
           const count = statusCounts[status] || 0;
           if (count === 0) return null;
-          const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
+          const sconfig = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
           return (
             <span
               key={status}
               className="text-[12px] px-2 py-1 rounded-full flex items-center gap-1"
-              style={{ background: config.bgColor, color: config.color, border: `1px solid ${config.borderColor}60` }}
+              style={{ background: sconfig.bgColor, color: sconfig.color, border: `1px solid ${sconfig.borderColor}60` }}
             >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: config.borderColor }} />
-              {config.label} ×{count}
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: sconfig.borderColor }} />
+              {sconfig.label} ×{count}
             </span>
           );
         })}
@@ -82,16 +139,32 @@ export function BoxGrid({ box, cells, matchedCellIds, onBack, onCellClick }: Box
             gridTemplateRows: `repeat(${rows}, auto)`,
           }}
         >
-          {Array.from({ length: capacity }, (_, i) => {
-            const cell = getCellAt(i);
+          {Array.from({ length: capacity }, (_, position) => {
+            const tube = tubeByPosition.get(position);
+            const cell = cellByPosition.get(position);
+            const isCellHighlighted = cell ? matchedIds.has(cell.id) : false;
+            const isTubeHighlighted = tube ? matchedIds.has(tube.id) : false;
+            const isGrouped = tube ? groupedPositions.has(position) : false;
+            const isSelected = selectedPositions.has(position);
+
             return (
               <CellSlot
-                key={`cell-${i}`}
+                key={`cell-${position}`}
                 cell={cell}
-                position={i}
+                tube={tube}
+                position={position}
                 cols={cols}
-                isHighlighted={cell ? matchedCellIds.has(cell.id) : false}
-                onClick={() => onCellClick(i)}
+                isHighlighted={isCellHighlighted || isTubeHighlighted}
+                isGrouped={isGrouped}
+                groupColor={tube?.group_color}
+                isSelected={isSelected}
+                onClick={() => {
+                  if (multiSelect && onMultiSelectToggle) {
+                    onMultiSelectToggle(position);
+                  } else {
+                    onCellClick(position);
+                  }
+                }}
               />
             );
           })}

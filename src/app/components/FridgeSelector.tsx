@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Plus, Trash2, Box, Pencil } from 'lucide-react';
-import { Refrigerator } from '../types';
+import { FridgeType, Refrigerator } from '../types';
 
 interface FridgeSelectorProps {
   refrigerators: Refrigerator[];
@@ -12,6 +12,7 @@ interface FridgeSelectorProps {
     description?: string,
     upperTemperature?: number,
     lowerTemperature?: number,
+    fridgeType?: FridgeType,
   ) => void;
   onDelete: (id: string) => void;
   onEdit: (
@@ -38,6 +39,7 @@ export function FridgeSelector({
   const [addDesc, setAddDesc] = useState('');
   const [addUpperTemp, setAddUpperTemp] = useState('-20');
   const [addLowerTemp, setAddLowerTemp] = useState('4');
+  const [addFridgeType, setAddFridgeType] = useState<FridgeType>('drawer');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
@@ -82,11 +84,13 @@ export function FridgeSelector({
       addDesc.trim() || undefined,
       parseTemperature(addUpperTemp, -20),
       parseTemperature(addLowerTemp, 4),
+      addFridgeType,
     );
     setAddName('');
     setAddDesc('');
     setAddUpperTemp('-20');
     setAddLowerTemp('4');
+    setAddFridgeType('drawer');
     setAdding(false);
   };
 
@@ -218,7 +222,7 @@ export function FridgeSelector({
                     color: r.fridge_type === 'drawer' ? '#1d4ed8' : '#15803d',
                     border: `1px solid ${r.fridge_type === 'drawer' ? '#93c5fd' : '#86efac'}`,
                   }}>
-                    {r.fridge_type === 'drawer' ? '抽屉' : '层架'}
+                    {r.fridge_type === 'drawer' ? '抽屉' : '四层'}
                   </span>
                   <span className="text-[11px] font-mono mr-1" style={{ color: 'var(--app-muted)' }}>
                     {r.upperTemperature}°/{r.lowerTemperature}°
@@ -265,6 +269,26 @@ export function FridgeSelector({
                   style={fieldStyle}
                 />
                 <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { value: 'drawer' as FridgeType, label: '主冰箱/抽屉' },
+                    { value: 'shelf' as FridgeType, label: '四层大空间' },
+                  ]).map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setAddFridgeType(option.value)}
+                      className="rounded px-2 py-1.5 text-[12px]"
+                      style={{
+                        background: addFridgeType === option.value ? '#dbeafe' : 'var(--app-panel-bg)',
+                        color: addFridgeType === option.value ? '#1d4ed8' : 'var(--app-muted)',
+                        border: `1px solid ${addFridgeType === option.value ? '#93c5fd' : 'var(--app-border)'}`,
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <input
                     type="number"
                     step="0.1"
@@ -292,6 +316,11 @@ export function FridgeSelector({
                   className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
                   style={fieldStyle}
                 />
+                {addFridgeType === 'shelf' && (
+                  <p className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
+                    四层大空间冰箱会创建 4 个固定大存储位。
+                  </p>
+                )}
                 <div className="flex gap-1.5">
                   <button
                     type="button"

@@ -32,6 +32,7 @@ import {
   DEFAULT_COMPARTMENT_GRIDS,
   compartmentCapacity,
   FridgeType,
+  DEFAULT_ITEM_TYPES,
 } from './types';
 import {
   fetchRefrigerators,
@@ -47,6 +48,8 @@ import {
   deleteSubSample,
   fetchSampleTypes,
   createSampleType,
+  fetchItemTypes,
+  createItemType,
 } from './api';
 import { FridgeUnit } from './components/FridgeUnit';
 import { FridgeSelector } from './components/FridgeSelector';
@@ -55,6 +58,7 @@ import { AddSampleModal } from './components/AddSampleModal';
 import { RootAdminPanel } from './components/RootAdminPanel';
 import { AuthProvider, useAuth } from './AuthContext';
 import { DrawerFridgeView } from './components/DrawerFridgeView';
+import { ShelfFridgeView } from './components/ShelfFridgeView';
 import { LoginPage } from './components/LoginPage';
 
 type UploadedSampleItem = {
@@ -122,6 +126,7 @@ function AppContent() {
   const [viewingContainerId, setViewingContainerId] = useState<string | null>(null);
   const [editItem, setEditItem] = useState<DetailItem | null>(null);
   const [sampleTypes, setSampleTypes] = useState<string[]>(['血清', '血浆', '尿液', 'DNA', '组织', '全血']);
+  const [itemTypes, setItemTypes] = useState<string[]>(DEFAULT_ITEM_TYPES);
 
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 5000);
@@ -159,6 +164,9 @@ function AppContent() {
     fetchSampleTypes()
       .then((data) => setSampleTypes(data))
       .catch(() => {}); // use defaults if server unavailable
+    fetchItemTypes()
+      .then((data) => setItemTypes(data.length > 0 ? data : DEFAULT_ITEM_TYPES))
+      .catch(() => {});
   }, []);
 
   // Load samples when fridge changes
@@ -304,17 +312,20 @@ function AppContent() {
       description?: string,
       upperTemperature = -20,
       lowerTemperature = 4,
+      fridgeType: FridgeType = 'drawer',
     ) => {
       try {
+        const isShelf = fridgeType === 'shelf';
         const data = await apiCreateRefrigerator({
           name,
           description,
-          upperRows: 2,
-          upperCols: 3,
-          lowerRows: 2,
-          lowerCols: 2,
+          upperRows: isShelf ? 2 : 2,
+          upperCols: isShelf ? 1 : 3,
+          lowerRows: isShelf ? 2 : 2,
+          lowerCols: isShelf ? 1 : 2,
           upperTemperature,
           lowerTemperature,
+          fridgeType,
         });
         const newFridge: Refrigerator = {
           id: data.id,
@@ -326,7 +337,7 @@ function AppContent() {
           lowerCols: data.lower_cols,
           upperTemperature: Number(data.upper_temperature ?? upperTemperature),
           lowerTemperature: Number(data.lower_temperature ?? lowerTemperature),
-          fridge_type: (data.fridge_type as FridgeType) || 'shelf',
+          fridge_type: (data.fridge_type as FridgeType) || fridgeType,
         };
         setRefrigerators((prev) => [...prev, newFridge]);
         setSelectedFridgeId(newFridge.id);
@@ -780,6 +791,18 @@ function AppContent() {
     [],
   );
 
+  const handleAddItemType = useCallback(
+    async (name: string) => {
+      setItemTypes((prev) => (prev.includes(name) ? prev : [...prev, name]));
+      try {
+        await createItemType(name);
+      } catch {
+        // type may already exist, ignore error
+      }
+    },
+    [],
+  );
+
   // ── Stats ──
 
   const usedSlots = samples.length;
@@ -998,7 +1021,21 @@ function AppContent() {
             {/* The fridge */}
             {(!loading || viewingContainer) && selectedFridgeId && selectedFridge && (
               selectedFridge.fridge_type === 'drawer' ? (
-                <DrawerFridgeView fridge={selectedFridge} currentUser={user!.username} />
+                <DrawerFridgeView
+                  fridge={selectedFridge}
+                  currentUser={user!.username}
+                  sampleTypes={sampleTypes}
+                  onAddSampleType={handleAddSampleType}
+                  itemTypes={itemTypes}
+                  onAddItemType={handleAddItemType}
+                />
+              ) : selectedFridge.fridge_type === 'shelf' && !viewingContainer ? (
+                <ShelfFridgeView
+                  fridge={selectedFridge}
+                  currentUsername={user!.username}
+                  itemTypes={itemTypes}
+                  onAddItemType={handleAddItemType}
+                />
               ) : (
                 <FridgeUnit
                   samples={samples}

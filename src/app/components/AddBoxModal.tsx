@@ -1,26 +1,60 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X } from 'lucide-react';
-import { Box, BoxMode, BOX_GRID_PRESETS } from '../types';
+import { Plus, X } from 'lucide-react';
+import { Box, BoxMode, BOX_GRID_PRESETS, boxPositionToLabel } from '../types';
 
 interface AddBoxModalProps {
   isOpen: boolean;
   editBox?: Box | null;
+  drawerLabel?: string;
+  targetPosition?: number | null;
+  sampleTypes: string[];
   onClose: () => void;
+  onAddSampleType: (name: string) => void;
   onSave: (data: Partial<Box>) => void;
 }
 
-export function AddBoxModal({ isOpen, editBox, onClose, onSave }: AddBoxModalProps) {
-  const [name, setName] = useState(editBox?.name || '');
-  const [mode, setMode] = useState<BoxMode>(editBox?.mode || 'simple');
+export function AddBoxModal({
+  isOpen,
+  editBox,
+  drawerLabel,
+  targetPosition,
+  sampleTypes,
+  onClose,
+  onAddSampleType,
+  onSave,
+}: AddBoxModalProps) {
+  const [name, setName] = useState('');
+  const [mode, setMode] = useState<BoxMode>('simple');
   const [gridPreset, setGridPreset] = useState(0);
-  const [customRows, setCustomRows] = useState(editBox?.grid_rows || 10);
-  const [customCols, setCustomCols] = useState(editBox?.grid_cols || 10);
-  const [sampleType, setSampleType] = useState(editBox?.sample_type || '');
-  const [projectName, setProjectName] = useState(editBox?.project_name || '');
-  const [quantity, setQuantity] = useState(editBox?.quantity || 0);
-  const [owner, setOwner] = useState(editBox?.owner || '');
-  const [note, setNote] = useState(editBox?.note || '');
+  const [customRows, setCustomRows] = useState(10);
+  const [customCols, setCustomCols] = useState(10);
+  const [sampleType, setSampleType] = useState('');
+  const [projectName, setProjectName] = useState('');
+  const [owner, setOwner] = useState('');
+  const [note, setNote] = useState('');
+  const [dataPath, setDataPath] = useState('');
+  const [showNewType, setShowNewType] = useState(false);
+  const [newTypeName, setNewTypeName] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setName(editBox?.name || '');
+    setMode(editBox?.mode || 'simple');
+    setCustomRows(editBox?.grid_rows || 10);
+    setCustomCols(editBox?.grid_cols || 10);
+    setSampleType(editBox?.sample_type || sampleTypes[0] || '');
+    setProjectName(editBox?.project_name || '');
+    setOwner(editBox?.owner || '');
+    setNote(editBox?.note || '');
+    setDataPath(editBox?.data_path || '');
+    setShowNewType(false);
+    setNewTypeName('');
+    const presetIndex = BOX_GRID_PRESETS.findIndex(
+      (preset) => preset.rows === editBox?.grid_rows && preset.cols === editBox?.grid_cols,
+    );
+    setGridPreset(presetIndex >= 0 ? presetIndex : 0);
+  }, [isOpen, editBox, sampleTypes]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,11 +69,13 @@ export function AddBoxModal({ isOpen, editBox, onClose, onSave }: AddBoxModalPro
       mode,
       grid_rows: finalRows,
       grid_cols: finalCols,
+      position: targetPosition ?? editBox?.position ?? null,
       sample_type: sampleType || null,
       project_name: projectName || null,
-      quantity,
+      quantity: 0,
       owner: owner || null,
       note: note || null,
+      data_path: dataPath || null,
       tags: editBox?.tags || [],
     });
     onClose();
@@ -76,9 +112,15 @@ export function AddBoxModal({ isOpen, editBox, onClose, onSave }: AddBoxModalPro
             }}
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-[18px]" style={{ color: 'var(--app-text)' }}>
-                {editBox ? '编辑盒子' : '添加盒子'}
-              </h3>
+              <div>
+                <h3 className="text-[18px]" style={{ color: 'var(--app-text)' }}>
+                  {editBox ? '编辑盒子' : '添加盒子'}
+                </h3>
+                <p className="text-[12px] mt-0.5" style={{ color: 'var(--app-muted)' }}>
+                  抽屉外部：{drawerLabel || '—'} · 抽屉内部：
+                  {targetPosition != null ? boxPositionToLabel(targetPosition) : '—'}
+                </p>
+              </div>
               <button type="button" onClick={onClose}>
                 <X size={18} color="var(--app-muted)" />
               </button>
@@ -157,13 +199,63 @@ export function AddBoxModal({ isOpen, editBox, onClose, onSave }: AddBoxModalPro
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              <input
-                value={sampleType}
-                onChange={(e) => setSampleType(e.target.value)}
-                placeholder="样本类型"
-                className="px-3 py-2 rounded-lg text-[14px] outline-none"
-                style={fieldStyle}
-              />
+              <div>
+                {showNewType ? (
+                  <div className="flex gap-1">
+                    <input
+                      value={newTypeName}
+                      onChange={(e) => setNewTypeName(e.target.value)}
+                      placeholder="新样本类型"
+                      autoFocus
+                      className="min-w-0 flex-1 px-3 py-2 rounded-lg text-[14px] outline-none"
+                      style={fieldStyle}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextType = newTypeName.trim();
+                        if (!nextType) return;
+                        onAddSampleType(nextType);
+                        setSampleType(nextType);
+                        setNewTypeName('');
+                        setShowNewType(false);
+                      }}
+                      className="px-2 rounded-lg text-[12px]"
+                      style={{ background: '#2563eb', color: '#fff' }}
+                    >
+                      添加
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-1">
+                    <select
+                      value={sampleType}
+                      onChange={(e) => setSampleType(e.target.value)}
+                      className="min-w-0 flex-1 px-3 py-2 rounded-lg text-[14px] outline-none"
+                      style={fieldStyle}
+                    >
+                      {sampleTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewType(true)}
+                      className="px-2 rounded-lg"
+                      title="添加样本类型"
+                      style={{
+                        background: 'var(--app-panel-bg)',
+                        border: '1px solid var(--app-border)',
+                        color: '#2563eb',
+                      }}
+                    >
+                      <Plus size={15} />
+                    </button>
+                  </div>
+                )}
+              </div>
               <input
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
@@ -173,24 +265,13 @@ export function AddBoxModal({ isOpen, editBox, onClose, onSave }: AddBoxModalPro
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="number"
-                min={0}
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-                placeholder="数量"
-                className="px-3 py-2 rounded-lg text-[14px] outline-none"
-                style={fieldStyle}
-              />
-              <input
-                value={owner}
-                onChange={(e) => setOwner(e.target.value)}
-                placeholder="负责人"
-                className="px-3 py-2 rounded-lg text-[14px] outline-none"
-                style={fieldStyle}
-              />
-            </div>
+            <input
+              value={owner}
+              onChange={(e) => setOwner(e.target.value)}
+              placeholder="负责人"
+              className="w-full px-3 py-2 rounded-lg text-[14px] outline-none"
+              style={fieldStyle}
+            />
 
             <textarea
               value={note}
@@ -198,6 +279,14 @@ export function AddBoxModal({ isOpen, editBox, onClose, onSave }: AddBoxModalPro
               placeholder="备注（选填）"
               rows={2}
               className="w-full px-3 py-2 rounded-lg text-[14px] outline-none resize-none"
+              style={fieldStyle}
+            />
+
+            <input
+              value={dataPath}
+              onChange={(e) => setDataPath(e.target.value)}
+              placeholder="数据路径（选填，如 /data/project/sample/、s3://bucket/）"
+              className="w-full px-3 py-2 rounded-lg text-[14px] outline-none"
               style={fieldStyle}
             />
 
