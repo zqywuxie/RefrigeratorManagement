@@ -34,3 +34,23 @@ export function requireOwner(table, idParam) {
     }
   };
 }
+
+// Flexible owner check: checks a specified column (owner_field) and/or uploader
+export function requireResourceOwner(table, idParam, ownerColumn = 'owner') {
+  return async (req, res, next) => {
+    try {
+      if (req.user?.role === 'root') return next();
+      const id = req.params[idParam];
+      const [[row]] = await pool.query(`SELECT ${ownerColumn} FROM \`${table}\` WHERE id = ?`, [id]);
+      if (!row) return res.status(404).json({ error: 'Record not found' });
+      const recordOwner = row[ownerColumn];
+      if (!recordOwner) return next(); // unowned records: any logged-in user can modify
+      if (recordOwner !== req.user?.username) {
+        return res.status(403).json({ error: '只有创建者可以修改此记录' });
+      }
+      next();
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  };
+}

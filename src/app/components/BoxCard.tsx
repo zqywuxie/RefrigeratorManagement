@@ -8,9 +8,10 @@ interface BoxCardProps {
   box: Box;
   onClick: () => void;
   onDelete: (id: string) => void;
+  canDelete?: boolean;
 }
 
-export function BoxCard({ box, onClick, onDelete }: BoxCardProps) {
+export function BoxCard({ box, onClick, onDelete, canDelete = true }: BoxCardProps) {
   const isPrecise = box.mode === 'precise';
   const gridLabel = isPrecise && box.grid_rows && box.grid_cols
     ? `${box.grid_rows}×${box.grid_cols}`
@@ -69,14 +70,16 @@ export function BoxCard({ box, onClick, onDelete }: BoxCardProps) {
             </span>
           )}
         </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(box.id); }}
-          className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors"
-          style={{ color: '#f87171' }}
-          title="删除盒子"
-        >
-          <Trash2 size={14} />
-        </button>
+        {canDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(box.id); }}
+            className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors"
+            style={{ color: '#f87171' }}
+            title="删除盒子"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
       </div>
 
       {/* Metadata grid */}

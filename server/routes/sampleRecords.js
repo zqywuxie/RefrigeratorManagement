@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import pool from '../db.js';
+import { authenticate, requireResourceOwner } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -127,7 +128,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/sample-records/:id
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, requireResourceOwner('sample_records', 'id', 'uploader'), async (req, res) => {
   try {
     const [[existing]] = await pool.query('SELECT * FROM sample_records WHERE id = ? AND deleted_at IS NULL', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Sample record not found' });
@@ -163,7 +164,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/sample-records/:id (soft delete)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, requireResourceOwner('sample_records', 'id', 'uploader'), async (req, res) => {
   try {
     await pool.query('UPDATE sample_records SET deleted_at = NOW() WHERE id = ?', [req.params.id]);
     await pool.query('DELETE FROM tubes WHERE sample_id = ?', [req.params.id]);

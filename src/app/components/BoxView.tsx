@@ -12,6 +12,7 @@ interface BoxPositionSlotProps {
   onBoxClick: (boxId: string) => void;
   onDeleteBox: (boxId: string) => void;
   onDropBox: (boxId: string, targetPosition: number) => void;
+  canDelete?: boolean;
 }
 
 function BoxPositionSlot({
@@ -21,6 +22,7 @@ function BoxPositionSlot({
   onBoxClick,
   onDeleteBox,
   onDropBox,
+  canDelete = true,
 }: BoxPositionSlotProps) {
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: 'BOX',
@@ -51,6 +53,7 @@ function BoxPositionSlot({
           box={box}
           onClick={() => onBoxClick(box.id)}
           onDelete={onDeleteBox}
+          canDelete={canDelete}
         />
       ) : (
         <motion.button
@@ -79,6 +82,7 @@ interface BoxViewProps {
   drawer: Drawer;
   drawerZoneLabel: string;
   boxes: Box[];
+  currentUser: string;
   onBack: () => void;
   onBoxClick: (boxId: string) => void;
   onAddBox: (position: number) => void;
@@ -91,6 +95,7 @@ export function BoxView({
   drawer,
   drawerZoneLabel,
   boxes,
+  currentUser,
   onBack,
   onBoxClick,
   onAddBox,
@@ -193,6 +198,7 @@ export function BoxView({
                 onBoxClick={onBoxClick}
                 onDeleteBox={onDeleteBox}
                 onDropBox={onMoveBox}
+                canDelete={!box || !box.owner || box.owner === currentUser}
               />
             );
           })}

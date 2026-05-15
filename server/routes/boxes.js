@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import pool from '../db.js';
+import { authenticate, requireResourceOwner } from '../middleware/auth.js';
 
 const router = Router();
 
 // PUT /api/boxes/:boxId
-router.put('/:boxId', async (req, res) => {
+router.put('/:boxId', authenticate, requireResourceOwner('boxes', 'boxId', 'owner'), async (req, res) => {
   try {
     const {
       name,
@@ -70,7 +71,7 @@ router.put('/:boxId', async (req, res) => {
 });
 
 // DELETE /api/boxes/:boxId (soft delete)
-router.delete('/:boxId', async (req, res) => {
+router.delete('/:boxId', authenticate, requireResourceOwner('boxes', 'boxId', 'owner'), async (req, res) => {
   try {
     await pool.query('UPDATE boxes SET deleted_at = NOW() WHERE id = ?', [req.params.boxId]);
     res.json({ ok: true });

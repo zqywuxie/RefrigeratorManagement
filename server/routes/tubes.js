@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import pool from '../db.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.get('/boxes/:boxId/tubes', async (req, res) => {
 });
 
 // PUT /api/tubes/:id
-router.put('/tubes/:id', async (req, res) => {
+router.put('/tubes/:id', authenticate, async (req, res) => {
   try {
     const [[existing]] = await pool.query('SELECT * FROM tubes WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Tube not found' });
@@ -47,7 +48,7 @@ router.put('/tubes/:id', async (req, res) => {
 });
 
 // DELETE /api/tubes/:id
-router.delete('/tubes/:id', async (req, res) => {
+router.delete('/tubes/:id', authenticate, async (req, res) => {
   try {
     await pool.query('DELETE FROM tubes WHERE id = ?', [req.params.id]);
     res.json({ ok: true });

@@ -738,6 +738,7 @@ export function DrawerFridgeView({
                 drawer={selectedDrawer}
                 drawerZoneLabel={selectedDrawerZoneLabel}
                 boxes={boxes}
+                currentUser={currentUser}
                 onBack={handleBackToFridge}
                 onBoxClick={handleBoxClick}
                 onAddBox={handleAddBoxAtPosition}
