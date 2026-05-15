@@ -605,7 +605,7 @@ export function DrawerFridgeView({
   }
 
   return (
-    <div className="flex flex-col gap-5 w-full" style={{ maxWidth: isMapView ? '1100px' : '680px' }}>
+    <div className="flex flex-col gap-5 w-full" style={{ maxWidth: isMapView ? 'none' : 'none' }}>
       <div className="flex items-center gap-3">
         <div className="flex-1">
           <BreadcrumbNav nodes={breadcrumbNodes} />

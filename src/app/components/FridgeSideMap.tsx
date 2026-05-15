@@ -21,10 +21,12 @@ function MiniDrawerBlock({
   drawer,
   isSelected,
   onClick,
+  aspectRatio = '1 / 1',
 }: {
   drawer: Drawer;
   isSelected: boolean;
   onClick: () => void;
+  aspectRatio?: string;
 }) {
   const boxCount = drawer.box_count ?? 0;
   const rate = getOccupancyRate(boxCount, drawer.max_boxes);
@@ -32,12 +34,12 @@ function MiniDrawerBlock({
 
   return (
     <motion.button
-      whileHover={{ scale: 1.08 }}
+      whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className="relative rounded cursor-pointer"
+      className="relative rounded cursor-pointer overflow-hidden"
       style={{
-        aspectRatio: '1 / 1',
+        aspectRatio,
         background: oc.bg,
         border: isSelected ? '2px solid #22d3ee' : `1px solid ${oc.border}`,
         boxShadow: isSelected ? `0 0 8px ${oc.border}60` : 'none',
@@ -52,8 +54,8 @@ function MiniDrawerBlock({
         }}
       />
       <span
-        className="relative z-10 text-[8px] font-mono font-bold flex items-center justify-center h-full"
-        style={{ color: isSelected ? '#0891b2' : 'var(--app-text)' }}
+        className="relative z-10 font-mono font-bold flex items-center justify-center h-full"
+        style={{ color: isSelected ? '#0891b2' : 'var(--app-text)', fontSize: '9px' }}
       >
         {drawer.label}
       </span>
@@ -92,12 +94,37 @@ export function FridgeSideMap({
   const totalCapacity = [...layer1Drawers, ...layer2Drawers].reduce((s, d) => s + (d.max_boxes || 5), 0);
   const overallRate = totalCapacity > 0 ? Math.round((totalBoxes / totalCapacity) * 100) : 0;
 
+  const [width, setWidth] = useState(280);
+  const resizeRef = React.useRef<HTMLDivElement>(null);
+  const isResizing = React.useRef(false);
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    const startX = e.clientX;
+    const startWidth = width;
+
+    const onMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return;
+      const delta = ev.clientX - startX;
+      const newWidth = Math.max(200, Math.min(500, startWidth + delta));
+      setWidth(newWidth);
+    };
+    const onUp = () => {
+      isResizing.current = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
   const row1Items = upperItems.filter((i) => i.row_number === 1);
   const row2Items = upperItems.filter((i) => i.row_number === 2);
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 flex-shrink-0" style={{ width: '200px', minHeight: '400px' }}>
+      <div className="flex flex-col items-center justify-center gap-2 flex-shrink-0" style={{ width: `${width}px`, minHeight: '400px' }}>
         <Loader2 size={20} className="animate-spin" style={{ color: 'var(--app-muted)' }} />
         <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>加载冰箱...</span>
       </div>
@@ -105,7 +132,7 @@ export function FridgeSideMap({
   }
 
   return (
-    <div className="flex flex-col gap-3 flex-shrink-0" style={{ width: '200px' }}>
+    <div className="flex flex-col gap-3 flex-shrink-0 relative group/sidemap" style={{ width: `${width}px` }}>
       {/* Fridge outline */}
       <div
         className="rounded-2xl overflow-hidden flex flex-col"
@@ -200,7 +227,7 @@ export function FridgeSideMap({
                 key={d.id}
                 drawer={d}
                 isSelected={selectedDrawerId === d.id}
-                onClick={() => onDrawerClick(d.id)}
+                onClick={() => onDrawerClick(d.id, d.label)}
               />
             ))}
           </div>
@@ -235,11 +262,25 @@ export function FridgeSideMap({
                 key={d.id}
                 drawer={d}
                 isSelected={selectedDrawerId === d.id}
-                onClick={() => onDrawerClick(d.id)}
+                onClick={() => onDrawerClick(d.id, d.label)}
+                aspectRatio="2.2 / 1"
               />
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Resize handle */}
+      <div
+        ref={resizeRef}
+        onMouseDown={handleResizeStart}
+        className="absolute top-0 bottom-0 right-0 w-2 cursor-col-resize opacity-0 group-hover/sidemap:opacity-100 transition-opacity z-10"
+        style={{
+          background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.3))',
+          transform: 'translateX(50%)',
+        }}
+      >
+        <div className="absolute top-1/2 -translate-y-1/2 right-0 w-0.5 h-12 rounded" style={{ background: '#2563eb60' }} />
       </div>
 
       {/* Legend */}

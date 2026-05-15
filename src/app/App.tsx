@@ -958,7 +958,7 @@ function AppContent() {
         {activeView === 'admin' && isRoot ? (
           <RootAdminPanel currentUsername={user!.username} onNotify={showNotif} />
         ) : (
-        <main className="flex-1 flex gap-6 p-6 overflow-auto items-start justify-center flex-wrap">
+    <main className="flex-1 flex gap-6 p-6 overflow-auto items-start ">
           {/* ── Far Left: 2D Fridge Map ── */}
           {selectedFridge && selectedFridge.fridge_type === 'drawer' && (
             <FridgeSideMap
@@ -990,7 +990,7 @@ function AppContent() {
           />
 
           {/* Center: Fridge */}
-          <div className="flex w-full max-w-[560px] flex-col gap-5">
+          <div className="flex w-full max-w-[680px] flex-col gap-5">
             {/* Search bar */}
               <div
                 className="flex w-full items-center gap-3 rounded-xl px-4 py-3"

@@ -27,6 +27,7 @@ const SCHEMA_STATEMENTS = [
     lower_cols  INT NOT NULL DEFAULT 2,
     upper_temperature DECIMAL(5,1) NOT NULL DEFAULT -20.0,
     lower_temperature DECIMAL(5,1) NOT NULL DEFAULT 4.0,
+    fridge_type ENUM('drawer','shelf') DEFAULT 'drawer',
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at  TIMESTAMP NULL,
@@ -58,6 +59,28 @@ const SCHEMA_STATEMENTS = [
     INDEX idx_fridge (refrigerator_id),
     INDEX idx_samples_active_position (refrigerator_id, deleted_at, compartment, position)
   ) ENGINE=InnoDB`,
+  `CREATE TABLE IF NOT EXISTS item_types (
+    name VARCHAR(100) PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB`,
+  `CREATE TABLE IF NOT EXISTS upper_items (
+    id VARCHAR(36) PRIMARY KEY,
+    refrigerator_id VARCHAR(36) NOT NULL,
+    \`row_number\` INT NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    item_type VARCHAR(100) NOT NULL DEFAULT '样本',
+    quantity INT DEFAULT 1,
+    owner VARCHAR(100),
+    tags JSON,
+    note TEXT,
+    image_url VARCHAR(500),
+    qr_code VARCHAR(200),
+    sort_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (refrigerator_id) REFERENCES refrigerators(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB`,
   `CREATE TABLE IF NOT EXISTS sub_samples (
     id            VARCHAR(20) PRIMARY KEY,
     sample_id     VARCHAR(20) NOT NULL,
@@ -84,6 +107,7 @@ const SCHEMA_STATEMENTS = [
 ];
 
 const FRIDGE_ID = 'fridge-default-001';
+const SHELF_FRIDGE_ID = 'fridge-shelf-4space-001';
 
 const FRIDGE = {
   id: FRIDGE_ID,
@@ -95,57 +119,24 @@ const FRIDGE = {
   lower_cols: 2,
   upper_temperature: -20,
   lower_temperature: 4,
+  fridge_type: 'drawer',
 };
 
-const SAMPLES = [
-  {
-    id: 'S-001', refrigerator_id: FRIDGE_ID, name: '全血样本容器 001', type: '全血',
-    status: 'normal', temperature: -20, collected_at: '2026-04-15', patient_id: 'P-2024-001',
-    tags: JSON.stringify(['紧急', 'A型']), compartment: 'upper', position: 0,
-    volume: '5ml', note: '手术前采集，状态良好', grid_rows: 2, grid_cols: 2,
-  },
-  {
-    id: 'S-002', refrigerator_id: FRIDGE_ID, name: '血清样本容器 002', type: '血清',
-    status: 'warning', temperature: -18, collected_at: '2026-04-20', patient_id: 'P-2024-015',
-    tags: JSON.stringify(['常规']), compartment: 'upper', position: 1,
-    volume: '3ml', note: '温度偏高，需持续关注', grid_rows: 2, grid_cols: 2,
-  },
-  {
-    id: 'S-003', refrigerator_id: FRIDGE_ID, name: 'DNA样本容器 003', type: 'DNA',
-    status: 'critical', temperature: -15, collected_at: '2026-04-22', patient_id: 'P-2024-032',
-    tags: JSON.stringify(['基因检测', '紧急']), compartment: 'upper', position: 3,
-    volume: '2ml', note: '温度严重偏高！需立即处理', grid_rows: 2, grid_cols: 2,
-  },
-  {
-    id: 'S-004', refrigerator_id: FRIDGE_ID, name: '尿液样本容器 004', type: '尿液',
-    status: 'used', temperature: 4, collected_at: '2026-04-18', patient_id: 'P-2024-008',
-    tags: JSON.stringify(['常规检查']), compartment: 'lower', position: 0,
-    volume: '10ml', note: '已完成常规检测', grid_rows: 2, grid_cols: 2,
-  },
-  {
-    id: 'S-005', refrigerator_id: FRIDGE_ID, name: '血浆样本容器 005', type: '血浆',
-    status: 'pending', temperature: 4, collected_at: '2026-05-01', patient_id: 'P-2024-088',
-    tags: JSON.stringify(['待检测']), compartment: 'lower', position: 2,
-    volume: '4ml', note: '等待科室处理指令', grid_rows: 2, grid_cols: 2,
-  },
-  {
-    id: 'S-006', refrigerator_id: FRIDGE_ID, name: '组织样本容器 006', type: '组织',
-    status: 'normal', temperature: -20, collected_at: '2026-05-03', patient_id: 'P-2024-099',
-    tags: JSON.stringify(['活检', '肿瘤科']), compartment: 'upper', position: 4,
-    volume: '0.5g', note: '活检组织，保存完好', grid_rows: 2, grid_cols: 2,
-  },
-];
+const SHELF_FRIDGE = {
+  id: SHELF_FRIDGE_ID,
+  name: '四层大空间冰箱',
+  description: '四层固定大空间存储冰箱',
+  upper_rows: 2,
+  upper_cols: 1,
+  lower_rows: 2,
+  lower_cols: 1,
+  upper_temperature: -20,
+  lower_temperature: 4,
+  fridge_type: 'shelf',
+};
 
-const SUB_SAMPLES = [
-  { id: 'SS-001', sample_id: 'S-001', name: '全血副样本 001-A', type: '全血', status: 'normal', temperature: -20, collected_at: '2026-04-15', patient_id: 'P-2024-001', tags: JSON.stringify(['原液']), position: 0, volume: '3ml' },
-  { id: 'SS-002', sample_id: 'S-001', name: '全血副样本 001-B', type: '全血', status: 'warning', temperature: -18, collected_at: '2026-04-15', patient_id: 'P-2024-001', tags: JSON.stringify(['稀释']), position: 1, volume: '2ml', note: '轻微溶血' },
-  { id: 'SS-003', sample_id: 'S-002', name: '血清副样本 002-A', type: '血清', status: 'normal', temperature: -20, collected_at: '2026-04-20', patient_id: 'P-2024-015', tags: JSON.stringify(['常规']), position: 0, volume: '1.5ml' },
-  { id: 'SS-004', sample_id: 'S-003', name: 'DNA副样本 003-A', type: 'DNA', status: 'critical', temperature: -15, collected_at: '2026-04-22', patient_id: 'P-2024-032', tags: JSON.stringify(['基因检测']), position: 0, volume: '1ml', note: '温度异常' },
-  { id: 'SS-005', sample_id: 'S-003', name: 'DNA副样本 003-B', type: 'DNA', status: 'warning', temperature: -17, collected_at: '2026-04-22', patient_id: 'P-2024-032', tags: JSON.stringify(['备份']), position: 1, volume: '1ml' },
-  { id: 'SS-006', sample_id: 'S-004', name: '尿液副样本 004-A', type: '尿液', status: 'used', temperature: 4, collected_at: '2026-04-18', patient_id: 'P-2024-008', tags: JSON.stringify(['已检测']), position: 0, volume: '5ml' },
-  { id: 'SS-007', sample_id: 'S-006', name: '组织副样本 006-A', type: '组织', status: 'normal', temperature: -20, collected_at: '2026-05-03', patient_id: 'P-2024-099', tags: JSON.stringify(['切片A']), position: 0, volume: '0.2g' },
-  { id: 'SS-008', sample_id: 'S-006', name: '组织副样本 006-B', type: '组织', status: 'normal', temperature: -20, collected_at: '2026-05-03', patient_id: 'P-2024-099', tags: JSON.stringify(['切片B']), position: 1, volume: '0.3g' },
-];
+const SAMPLES = [];
+const SUB_SAMPLES = [];
 
 async function ensureColumn(conn, table, column, definition) {
   const [rows] = await conn.query(`SHOW COLUMNS FROM \`${table}\` LIKE ?`, [column]);
@@ -164,6 +155,7 @@ async function main() {
     }
     await ensureColumn(conn, 'refrigerators', 'upper_temperature', '`upper_temperature` DECIMAL(5,1) NOT NULL DEFAULT -20.0');
     await ensureColumn(conn, 'refrigerators', 'lower_temperature', '`lower_temperature` DECIMAL(5,1) NOT NULL DEFAULT 4.0');
+    await ensureColumn(conn, 'refrigerators', 'fridge_type', "`fridge_type` ENUM('drawer','shelf') DEFAULT 'drawer' AFTER `lower_temperature`");
     await ensureColumn(conn, 'samples', 'uploader', '`uploader` VARCHAR(100) NULL AFTER `patient_id`');
     await ensureColumn(conn, 'sub_samples', 'uploader', '`uploader` VARCHAR(100) NULL AFTER `patient_id`');
     await ensureColumn(conn, 'samples', 'created_by', '`created_by` VARCHAR(50) NULL AFTER `uploader`');
@@ -174,6 +166,10 @@ async function main() {
     await ensureColumn(conn, 'samples', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
     await ensureColumn(conn, 'sub_samples', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `updated_at`');
     await ensureColumn(conn, 'sub_samples', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
+    await conn.query("ALTER TABLE upper_items MODIFY COLUMN item_type VARCHAR(100) NOT NULL DEFAULT '样本'");
+    for (const name of ['试剂', '样本', '耗材', '临时物品']) {
+      await conn.query('INSERT IGNORE INTO item_types (name) VALUES (?)', [name]);
+    }
     console.log('Tables created.');
 
     const [rootRows] = await conn.query('SELECT username FROM users WHERE username = ?', ['root']);
@@ -185,28 +181,63 @@ async function main() {
       console.log('Root user inserted.');
     }
 
-    // Insert default fridge if not exists
-    const [existing] = await conn.query('SELECT id FROM refrigerators WHERE id = ?', [FRIDGE_ID]);
-    if (existing.length === 0) {
-      await conn.query(
-        `INSERT INTO refrigerators (id, name, description, upper_rows, upper_cols, lower_rows, lower_cols, upper_temperature, lower_temperature)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          FRIDGE.id,
-          FRIDGE.name,
-          FRIDGE.description,
-          FRIDGE.upper_rows,
-          FRIDGE.upper_cols,
-          FRIDGE.lower_rows,
-          FRIDGE.lower_cols,
-          FRIDGE.upper_temperature,
-          FRIDGE.lower_temperature,
-        ],
-      );
-      console.log('Default refrigerator inserted.');
-    } else {
-      console.log('Default refrigerator already exists.');
+    // Insert required fridges if not exists.
+    for (const fridge of [FRIDGE, SHELF_FRIDGE]) {
+      const [existing] = await conn.query('SELECT id FROM refrigerators WHERE id = ?', [fridge.id]);
+      if (existing.length === 0) {
+        await conn.query(
+          `INSERT INTO refrigerators (id, name, description, upper_rows, upper_cols, lower_rows, lower_cols, upper_temperature, lower_temperature, fridge_type)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            fridge.id,
+            fridge.name,
+            fridge.description,
+            fridge.upper_rows,
+            fridge.upper_cols,
+            fridge.lower_rows,
+            fridge.lower_cols,
+            fridge.upper_temperature,
+            fridge.lower_temperature,
+            fridge.fridge_type,
+          ],
+        );
+        console.log(`${fridge.name} inserted.`);
+      } else {
+        await conn.query(
+          `UPDATE refrigerators
+           SET name = ?, description = ?, upper_rows = ?, upper_cols = ?, lower_rows = ?, lower_cols = ?,
+               upper_temperature = ?, lower_temperature = ?, fridge_type = ?
+           WHERE id = ?`,
+          [
+            fridge.name,
+            fridge.description,
+            fridge.upper_rows,
+            fridge.upper_cols,
+            fridge.lower_rows,
+            fridge.lower_cols,
+            fridge.upper_temperature,
+            fridge.lower_temperature,
+            fridge.fridge_type,
+            fridge.id,
+          ],
+        );
+        console.log(`${fridge.name} already exists; metadata updated.`);
+      }
     }
+
+    // Remove old demo samples created by previous seed versions.
+    await conn.query(
+      `DELETE sub_samples FROM sub_samples
+       JOIN samples ON samples.id = sub_samples.sample_id
+       WHERE samples.id IN ('S-001','S-002','S-003','S-004','S-005','S-006')`,
+    );
+    await conn.query(
+      `DELETE FROM samples WHERE id IN ('S-001','S-002','S-003','S-004','S-005','S-006')`,
+    );
+    await conn.query(
+      `DELETE FROM users WHERE username = 'testuser' OR username LIKE 'gridtest\\_%' OR username LIKE 'admintest\\_%'`,
+    );
+    console.log('Old demo samples and known test users removed.');
 
     // Insert samples (ignore duplicates)
     for (const s of SAMPLES) {
