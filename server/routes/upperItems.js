@@ -54,7 +54,7 @@ router.post('/:fridgeId/upper-items', async (req, res) => {
     await pool.query('INSERT IGNORE INTO item_types (name) VALUES (?)', [finalItemType]);
     await pool.query(
       `INSERT INTO upper_items (id, refrigerator_id, \`row_number\`, name, item_type, box_mode, grid_rows, grid_cols, quantity, owner, tags, note, image_url, qr_code, sort_order)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         itemId,
         req.params.fridgeId,

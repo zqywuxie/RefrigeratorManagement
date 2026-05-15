@@ -141,6 +141,9 @@ function AppContent() {
   // Pending imported samples (shared with DrawerFridgeView)
   const [pendingSamples, setPendingSamples] = useState<SampleRecord[]>([]);
 
+  // Global sample search
+  const [globalSampleQuery, setGlobalSampleQuery] = useState('');
+
   const handleImportComplete = useCallback(async (sampleIds: string[]) => {
     if (sampleIds.length === 0) return;
     try {
@@ -844,23 +847,24 @@ function AppContent() {
     (sum, s) => sum + s.subSamples.filter((ss) => ss.status === 'warning').length,
     0,
   );
-  const tagStats = React.useMemo(() => {
+  const typeStats = React.useMemo(() => {
     const counts = new Map<string, number>();
 
     samples.forEach((sample) => {
-      [...sample.tags, ...sample.subSamples.flatMap((subSample) => subSample.tags)].forEach((tag) => {
-        const normalized = tag.trim();
-        if (!normalized) return;
-        counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+      const t = sample.type?.trim();
+      if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
+      sample.subSamples.forEach((ss) => {
+        const st = ss.type?.trim();
+        if (st) counts.set(st, (counts.get(st) ?? 0) + 1);
       });
     });
 
-    return Array.from(counts, ([tag, count]) => ({ tag, count })).sort(
-      (a, b) => b.count - a.count || a.tag.localeCompare(b.tag, 'zh-CN'),
+    return Array.from(counts, ([type, count]) => ({ type, count })).sort(
+      (a, b) => b.count - a.count || a.type.localeCompare(b.type, 'zh-CN'),
     );
   }, [samples]);
-  const displayedTagStats = tagStats.slice(0, 8);
-  const remainingTagCount = Math.max(tagStats.length - displayedTagStats.length, 0);
+  const displayedTypeStats = typeStats.slice(0, 8);
+  const remainingTypeCount = Math.max(typeStats.length - displayedTypeStats.length, 0);
 
   const notifColors = {
     info: { bg: 'rgba(29,78,216,0.85)', border: '#3b82f6', text: '#93c5fd' },
@@ -1141,27 +1145,30 @@ function AppContent() {
             className="flex w-full flex-col gap-4"
             style={{ maxWidth: '400px' }}
           >
-            {/* Add button */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleAddButtonClick}
-              disabled={!selectedFridgeId}
-              className="w-full py-3 rounded-xl flex items-center justify-center gap-2 text-[18px] transition-all"
+            {/* Global sample search */}
+            <div
+              className="flex items-center gap-2 rounded-xl px-4 py-3"
               style={{
-                background: selectedFridgeId
-                  ? 'linear-gradient(135deg, #1d4ed8, #2563eb)'
-                  : 'var(--app-panel-bg)',
-                border: selectedFridgeId
-                  ? '1px solid #3b82f6'
-                  : '1px solid var(--app-border)',
-                color: selectedFridgeId ? '#fff' : 'var(--app-muted)',
-                boxShadow: selectedFridgeId ? '0 14px 32px rgba(37,99,235,0.2)' : 'none',
+                background: 'var(--app-card-bg)',
+                border: `1px solid ${globalSampleQuery ? 'rgba(37,99,235,0.35)' : 'var(--app-border)'}`,
+                boxShadow: globalSampleQuery ? '0 12px 34px rgba(37,99,235,0.08)' : '0 12px 34px rgba(15,23,42,0.06)',
               }}
             >
-              <Plus size={22} />
-              {viewingContainer ? '添加副样本' : '添加新样本'}
-            </motion.button>
+              <Search size={18} color={globalSampleQuery ? '#2563eb' : 'var(--app-muted)'} />
+              <input
+                type="text"
+                placeholder="全局搜索样本（姓名、编号、类型）..."
+                value={globalSampleQuery}
+                onChange={(e) => setGlobalSampleQuery(e.target.value)}
+                className="flex-1 bg-transparent outline-none text-[13px]"
+                style={{ color: 'var(--app-text)' }}
+              />
+              {globalSampleQuery && (
+                <button onClick={() => setGlobalSampleQuery('')} className="text-[13px]" style={{ color: 'var(--app-muted)' }}>
+                  ✕
+                </button>
+              )}
+            </div>
 
             {/* Stats cards */}
             <div className="grid grid-cols-2 gap-3">
@@ -1253,17 +1260,17 @@ function AppContent() {
                 <div className="flex items-center gap-2">
                   <Tags size={15} color="#38bdf8" />
                   <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>
-                    标签统计
+                    样本类型
                   </span>
                 </div>
                 <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>
-                  {tagStats.length} 类
+                  {typeStats.length} 类
                 </span>
               </div>
-              {displayedTagStats.length > 0 ? (
+              {displayedTypeStats.length > 0 ? (
                 <div className="space-y-2">
-                  {displayedTagStats.map(({ tag, count }, index) => (
-                    <div key={tag} className="flex items-center gap-2">
+                  {displayedTypeStats.map(({ type, count }, index) => (
+                    <div key={type} className="flex items-center gap-2">
                       <span
                         className="w-6 text-[12px] font-mono text-right flex-shrink-0"
                         style={{ color: index < 3 ? '#2563eb' : 'var(--app-muted)' }}
@@ -1272,14 +1279,14 @@ function AppContent() {
                       </span>
                       <span
                         className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
-                        title={tag}
+                        title={type}
                         style={{
                           background: 'var(--app-info-bg)',
                           border: '1px solid var(--app-info-border)',
                           color: 'var(--app-info-text)',
                         }}
                       >
-                        {tag}
+                        {type}
                       </span>
                       <span
                         className="min-w-8 text-right text-[14px] font-mono"
@@ -1289,9 +1296,9 @@ function AppContent() {
                       </span>
                     </div>
                   ))}
-                  {remainingTagCount > 0 && (
+                  {remainingTypeCount > 0 && (
                     <div className="pt-1 text-right text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                      另有 {remainingTagCount} 类标签
+                      另有 {remainingTypeCount} 类样本类型
                     </div>
                   )}
                 </div>
