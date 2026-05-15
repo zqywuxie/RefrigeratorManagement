@@ -35,6 +35,7 @@ import {
   compartmentCapacity,
   FridgeType,
   DEFAULT_ITEM_TYPES,
+  SampleRecord,
 } from './types';
 import {
   fetchRefrigerators,
@@ -52,6 +53,7 @@ import {
   createSampleType,
   fetchItemTypes,
   createItemType,
+  fetchSampleRecord,
 } from './api';
 import { FridgeUnit } from './components/FridgeUnit';
 import { FridgeSelector } from './components/FridgeSelector';
@@ -62,6 +64,7 @@ import { AuthProvider, useAuth } from './AuthContext';
 import { DrawerFridgeView } from './components/DrawerFridgeView';
 import { ShelfFridgeView } from './components/ShelfFridgeView';
 import { FridgeSideMap } from './components/FridgeSideMap';
+import { PendingSamplesPanel } from './components/PendingSamplesPanel';
 import { LoginPage } from './components/LoginPage';
 
 type UploadedSampleItem = {
@@ -135,6 +138,22 @@ function AppContent() {
   const [showSideMap, setShowSideMap] = useState(true);
   const [sideMapNavTarget, setSideMapNavTarget] = useState<{ drawerId: string; drawerLabel: string } | null>(null);
 
+  // Pending imported samples (shared with DrawerFridgeView)
+  const [pendingSamples, setPendingSamples] = useState<SampleRecord[]>([]);
+
+  const handleImportComplete = useCallback(async (sampleIds: string[]) => {
+    if (sampleIds.length === 0) return;
+    try {
+      const all = await Promise.all(
+        sampleIds.map((id) => fetchSampleRecord(id).catch(() => null))
+      );
+      const valid = all.filter(Boolean) as SampleRecord[];
+      setPendingSamples((prev) => [...prev, ...valid]);
+    } catch (err) {
+      console.error('Failed to fetch imported samples:', err);
+    }
+  }, []);
+
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 5000);
     return () => clearInterval(t);
@@ -154,8 +173,8 @@ function AppContent() {
             lowerRows: r.lower_rows,
             lowerCols: r.lower_cols,
             fridge_type: (r.fridge_type as FridgeType) || 'drawer',
-            upperTemperature: Number(r.upper_temperature ?? -20),
-            lowerTemperature: Number(r.lower_temperature ?? 4),
+            upperTemperature: Number(r.upper_temperature ?? -80),
+            lowerTemperature: Number(r.lower_temperature ?? -80),
           })),
         );
         setLoading(false);
@@ -317,8 +336,8 @@ function AppContent() {
     async (
       name: string,
       description?: string,
-      upperTemperature = -20,
-      lowerTemperature = 4,
+      upperTemperature = -80,
+      lowerTemperature = -80,
       fridgeType: FridgeType = 'drawer',
     ) => {
       try {
@@ -1051,6 +1070,9 @@ function AppContent() {
                   onAddItemType={handleAddItemType}
                   navigateToDrawer={sideMapNavTarget}
                   onNavigated={() => setSideMapNavTarget(null)}
+                  pendingSamples={pendingSamples}
+                  onPendingSamplesChange={setPendingSamples}
+                  onImportComplete={handleImportComplete}
                 />
               ) : selectedFridge.fridge_type === 'shelf' && !viewingContainer ? (
                 <ShelfFridgeView
@@ -1066,8 +1088,8 @@ function AppContent() {
                   matchedIds={matchedIds}
                   searchQuery={searchQuery}
                   compartmentGrids={compartmentGrids}
-                  upperTemperature={selectedFridge?.upperTemperature ?? -20}
-                  lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
+                  upperTemperature={selectedFridge?.upperTemperature ?? -80}
+                  lowerTemperature={selectedFridge?.lowerTemperature ?? -80}
                   canManageFridge={isRoot}
                   viewingContainer={viewingContainer}
                   onDropSample={handleDrop}
@@ -1152,13 +1174,13 @@ function AppContent() {
               <StatsCard
                 label="上层"
                 value={`${samples.filter((s) => s.compartment === 'upper').length}/${upperCapacity}`}
-                sub={`${selectedFridge?.upperTemperature ?? -20}°C 参考`}
+                sub={`${selectedFridge?.upperTemperature ?? -80}°C 参考`}
                 color="#818cf8"
               />
               <StatsCard
                 label="下层"
                 value={`${samples.filter((s) => s.compartment === 'lower').length}/${lowerCapacity}`}
-                sub={`${selectedFridge?.lowerTemperature ?? 4}°C 参考`}
+                sub={`${selectedFridge?.lowerTemperature ?? -80}°C 参考`}
                 color="#34d399"
               />
               <StatsCard
@@ -1287,6 +1309,13 @@ function AppContent() {
               )}
             </div>
 
+            {/* Pending imported samples — drag to positions */}
+            <PendingSamplesPanel
+              samples={pendingSamples}
+              onSelectSample={() => {}}
+              onClear={() => setPendingSamples([])}
+            />
+
           </div>
           </div>
         </main>
@@ -1329,8 +1358,8 @@ function AppContent() {
           onAddSubSample={handleAddSubSample}
           existingIds={samples.map((s) => s.id)}
           containers={samples}
-          upperTemperature={selectedFridge?.upperTemperature ?? -20}
-          lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
+          upperTemperature={selectedFridge?.upperTemperature ?? -80}
+          lowerTemperature={selectedFridge?.lowerTemperature ?? -80}
           currentUsername={user!.username}
           isSubSampleMode={addTarget?.isSubSample ?? false}
           parentContainerId={

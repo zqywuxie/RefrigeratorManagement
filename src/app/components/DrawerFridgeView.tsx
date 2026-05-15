@@ -37,6 +37,9 @@ interface DrawerFridgeViewProps {
   onAddItemType: (name: string) => void;
   navigateToDrawer?: { drawerId: string; drawerLabel: string } | null;
   onNavigated?: () => void;
+  pendingSamples?: SampleRecord[];
+  onPendingSamplesChange?: (samples: SampleRecord[]) => void;
+  onImportComplete?: (sampleIds: string[]) => void;
 }
 
 export function DrawerFridgeView({
@@ -48,6 +51,9 @@ export function DrawerFridgeView({
   onAddItemType,
   navigateToDrawer,
   onNavigated,
+  pendingSamples = [],
+  onPendingSamplesChange,
+  onImportComplete,
 }: DrawerFridgeViewProps) {
   const [viewLevel, setViewLevel] = useState<ViewLevel>('fridge');
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('upper');
@@ -87,9 +93,6 @@ export function DrawerFridgeView({
 
   // Excel import modal
   const [showImportModal, setShowImportModal] = useState(false);
-
-  // Pending imported samples
-  const [pendingSamples, setPendingSamples] = useState<SampleRecord[]>([]);
 
   // Batch edit modal
   const [showBatchModal, setShowBatchModal] = useState(false);
@@ -497,27 +500,12 @@ export function DrawerFridgeView({
       await addTubesToSample(sampleId, [{ box_id: selectedBox.id, position }]);
       const updated = await fetchBoxTubes(selectedBox.id);
       setTubes(updated);
-      // Remove from pending if all tubes for this sample are now in this box
-      setPendingSamples((prev) => prev.filter((s) => s.id !== sampleId));
+      // Remove from pending list
+      onPendingSamplesChange?.(pendingSamples.filter((s) => s.id !== sampleId));
     } catch (err) {
       console.error('Failed to drop sample:', err);
     }
-  }, [selectedBox]);
-
-  // Handle Excel import completion
-  const handleImportComplete = useCallback(async (sampleIds: string[]) => {
-    if (sampleIds.length === 0) return;
-    try {
-      // Fetch the full sample records
-      const all = await Promise.all(
-        sampleIds.map((id) => fetchSampleRecord(id).catch(() => null))
-      );
-      const valid = all.filter(Boolean) as SampleRecord[];
-      setPendingSamples((prev) => [...prev, ...valid]);
-    } catch (err) {
-      console.error('Failed to fetch imported samples:', err);
-    }
-  }, []);
+  }, [selectedBox, pendingSamples, onPendingSamplesChange]);
 
   const handleBatchEdit = useCallback((sampleIds: string[]) => {
     setBatchSampleIds(sampleIds);
@@ -868,17 +856,6 @@ export function DrawerFridgeView({
                     onSelectSample={handleSelectSampleFromList}
                   />
                 )}
-                <PendingSamplesPanel
-                  samples={pendingSamples}
-                  onSelectSample={(sampleId) => {
-                    fetchSampleRecord(sampleId).then((record) => {
-                      setEditSampleRecord(record);
-                      setPreselectedWells([]);
-                      setShowSampleModal(true);
-                    }).catch(console.error);
-                  }}
-                  onClear={() => setPendingSamples([])}
-                />
               </div>
             ) : (
               <div className="flex flex-col gap-4">
@@ -1047,7 +1024,7 @@ export function DrawerFridgeView({
           occupiedPositions={new Set(tubes.map((t) => t.position))}
           currentUser={currentUser}
           onClose={() => setShowImportModal(false)}
-          onImported={handleImportComplete}
+          onImported={(ids) => onImportComplete?.(ids)}
         />
       )}
       <BatchEditModal

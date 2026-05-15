@@ -47,8 +47,11 @@ export async function runSchemaMigrations() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB
   `);
-  await ensureColumn('refrigerators', 'upper_temperature', '`upper_temperature` DECIMAL(5,1) NOT NULL DEFAULT -20.0');
-  await ensureColumn('refrigerators', 'lower_temperature', '`lower_temperature` DECIMAL(5,1) NOT NULL DEFAULT 4.0');
+  await ensureColumn('refrigerators', 'upper_temperature', '`upper_temperature` DECIMAL(5,1) NOT NULL DEFAULT -80.0');
+  await ensureColumn('refrigerators', 'lower_temperature', '`lower_temperature` DECIMAL(5,1) NOT NULL DEFAULT -80.0');
+  // Update existing fridges to -80°C
+  await pool.query("UPDATE refrigerators SET upper_temperature = -80 WHERE upper_temperature IS NULL OR upper_temperature > 0");
+  await pool.query("UPDATE refrigerators SET lower_temperature = -80 WHERE lower_temperature IS NULL OR lower_temperature > 0");
   await ensureColumn('samples', 'uploader', '`uploader` VARCHAR(100) NULL AFTER `patient_id`');
   await ensureColumn('sub_samples', 'uploader', '`uploader` VARCHAR(100) NULL AFTER `patient_id`');
   await ensureColumn('samples', 'created_by', '`created_by` VARCHAR(50) NULL AFTER `uploader`');
