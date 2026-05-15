@@ -921,6 +921,19 @@ function AppContent() {
               onDelete={handleDeleteFridge}
               onEdit={handleEditFridge}
             />
+            <button
+              type="button"
+              onClick={() => setShowSideMap((v) => !v)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
+              style={{
+                background: showSideMap ? '#2563eb15' : 'var(--app-panel-bg)',
+                border: showSideMap ? '1px solid #3b82f680' : '1px solid var(--app-border)',
+                color: showSideMap ? '#2563eb' : 'var(--app-muted)',
+              }}
+              title={showSideMap ? '隐藏冰箱图' : '显示冰箱图'}
+            >
+              <PanelLeft size={16} />
+            </button>
           </div>
 
           <div className="flex items-center gap-6">
@@ -984,7 +997,7 @@ function AppContent() {
         ) : (
     <main className="flex-1 flex gap-3 lg:gap-6 p-3 lg:p-6 overflow-auto items-start">
           {/* ── Far Left: 2D Fridge Map ── */}
-          {selectedFridge && selectedFridge.fridge_type === 'drawer' && (
+          {selectedFridge && selectedFridge.fridge_type === 'drawer' && showSideMap && (
             <FridgeSideMap
               fridgeId={selectedFridge.id}
               fridgeName={selectedFridge.name}
@@ -992,12 +1005,12 @@ function AppContent() {
               lowerTemperature={selectedFridge.lowerTemperature}
               onDrawerClick={(drawerId, drawerLabel) => {
                 setSideMapNavTarget({ drawerId, drawerLabel });
-              refreshKey={sideMapRefreshKey}
               }}
+              refreshKey={sideMapRefreshKey}
             />
           )}
 
-          <div className="flex-1 flex gap-3 lg:gap-5 items-start justify-center min-w-0">
+          <div className="flex-1 flex flex-col lg:flex-row gap-3 lg:gap-5 items-start justify-center min-w-0">
           {/* Detail panel — left of fridge */}
           <DetailPanel
             item={selectedDetailItem}
@@ -1016,7 +1029,7 @@ function AppContent() {
           />
 
           {/* Center: Fridge */}
-          <div className="flex w-full max-w-[860px] flex-col gap-5">
+          <div className="flex w-full w-full max-w-full lg:max-w-[860px] flex-col gap-5">
             {/* Search bar */}
               <div
                 className="flex w-full items-center gap-3 rounded-xl px-4 py-3"
