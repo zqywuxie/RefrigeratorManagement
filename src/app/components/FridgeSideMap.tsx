@@ -154,7 +154,7 @@ export function FridgeSideMap({
   const totalCapacity = [...layer1Drawers, ...layer2Drawers].reduce((s, d) => s + (d.max_boxes || 5), 0);
   const overallRate = totalCapacity > 0 ? Math.round((totalBoxes / totalCapacity) * 100) : 0;
 
-  const [width, setWidth] = useState(280);
+  const [width, setWidth] = useState(240);
   const resizeRef = React.useRef<HTMLDivElement>(null);
   const isResizing = React.useRef(false);
 
@@ -167,7 +167,7 @@ export function FridgeSideMap({
     const onMove = (ev: MouseEvent) => {
       if (!isResizing.current) return;
       const delta = ev.clientX - startX;
-      const newWidth = Math.max(200, Math.min(500, startWidth + delta));
+      const newWidth = Math.max(180, Math.min(420, startWidth + delta));
       setWidth(newWidth);
     };
     const onUp = () => {

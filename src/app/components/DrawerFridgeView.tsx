@@ -631,7 +631,7 @@ export function DrawerFridgeView({
   }
 
   return (
-    <div className="flex flex-col gap-5 w-full" style={{ maxWidth: '860px' }}>
+    <div className="flex flex-col gap-5 w-full" style={{ maxWidth: '100%' }}>
       <BreadcrumbNav nodes={breadcrumbNodes} />
 
       <AnimatePresence mode="wait">
