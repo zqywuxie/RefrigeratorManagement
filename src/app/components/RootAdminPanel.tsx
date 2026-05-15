@@ -34,6 +34,8 @@ import {
   updateAdminUser,
   updateSample,
   updateSubSample,
+  updateBox,
+  deleteBox,
 } from '../api';
 import { AddSampleModal } from './AddSampleModal';
 import { Compartment, Sample, SampleStatus, SubSample, SampleRecord, formatChineseShortDate } from '../types';
@@ -78,6 +80,11 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   const [editingSample, setEditingSample] = useState<AdminSampleItem | null>(null);
   const [adminBoxes, setAdminBoxes] = useState<AdminBox[]>([]);
   const [adminSampleRecords, setAdminSampleRecords] = useState<SampleRecord[]>([]);
+  const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
+  const [editBoxName, setEditBoxName] = useState('');
+  const [editBoxOwner, setEditBoxOwner] = useState('');
+  const [editBoxNote, setEditBoxNote] = useState('');
+  const [busyBoxId, setBusyBoxId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyUser, setBusyUser] = useState<string | null>(null);
   const [busySampleId, setBusySampleId] = useState<string | null>(null);
@@ -353,6 +360,48 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
       setBusySampleId(null);
     }
   }, [loadAdminData, onNotify]);
+
+  // ── Box handlers ──
+
+  const handleStartEditBox = useCallback((box: AdminBox) => {
+    setEditingBoxId(box.id);
+    setEditBoxName(box.name);
+    setEditBoxOwner(box.owner || '');
+    setEditBoxNote(box.note || '');
+  }, []);
+
+  const handleCancelEditBox = useCallback(() => {
+    setEditingBoxId(null);
+  }, []);
+
+  const handleSaveBox = useCallback(async (boxId: string) => {
+    if (!editBoxName.trim()) return;
+    setBusyBoxId(boxId);
+    try {
+      await updateBox(boxId, { name: editBoxName.trim(), owner: editBoxOwner || null, note: editBoxNote || null });
+      setAdminBoxes((prev) => prev.map((b) => b.id === boxId ? { ...b, name: editBoxName.trim(), owner: editBoxOwner || null, note: editBoxNote || null } : b));
+      setEditingBoxId(null);
+      onNotify('盒子已更新', 'success');
+    } catch (err: any) {
+      onNotify(err.message || '更新盒子失败', 'error');
+    } finally {
+      setBusyBoxId(null);
+    }
+  }, [editBoxName, editBoxOwner, editBoxNote, onNotify]);
+
+  const handleDeleteBox = useCallback(async (box: AdminBox) => {
+    if (!window.confirm(`确定删除盒子 "${box.name}"（${box.fridge_name} / 抽屉${box.drawer_label}）？关联试管不会被删除。`)) return;
+    setBusyBoxId(box.id);
+    try {
+      await deleteBox(box.id);
+      setAdminBoxes((prev) => prev.filter((b) => b.id !== box.id));
+      onNotify(`盒子 "${box.name}" 已删除`, 'warn');
+    } catch (err: any) {
+      onNotify(err.message || '删除盒子失败', 'error');
+    } finally {
+      setBusyBoxId(null);
+    }
+  }, [onNotify]);
 
   const totalSamplesText = summary
     ? `${summary.totals.samples} / ${summary.totals.totalCapacity}`
@@ -712,21 +761,32 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                     <th className="px-2 py-1 font-medium">网格</th>
                     <th className="px-2 py-1 font-medium">试管数</th>
                     <th className="px-2 py-1 font-medium">负责人</th>
+                    <th className="px-2 py-1 text-right font-medium">操作</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {adminBoxes.map((box) => (
+                  {adminBoxes.map((box) => {
+                    const isEditing = editingBoxId === box.id;
+                    const busy = busyBoxId === box.id;
+                    const rowBg = { background: 'var(--app-panel-bg)' };
+                    const cellText = { color: 'var(--app-text)' };
+                    const cellMuted = { color: 'var(--app-muted)' };
+                    return (
                     <tr key={box.id}>
-                      <td className="rounded-l-lg px-2 py-2 text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-text)' }}>
+                      <td className="rounded-l-lg px-2 py-2 text-[13px]" style={{ ...rowBg, ...cellText }}>
                         {box.fridge_name}
                       </td>
-                      <td className="px-2 py-2 text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-text)' }}>
+                      <td className="px-2 py-2 text-[13px]" style={{ ...rowBg, ...cellText }}>
                         第{box.layer}层 {box.drawer_label}
                       </td>
-                      <td className="px-2 py-2 text-[13px] font-medium" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-text)' }}>
-                        {box.name}
+                      <td className="px-2 py-2 text-[13px] font-medium" style={{ ...rowBg, ...cellText }}>
+                        {isEditing ? (
+                          <input value={editBoxName} onChange={(e) => setEditBoxName(e.target.value)}
+                            className="w-full rounded px-2 py-1 text-[13px] outline-none"
+                            style={{ background: 'var(--app-input-bg)', border: '1px solid var(--app-input-border)', color: 'var(--app-text)' }} />
+                        ) : box.name}
                       </td>
-                      <td className="px-2 py-2 text-[12px]" style={{ background: 'var(--app-panel-bg)' }}>
+                      <td className="px-2 py-2 text-[12px]" style={rowBg}>
                         <span className="rounded px-1.5 py-0.5" style={{
                           background: box.mode === 'precise' ? '#dbeafe' : '#f1f5f9',
                           color: box.mode === 'precise' ? '#1d4ed8' : '#64748b',
@@ -734,17 +794,46 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                           {box.mode === 'precise' ? '精细' : '简略'}
                         </span>
                       </td>
-                      <td className="px-2 py-2 text-[12px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
+                      <td className="px-2 py-2 text-[12px]" style={{ ...rowBg, ...cellMuted }}>
                         {box.grid_rows && box.grid_cols ? `${box.grid_rows}×${box.grid_cols}` : '—'}
                       </td>
-                      <td className="px-2 py-2 text-[13px] font-mono" style={{ background: 'var(--app-panel-bg)', color: '#2563eb' }}>
+                      <td className="px-2 py-2 text-[13px] font-mono" style={{ ...rowBg, color: '#2563eb' }}>
                         {box.tube_count || 0}
                       </td>
-                      <td className="rounded-r-lg px-2 py-2 text-[12px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
-                        {box.owner || '—'}
+                      <td className="px-2 py-2 text-[12px]" style={{ ...rowBg, ...cellMuted }}>
+                        {isEditing ? (
+                          <input value={editBoxOwner} onChange={(e) => setEditBoxOwner(e.target.value)}
+                            className="w-full rounded px-2 py-1 text-[12px] outline-none"
+                            style={{ background: 'var(--app-input-bg)', border: '1px solid var(--app-input-border)', color: 'var(--app-text)' }} />
+                        ) : (box.owner || '—')}
+                      </td>
+                      <td className="rounded-r-lg px-2 py-2 text-right" style={rowBg}>
+                        {isEditing ? (
+                          <div className="flex items-center gap-1 justify-end">
+                            <button onClick={() => handleSaveBox(box.id)} disabled={busy}
+                              className="text-[11px] px-2 py-1 rounded" style={{ background: '#2563eb', color: '#fff' }}>
+                              {busy ? '...' : '保存'}
+                            </button>
+                            <button onClick={handleCancelEditBox}
+                              className="text-[11px] px-2 py-1 rounded" style={{ background: 'var(--app-input-bg)', color: 'var(--app-muted)' }}>
+                              取消
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 justify-end">
+                            <button onClick={() => handleStartEditBox(box)}
+                              className="text-[11px] px-2 py-1 rounded hover:opacity-80" style={{ color: '#2563eb' }}>
+                              编辑
+                            </button>
+                            <button onClick={() => handleDeleteBox(box)} disabled={busy}
+                              className="text-[11px] px-2 py-1 rounded hover:opacity-80" style={{ color: '#ef4444' }}>
+                              删除
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>
