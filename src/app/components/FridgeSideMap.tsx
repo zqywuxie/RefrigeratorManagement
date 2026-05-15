@@ -195,7 +195,7 @@ export function FridgeSideMap({
     <div className="flex flex-col gap-3 flex-shrink-0 relative group/sidemap" style={{ width: `${width}px` }}>
       {/* Fridge outline */}
       <div
-        className="rounded-2xl overflow-hidden flex flex-col"
+        className="rounded-2xl flex flex-col"
         style={{
           background: '#f8fafc',
           border: '2px solid #cbd5e1',
