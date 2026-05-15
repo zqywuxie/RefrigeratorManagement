@@ -12,7 +12,7 @@ interface ExcelImportModalProps {
   occupiedPositions: Set<number>;
   currentUser: string;
   onClose: () => void;
-  onImported: () => void;
+  onImported: (sampleIds: string[]) => void;
 }
 
 const SYSTEM_FIELDS: { key: string; label: string }[] = [
@@ -66,12 +66,6 @@ export function ExcelImportModal({
     if (!parsed) return;
     setStep('importing');
 
-    // Find empty positions to auto-assign
-    const emptyPositions: number[] = [];
-    for (let pos = 0; pos < capacity; pos++) {
-      if (!occupiedPositions.has(pos)) emptyPositions.push(pos);
-    }
-
     const samples: ImportAssignment[] = [];
     for (const row of parsed.rows) {
       const patientName = row[findMappedHeader('patient_name')]?.toString().trim();
@@ -86,9 +80,6 @@ export function ExcelImportModal({
       const tagsStr = row[findMappedHeader('tags')]?.toString().trim() || '';
       const tags = tagsStr ? tagsStr.split(/[,，;；\s]+/).filter(Boolean) : [];
 
-      // Auto-assign one empty position per sample
-      const position = emptyPositions.shift();
-
       samples.push({
         patient_name: patientName,
         sample_code: sampleCode,
@@ -99,7 +90,7 @@ export function ExcelImportModal({
         tags,
         note,
         uploader: currentUser,
-        positions: position != null ? [position] : [],
+        positions: [],
       });
     }
 
@@ -110,8 +101,9 @@ export function ExcelImportModal({
     }
 
     try {
-      await assignImportedSamples(boxId, samples);
-      onImported();
+      const result = await assignImportedSamples(boxId, samples);
+      const ids = result.results.map((r: any) => r.sample_id);
+      onImported(ids);
       onClose();
       setStep('upload');
       setParsed(null);

@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useDrop } from 'react-dnd';
 import { ArrowLeft, Grid3X3, CheckSquare, Square } from 'lucide-react';
 import { Box, BoxCell, Tube, STATUS_CONFIG } from '../types';
 import { CellSlot } from './CellSlot';
@@ -16,6 +17,46 @@ interface BoxGridProps {
   onMultiSelectToggle?: (position: number) => void;
   onMultiSelectConfirm?: (positions: number[]) => void;
   onTubeHover?: (sampleId: string | null) => void;
+  onPendingSampleDrop?: (sampleId: string, position: number) => void;
+}
+
+function DropCellWrapper({
+  position,
+  isOccupied,
+  children,
+  onDrop,
+}: {
+  position: number;
+  isOccupied: boolean;
+  children: React.ReactNode;
+  onDrop: (sampleId: string, position: number) => void;
+}) {
+  const [{ isOver, canDrop }, drop] = useDrop({
+    accept: 'PENDING_SAMPLE',
+    drop: (item: { sample_id: string }) => {
+      onDrop(item.sample_id, position);
+    },
+    canDrop: () => !isOccupied,
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  });
+
+  return (
+    <div
+      ref={drop}
+      className="relative"
+      style={{
+        outline: isOver && canDrop ? '2px dashed #06b6d4' : 'none',
+        outlineOffset: 1,
+        borderRadius: '6px',
+        background: isOver && canDrop ? 'rgba(6,182,212,0.1)' : 'transparent',
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function BoxGrid({
@@ -31,6 +72,7 @@ export function BoxGrid({
   onMultiSelectToggle,
   onMultiSelectConfirm,
   onTubeHover,
+  onPendingSampleDrop,
 }: BoxGridProps) {
   const rows = box.grid_rows || 10;
   const cols = box.grid_cols || 10;
@@ -146,8 +188,9 @@ export function BoxGrid({
             const isTubeHighlighted = tube ? matchedIds.has(tube.id) : false;
             const isGrouped = tube ? groupedPositions.has(position) : false;
             const isSelected = selectedPositions.has(position);
+            const isOccupied = !!tube || !!cell;
 
-            return (
+            const cellElement = (
               <CellSlot
                 key={`cell-${position}`}
                 cell={cell}
@@ -167,6 +210,21 @@ export function BoxGrid({
                 }}
               />
             );
+
+            if (onPendingSampleDrop) {
+              return (
+                <DropCellWrapper
+                  key={`cell-${position}`}
+                  position={position}
+                  isOccupied={isOccupied}
+                  onDrop={onPendingSampleDrop}
+                >
+                  {cellElement}
+                </DropCellWrapper>
+              );
+            }
+
+            return cellElement;
           })}
         </div>
       </div>
