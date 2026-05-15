@@ -19,6 +19,7 @@ import {
   AdminSummary,
   AdminSampleItem,
   AdminUser,
+  AdminBox,
   createAdminUser,
   createSampleType,
   deleteAdminUser,
@@ -27,13 +28,15 @@ import {
   fetchAdminSamples,
   fetchAdminSummary,
   fetchAdminUsers,
+  fetchAdminBoxes,
+  fetchAdminSampleRecords,
   fetchSampleTypes,
   updateAdminUser,
   updateSample,
   updateSubSample,
 } from '../api';
 import { AddSampleModal } from './AddSampleModal';
-import { Compartment, Sample, SampleStatus, SubSample, formatChineseShortDate } from '../types';
+import { Compartment, Sample, SampleStatus, SubSample, SampleRecord, formatChineseShortDate } from '../types';
 
 type NotifyType = 'info' | 'warn' | 'success' | 'error';
 
@@ -73,6 +76,8 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   const [sampleQuery, setSampleQuery] = useState('');
   const [sampleTypeFilter, setSampleTypeFilter] = useState('__all__');
   const [editingSample, setEditingSample] = useState<AdminSampleItem | null>(null);
+  const [adminBoxes, setAdminBoxes] = useState<AdminBox[]>([]);
+  const [adminSampleRecords, setAdminSampleRecords] = useState<SampleRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyUser, setBusyUser] = useState<string | null>(null);
   const [busySampleId, setBusySampleId] = useState<string | null>(null);
@@ -128,15 +133,19 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   const loadAdminData = useCallback(async () => {
     setLoading(true);
     try {
-      const [summaryData, userData, sampleData, sampleTypeData] = await Promise.all([
+      const [summaryData, userData, sampleData, sampleTypeData, boxData, srData] = await Promise.all([
         fetchAdminSummary(),
         fetchAdminUsers(),
         fetchAdminSamples(),
         fetchSampleTypes().catch(() => []),
+        fetchAdminBoxes().catch(() => []),
+        fetchAdminSampleRecords().catch(() => []),
       ]);
       setSummary(summaryData);
       setUsers(userData);
       setSamples(sampleData);
+      setAdminBoxes(boxData);
+      setAdminSampleRecords(srData);
       setSampleTypes(() => {
         const merged = new Set<string>([
           ...sampleTypeData,
@@ -666,6 +675,80 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
               </div>
             )}
           </div>
+        </section>
+
+        {/* Box Management */}
+        <section
+          className="rounded-xl p-4"
+          style={{
+            background: 'var(--app-card-bg)',
+            border: '1px solid var(--app-border)',
+            boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
+          }}
+        >
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>
+                盒子管理
+              </h3>
+              <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                {adminBoxes.length} 个盒子 · {adminBoxes.reduce((s, b) => s + (b.tube_count || 0), 0)} 个试管
+              </div>
+            </div>
+          </div>
+          {adminBoxes.length === 0 ? (
+            <div className="text-center py-8 text-[13px]" style={{ color: 'var(--app-muted)' }}>
+              暂无盒子数据
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] border-separate border-spacing-y-1.5 text-left">
+                <thead>
+                  <tr className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                    <th className="px-2 py-1 font-medium">冰箱</th>
+                    <th className="px-2 py-1 font-medium">抽屉</th>
+                    <th className="px-2 py-1 font-medium">盒子名称</th>
+                    <th className="px-2 py-1 font-medium">模式</th>
+                    <th className="px-2 py-1 font-medium">网格</th>
+                    <th className="px-2 py-1 font-medium">试管数</th>
+                    <th className="px-2 py-1 font-medium">负责人</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminBoxes.map((box) => (
+                    <tr key={box.id}>
+                      <td className="rounded-l-lg px-2 py-2 text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-text)' }}>
+                        {box.fridge_name}
+                      </td>
+                      <td className="px-2 py-2 text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-text)' }}>
+                        第{box.layer}层 {box.drawer_label}
+                      </td>
+                      <td className="px-2 py-2 text-[13px] font-medium" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-text)' }}>
+                        {box.name}
+                      </td>
+                      <td className="px-2 py-2 text-[12px]" style={{ background: 'var(--app-panel-bg)' }}>
+                        <span className="rounded px-1.5 py-0.5" style={{
+                          background: box.mode === 'precise' ? '#dbeafe' : '#f1f5f9',
+                          color: box.mode === 'precise' ? '#1d4ed8' : '#64748b',
+                        }}>
+                          {box.mode === 'precise' ? '精细' : '简略'}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-[12px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
+                        {box.grid_rows && box.grid_cols ? `${box.grid_rows}×${box.grid_cols}` : '—'}
+                      </td>
+                      <td className="px-2 py-2 text-[13px] font-mono" style={{ background: 'var(--app-panel-bg)', color: '#2563eb' }}>
+                        {box.tube_count || 0}
+                      </td>
+                      <td className="rounded-r-lg px-2 py-2 text-[12px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
+                        {box.owner || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <section

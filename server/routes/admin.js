@@ -450,4 +450,78 @@ router.delete('/users/:username', async (req, res) => {
   }
 });
 
+// GET /api/admin/boxes — list all boxes with drawer/fridge info
+router.get('/boxes', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT b.*, d.label as drawer_label, d.layer, d.row_pos, d.col_pos,
+              r.name as fridge_name, r.id as fridge_id
+       FROM boxes b
+       JOIN drawers d ON d.id = b.drawer_id
+       JOIN refrigerators r ON r.id = d.refrigerator_id
+       WHERE b.deleted_at IS NULL AND r.deleted_at IS NULL
+       ORDER BY r.name, d.layer, d.row_pos, d.col_pos, b.position`
+    );
+    // Get tube counts per box
+    for (const box of rows) {
+      const [[{ cnt }]] = await pool.query(
+        'SELECT COUNT(*) as cnt FROM tubes WHERE box_id = ?', [box.id]
+      );
+      box.tube_count = cnt;
+    }
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/boxes/:boxId — box detail with tubes and sample records
+router.get('/boxes/:boxId', async (req, res) => {
+  try {
+    const [[box]] = await pool.query(
+      `SELECT b.*, d.label as drawer_label, r.name as fridge_name
+       FROM boxes b
+       JOIN drawers d ON d.id = b.drawer_id
+       JOIN refrigerators r ON r.id = d.refrigerator_id
+       WHERE b.id = ? AND b.deleted_at IS NULL`,
+      [req.params.boxId]
+    );
+    if (!box) return res.status(404).json({ error: 'Box not found' });
+
+    const [tubes] = await pool.query(
+      `SELECT t.*, sr.patient_name, sr.sample_code, sr.group_color
+       FROM tubes t
+       JOIN sample_records sr ON sr.id = t.sample_id AND sr.deleted_at IS NULL
+       WHERE t.box_id = ?
+       ORDER BY t.position`,
+      [req.params.boxId]
+    );
+    box.tubes = tubes;
+    res.json(box);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/sample-records — list all sample records
+router.get('/sample-records', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT sr.*, COUNT(t.id) as tube_count
+       FROM sample_records sr
+       LEFT JOIN tubes t ON t.sample_id = sr.id
+       WHERE sr.deleted_at IS NULL
+       GROUP BY sr.id
+       ORDER BY sr.created_at DESC
+       LIMIT 200`
+    );
+    for (const row of rows) {
+      row.tags = typeof row.tags === 'string' ? JSON.parse(row.tags || '[]') : (row.tags || []);
+    }
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

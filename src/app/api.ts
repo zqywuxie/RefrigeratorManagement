@@ -514,3 +514,45 @@ export async function assignImportedSamples(boxId: string, samples: ImportAssign
     body: JSON.stringify({ box_id: boxId, samples }),
   });
 }
+
+// ── Admin: Boxes & Sample Records ──
+
+export interface AdminBox {
+  id: string;
+  drawer_id: string;
+  name: string;
+  mode: string;
+  grid_rows: number | null;
+  grid_cols: number | null;
+  position: number | null;
+  sample_type: string | null;
+  project_name: string | null;
+  quantity: number;
+  owner: string | null;
+  note: string | null;
+  data_path: string | null;
+  drawer_label: string;
+  layer: number;
+  row_pos: number;
+  col_pos: number;
+  fridge_name: string;
+  fridge_id: string;
+  tube_count: number;
+  created_at: string;
+}
+
+export interface AdminBoxDetail extends AdminBox {
+  tubes: (Tube & { patient_name: string; sample_code: string; group_color: string })[];
+}
+
+export async function fetchAdminBoxes(): Promise<AdminBox[]> {
+  return fetchJSON(`${BASE}/admin/boxes`);
+}
+
+export async function fetchAdminBoxDetail(boxId: string): Promise<AdminBoxDetail> {
+  return fetchJSON(`${BASE}/admin/boxes/${encodeURIComponent(boxId)}`);
+}
+
+export async function fetchAdminSampleRecords(): Promise<SampleRecord[]> {
+  return fetchJSON(`${BASE}/admin/sample-records`);
+}

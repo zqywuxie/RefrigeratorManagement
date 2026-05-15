@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useDrag } from 'react-dnd';
-import { FlaskConical, GripVertical, User } from 'lucide-react';
+import { FlaskConical, GripVertical, Search } from 'lucide-react';
 import { SampleRecord } from '../types';
 
 interface DraggableSampleProps {
@@ -52,6 +52,20 @@ interface PendingSamplesPanelProps {
 }
 
 export function PendingSamplesPanel({ samples, onSelectSample, onClear }: PendingSamplesPanelProps) {
+  const [query, setQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return samples;
+    const q = query.toLowerCase();
+    return samples.filter((s) =>
+      s.patient_name.toLowerCase().includes(q) ||
+      s.sample_code.toLowerCase().includes(q) ||
+      (s.sample_type || '').toLowerCase().includes(q) ||
+      (s.source || '').toLowerCase().includes(q) ||
+      (s.collection_stage || '').toLowerCase().includes(q)
+    );
+  }, [samples, query]);
+
   if (samples.length === 0) return null;
 
   return (
@@ -70,7 +84,7 @@ export function PendingSamplesPanel({ samples, onSelectSample, onClear }: Pendin
             待分配样本
           </span>
           <span className="text-[11px] px-1.5 py-0.5 rounded-full" style={{ background: '#ecfeff', color: '#0891b2' }}>
-            {samples.length}
+            {filtered.length}{query ? `/${samples.length}` : ''}
           </span>
         </div>
         <button
@@ -82,17 +96,41 @@ export function PendingSamplesPanel({ samples, onSelectSample, onClear }: Pendin
           清除列表
         </button>
       </div>
-      <p className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
-        拖拽样本到左侧孔位进行分配
+
+      <div
+        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
+        style={{
+          background: 'var(--app-input-bg)',
+          border: '1px solid var(--app-input-border)',
+        }}
+      >
+        <Search size={12} color="var(--app-muted)" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="搜索姓名、编号、类型..."
+          className="flex-1 bg-transparent outline-none text-[11px]"
+          style={{ color: 'var(--app-text)' }}
+        />
+      </div>
+
+      <p className="text-[10px]" style={{ color: 'var(--app-muted)' }}>
+        拖拽到左侧孔位分配
       </p>
-      <div className="space-y-1 max-h-64 overflow-y-auto">
-        {samples.map((s) => (
+      <div className="space-y-1 max-h-56 overflow-y-auto">
+        {filtered.map((s) => (
           <DraggableSample
             key={s.id}
             sample={s}
             onClick={() => onSelectSample(s.id)}
           />
         ))}
+        {filtered.length === 0 && (
+          <div className="text-center py-3 text-[11px]" style={{ color: 'var(--app-muted)' }}>
+            无匹配结果
+          </div>
+        )}
       </div>
     </div>
   );
