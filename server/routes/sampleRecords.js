@@ -11,6 +11,20 @@ function nextGroupColor(conn) {
     .then(([[{ cnt }]]) => GROUP_COLORS[Number(cnt) % GROUP_COLORS.length]);
 }
 
+async function assertTubePositionsAvailable(conn, tubeInputs, currentSampleId = null) {
+  for (const tubeInput of tubeInputs) {
+    const [[existingTube]] = await conn.query(
+      'SELECT id, sample_id FROM tubes WHERE box_id = ? AND position = ? LIMIT 1',
+      [tubeInput.box_id, tubeInput.position],
+    );
+    if (!existingTube) continue;
+    if (currentSampleId && existingTube.sample_id === currentSampleId) {
+      throw new Error(`格位已被当前样本占用: ${tubeInput.position}`);
+    }
+    throw new Error(`格位已被占用: ${tubeInput.position}`);
+  }
+}
+
 // GET /api/sample-records?box_id=&search=
 router.get('/', async (req, res) => {
   try {
@@ -79,11 +93,11 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/sample-records
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
     const {
       patient_name, sample_code, source, sample_type, collection_stage,
-      collected_at, tags, note, uploader,
+      collected_at, tags, note,
       tubes: tubeInputs, // [{ box_id, position, volume, barcode, status }]
     } = req.body;
 
@@ -93,13 +107,16 @@ router.post('/', async (req, res) => {
 
     const sampleId = `sr-${Date.now()}`;
     const color = await nextGroupColor(pool);
+    if (Array.isArray(tubeInputs) && tubeInputs.length > 0) {
+      await assertTubePositionsAvailable(pool, tubeInputs);
+    }
 
     await pool.query(
       `INSERT INTO sample_records (id, patient_name, sample_code, source, sample_type, collection_stage, collected_at, tags, note, group_color, uploader)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [sampleId, patient_name, sample_code, source || null, sample_type || null,
        collection_stage || null, collected_at || null, JSON.stringify(tags || []),
-       note || null, color, uploader || null]
+       note || null, color, req.user.username]
     );
 
     const createdTubes = [];
@@ -108,12 +125,9 @@ router.post('/', async (req, res) => {
         const t = tubeInputs[i];
         const tubeId = `tube-${Date.now()}-${i}`;
         const tubeLabel = `Tube${i + 1}`;
-        // Use INSERT ... ON DUPLICATE KEY to handle position reuse
         await pool.query(
           `INSERT INTO tubes (id, sample_id, tube_label, box_id, position, barcode, volume, status, note)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE sample_id = VALUES(sample_id), tube_label = VALUES(tube_label),
-           barcode = VALUES(barcode), volume = VALUES(volume), status = VALUES(status)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [tubeId, sampleId, tubeLabel, t.box_id, t.position, t.barcode || null,
            t.volume || null, t.status || 'normal', t.note || null]
         );
@@ -133,11 +147,21 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/sample-records/batch — batch update fields (must be before /:id)
-router.put('/batch', async (req, res) => {
+router.put('/batch', authenticate, async (req, res) => {
   try {
     const { ids, updates } = req.body;
     if (!Array.isArray(ids) || ids.length === 0 || !updates) {
       return res.status(400).json({ error: 'ids array and updates object required' });
+    }
+    if (req.user?.role !== 'root') {
+      const [ownerRows] = await pool.query(
+        'SELECT id, uploader FROM sample_records WHERE id IN (?) AND deleted_at IS NULL',
+        [ids],
+      );
+      const forbidden = ownerRows.find((row) => row.uploader && row.uploader !== req.user?.username);
+      if (forbidden) {
+        return res.status(403).json({ error: '只有创建者可以批量修改这些样本' });
+      }
     }
     const fields = [];
     const values = [];
@@ -207,7 +231,7 @@ router.delete('/:id', authenticate, requireResourceOwner('sample_records', 'id',
 });
 
 // POST /api/sample-records/:id/tubes — add tubes to existing sample
-router.post('/:id/tubes', async (req, res) => {
+router.post('/:id/tubes', authenticate, requireResourceOwner('sample_records', 'id', 'uploader'), async (req, res) => {
   try {
     const [[sample]] = await pool.query('SELECT * FROM sample_records WHERE id = ? AND deleted_at IS NULL', [req.params.id]);
     if (!sample) return res.status(404).json({ error: 'Sample record not found' });
@@ -216,6 +240,7 @@ router.post('/:id/tubes', async (req, res) => {
     if (!Array.isArray(tubeInputs) || tubeInputs.length === 0) {
       return res.status(400).json({ error: 'tubes array is required' });
     }
+    await assertTubePositionsAvailable(pool, tubeInputs, req.params.id);
 
     // Get current tube count for label numbering
     const [[{ cnt }]] = await pool.query('SELECT COUNT(*) as cnt FROM tubes WHERE sample_id = ?', [req.params.id]);
@@ -227,9 +252,7 @@ router.post('/:id/tubes', async (req, res) => {
       const tubeLabel = `Tube${Number(cnt) + i + 1}`;
       await pool.query(
         `INSERT INTO tubes (id, sample_id, tube_label, box_id, position, barcode, volume, status, note)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE sample_id = VALUES(sample_id), tube_label = VALUES(tube_label),
-         barcode = VALUES(barcode), volume = VALUES(volume), status = VALUES(status)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [tubeId, req.params.id, tubeLabel, t.box_id, t.position, t.barcode || null,
          t.volume || null, t.status || 'normal', t.note || null]
       );

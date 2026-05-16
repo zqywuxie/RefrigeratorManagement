@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, Lock, UserPlus } from 'lucide-react';
+import { Database, Lock, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../AuthContext';
 
@@ -9,6 +9,8 @@ export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -131,26 +133,52 @@ export function LoginPage() {
             <label className="block text-[13px] mb-1" style={{ color: 'var(--app-subtle-text)' }}>
               密码
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border px-3 py-2.5 outline-none text-[16px] min-h-[44px]"
+            <div
+              className="flex items-center rounded-lg border"
               style={{ borderColor: 'var(--app-input-border)', background: 'var(--app-input-bg)', color: 'var(--app-text)' }}
-            />
+            >
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="min-h-[44px] w-full bg-transparent px-3 py-2.5 text-[16px] outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((value) => !value)}
+                className="flex h-11 w-11 items-center justify-center"
+                style={{ color: 'var(--app-muted)' }}
+                aria-label={showPassword ? '隐藏密码' : '显示密码'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
           {isRegister && (
             <div>
               <label className="block text-[13px] mb-1" style={{ color: 'var(--app-subtle-text)' }}>
                 确认密码
               </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full rounded-lg border px-3 py-2.5 outline-none text-[16px] min-h-[44px]"
+              <div
+                className="flex items-center rounded-lg border"
                 style={{ borderColor: 'var(--app-input-border)', background: 'var(--app-input-bg)', color: 'var(--app-text)' }}
-              />
+              >
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="min-h-[44px] w-full bg-transparent px-3 py-2.5 text-[16px] outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((value) => !value)}
+                  className="flex h-11 w-11 items-center justify-center"
+                  style={{ color: 'var(--app-muted)' }}
+                  aria-label={showConfirmPassword ? '隐藏确认密码' : '显示确认密码'}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           )}
           <button

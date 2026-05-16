@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Lock, ChevronDown } from 'lucide-react';
 import { ResponsiveDialog, ResponsiveDialogContent, ResponsiveDialogHeader, ResponsiveDialogFooter, ResponsiveDialogTitle, ResponsiveDialogDescription } from './ui/responsive-dialog';
 import { SampleRecord, Tube, cellPositionToLabel } from '../types';
 
@@ -9,7 +9,10 @@ interface AddSampleRecordModalProps {
   currentUser: string;
   boxId: string;
   boxName: string;
+  gridRows: number;
   gridCols: number;
+  occupiedPositions?: number[];
+  canEdit?: boolean;
   preSelectedPositions?: number[];
   onClose: () => void;
   onSave: (data: {
@@ -35,7 +38,10 @@ export function AddSampleRecordModal({
   currentUser,
   boxId,
   boxName,
+  gridRows,
   gridCols,
+  occupiedPositions = [],
+  canEdit = true,
   preSelectedPositions = [],
   onClose,
   onSave,
@@ -57,6 +63,15 @@ export function AddSampleRecordModal({
   const [positionInput, setPositionInput] = useState('');
 
   const isEdit = !!editRecord;
+  const isReadOnly = isEdit && !canEdit;
+  const capacity = Math.max(1, gridRows * gridCols);
+  const currentTubePositions = new Set(editRecord?.tubes?.map((tube) => tube.position) || []);
+  const blockedPositions = new Set(
+    occupiedPositions.filter((position) => !currentTubePositions.has(position)),
+  );
+  const availablePositions = Array.from({ length: capacity }, (_, position) => position)
+    .filter((position) => !blockedPositions.has(position) && !currentTubePositions.has(position));
+  const selectablePositions = availablePositions.filter((position) => !newPositions.includes(position));
 
   useEffect(() => {
     if (!isOpen) return;
@@ -71,6 +86,17 @@ export function AddSampleRecordModal({
     setNewPositions([]);
     setPositionInput('');
   }, [isOpen, editRecord]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (selectablePositions.length === 0) {
+      setPositionInput('');
+      return;
+    }
+    if (!positionInput || !selectablePositions.includes(Number(positionInput))) {
+      setPositionInput(String(selectablePositions[0]));
+    }
+  }, [isOpen, positionInput, selectablePositions]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,11 +140,11 @@ export function AddSampleRecordModal({
 
   const handleAddPosition = () => {
     const pos = parseInt(positionInput, 10);
-    if (isNaN(pos) || pos < 0 || newPositions.includes(pos)) return;
-    // Check that position isn't already in editRecord tubes
-    if (editRecord?.tubes?.some((t) => t.position === pos)) return;
+    if (isNaN(pos) || pos < 0 || pos >= capacity || newPositions.includes(pos)) return;
+    if (!availablePositions.includes(pos)) return;
     setNewPositions((prev) => [...prev, pos]);
-    setPositionInput('');
+    const remaining = selectablePositions.filter((candidate) => candidate !== pos);
+    setPositionInput(remaining.length > 0 ? String(remaining[0]) : '');
   };
 
   const handleAddTubes = () => {
@@ -182,6 +208,7 @@ export function AddSampleRecordModal({
                     placeholder="患者姓名"
                     className="w-full rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"
                     style={fieldStyle}
+                    disabled={isReadOnly}
                     required
                   />
                 </div>
@@ -195,6 +222,7 @@ export function AddSampleRecordModal({
                     placeholder="样本编号"
                     className="w-full rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"
                     style={fieldStyle}
+                    disabled={isReadOnly}
                     required
                   />
                 </div>
@@ -227,6 +255,7 @@ export function AddSampleRecordModal({
                     placeholder="如: 门诊、住院"
                     className="w-full rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"
                     style={fieldStyle}
+                    disabled={isReadOnly}
                   />
                 </div>
                 <div>
@@ -237,6 +266,7 @@ export function AddSampleRecordModal({
                     placeholder="如: 外周血、脐血"
                     className="w-full rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"
                     style={fieldStyle}
+                    disabled={isReadOnly}
                   />
                 </div>
                 <div>
@@ -247,6 +277,7 @@ export function AddSampleRecordModal({
                     placeholder="如: 中孕期"
                     className="w-full rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"
                     style={fieldStyle}
+                    disabled={isReadOnly}
                   />
                 </div>
                 <div>
@@ -257,6 +288,7 @@ export function AddSampleRecordModal({
                     onChange={(e) => setCollectedAt(e.target.value)}
                     className="w-full rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"
                     style={fieldStyle}
+                    disabled={isReadOnly}
                   />
                 </div>
               </div>
@@ -279,6 +311,7 @@ export function AddSampleRecordModal({
                     placeholder="逗号分隔，如: 紧急, 需复查"
                     className="w-full rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"
                     style={fieldStyle}
+                    disabled={isReadOnly}
                   />
                 </div>
                 <div
@@ -289,10 +322,24 @@ export function AddSampleRecordModal({
                     上传者
                   </div>
                   <div className="mt-1 text-[14px]" style={{ color: 'var(--app-text)' }}>
-                    {currentUser}
+                    {editRecord?.uploader || currentUser}
                   </div>
                 </div>
               </div>
+
+              {isReadOnly && (
+                <div
+                  className="flex items-start gap-2 rounded-lg px-3 py-3 text-[12px]"
+                  style={{
+                    background: 'rgba(245,158,11,0.1)',
+                    border: '1px solid rgba(245,158,11,0.25)',
+                    color: '#b45309',
+                  }}
+                >
+                  <Lock size={14} className="mt-0.5 flex-shrink-0" />
+                  <span>当前仅可查看样本信息。只有创建者本人可以更新、删除或调整格位。</span>
+                </div>
+              )}
 
               <div>
                 <label className="mb-1 block text-[12px]" style={{ color: 'var(--app-muted)' }}>备注</label>
@@ -303,6 +350,7 @@ export function AddSampleRecordModal({
                   rows={3}
                   className="w-full rounded-lg px-3 py-2 text-[16px] outline-none resize-none sm:text-[14px] min-h-[88px]"
                   style={fieldStyle}
+                  disabled={isReadOnly}
                 />
               </div>
             </section>
@@ -343,7 +391,7 @@ export function AddSampleRecordModal({
                           {tube.tube_label} · {tube.box_name || boxName} · {positionLabel(tube.position)}
                         </span>
                       </div>
-                      {onDeleteTube && (
+                      {canEdit && onDeleteTube && (
                         <button
                           type="button"
                           onClick={() => onDeleteTube(tube.id)}
@@ -357,26 +405,47 @@ export function AddSampleRecordModal({
                   ))}
                 </div>
 
-                {onAddTubes && (
+                {canEdit && onAddTubes && (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-                    <input
-                      type="number"
-                      min={0}
+                    <div className="relative">
+                      <select
                       value={positionInput}
                       onChange={(e) => setPositionInput(e.target.value)}
-                      placeholder="添加格位编号"
-                      className="w-full rounded-lg px-3 py-2 text-[14px] outline-none min-h-[44px]"
+                      className="w-full appearance-none rounded-lg px-3 py-2 pr-9 text-[14px] outline-none min-h-[44px]"
                       style={fieldStyle}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPosition(); } }}
-                    />
+                      disabled={selectablePositions.length === 0}
+                    >
+                      {selectablePositions.length === 0 ? (
+                        <option value="">当前盒子没有可添加的空孔位</option>
+                      ) : (
+                        selectablePositions.map((position) => (
+                          <option key={position} value={position}>
+                            {positionLabel(position)} · 第 {position + 1} 位
+                          </option>
+                        ))
+                      )}
+                    </select>
+                      <ChevronDown
+                        size={16}
+                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+                        style={{ color: 'var(--app-muted)' }}
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={handleAddPosition}
                       className="flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-[13px] min-h-[44px]"
                       style={{ background: '#2563eb', color: '#fff' }}
+                      disabled={selectablePositions.length === 0}
                     >
                       <Plus size={14} />添加格位
                     </button>
+                  </div>
+                )}
+
+                {canEdit && onAddTubes && (
+                  <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                    可添加空孔位 {selectablePositions.length} 个
                   </div>
                 )}
 
@@ -404,7 +473,7 @@ export function AddSampleRecordModal({
 
           <ResponsiveDialogFooter className="pt-3">
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              {isEdit && onDelete && editRecord && (
+              {isEdit && canEdit && onDelete && editRecord && (
                 <button
                   type="button"
                   onClick={() => onDelete(editRecord.id)}
@@ -414,7 +483,7 @@ export function AddSampleRecordModal({
                   <Trash2 size={14} />删除样本
                 </button>
               )}
-              <div className="grid grid-cols-2 gap-2 sm:ml-auto sm:flex">
+              <div className={`gap-2 ${isReadOnly ? 'grid grid-cols-1' : 'grid grid-cols-2 sm:ml-auto sm:flex'}`}>
                 <button
                   type="button"
                   onClick={onClose}
@@ -427,13 +496,15 @@ export function AddSampleRecordModal({
                 >
                   取消
                 </button>
-                <button
-                  type="submit"
-                  className="min-h-[44px] rounded-lg px-4 py-2 text-[14px]"
-                  style={{ background: '#2563eb', color: '#fff' }}
-                >
-                  {isEdit ? '更新' : '保存'}
-                </button>
+                {!isReadOnly && (
+                  <button
+                    type="submit"
+                    className="min-h-[44px] rounded-lg px-4 py-2 text-[14px]"
+                    style={{ background: '#2563eb', color: '#fff' }}
+                  >
+                    {isEdit ? '更新' : '保存'}
+                  </button>
+                )}
               </div>
             </div>
           </ResponsiveDialogFooter>

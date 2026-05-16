@@ -4,11 +4,31 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
+async function ensureTubeOwner(req, res, tubeId) {
+  if (req.user?.role === 'root') return true;
+  const [[ownerRow]] = await pool.query(
+    `SELECT sr.uploader
+     FROM tubes t
+     JOIN sample_records sr ON sr.id = t.sample_id AND sr.deleted_at IS NULL
+     WHERE t.id = ?`,
+    [tubeId],
+  );
+  if (!ownerRow) {
+    res.status(404).json({ error: 'Tube not found' });
+    return false;
+  }
+  if (ownerRow.uploader && ownerRow.uploader !== req.user?.username) {
+    res.status(403).json({ error: '只有创建者可以修改此试管' });
+    return false;
+  }
+  return true;
+}
+
 // GET /api/boxes/:boxId/tubes
 router.get('/boxes/:boxId/tubes', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT t.*, sr.patient_name, sr.sample_code, sr.sample_type,
+      `SELECT t.*, sr.patient_name, sr.sample_code, sr.sample_type, sr.uploader,
               sr.group_color, b.drawer_id, d.refrigerator_id as fridge_id
        FROM tubes t
        JOIN sample_records sr ON sr.id = t.sample_id AND sr.deleted_at IS NULL
@@ -27,6 +47,7 @@ router.get('/boxes/:boxId/tubes', async (req, res) => {
 // PUT /api/tubes/:id
 router.put('/tubes/:id', authenticate, async (req, res) => {
   try {
+    if (!(await ensureTubeOwner(req, res, req.params.id))) return;
     const [[existing]] = await pool.query('SELECT * FROM tubes WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Tube not found' });
 
@@ -53,6 +74,7 @@ router.put('/tubes/:id', authenticate, async (req, res) => {
 // DELETE /api/tubes/:id
 router.delete('/tubes/:id', authenticate, async (req, res) => {
   try {
+    if (!(await ensureTubeOwner(req, res, req.params.id))) return;
     await pool.query('DELETE FROM tubes WHERE id = ?', [req.params.id]);
     res.json({ ok: true });
   } catch (err) {

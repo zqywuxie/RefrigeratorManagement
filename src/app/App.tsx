@@ -24,6 +24,8 @@ import {
   Menu,
   Map as MapIcon,
   BarChart3,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 import {
@@ -2321,6 +2323,8 @@ function UserMenu({
   const [message, setMessage] = useState('');
   const [registering, setRegistering] = useState(false);
   const [showUploads, setShowUploads] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -2369,6 +2373,8 @@ function UserMenu({
       setNewPassword('');
       setConfirmPassword('');
       setNewRole('user');
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
     } catch (err: any) {
       setMessage(err.message || '创建失败');
     } finally {
@@ -2479,22 +2485,48 @@ function UserMenu({
         className="w-full rounded-md px-2 py-2 text-[13px] outline-none"
         style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
       />
-      <input
-        value={newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
-        placeholder="密码"
-        type="password"
-        className="w-full rounded-md px-2 py-2 text-[13px] outline-none"
+      <div
+        className="flex items-center rounded-md"
         style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
-      />
-      <input
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        placeholder="确认密码"
-        type="password"
-        className="w-full rounded-md px-2 py-2 text-[13px] outline-none"
+      >
+        <input
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          placeholder="密码"
+          type={showNewPassword ? 'text' : 'password'}
+          className="w-full bg-transparent px-2 py-2 text-[13px] outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => setShowNewPassword((value) => !value)}
+          className="flex h-9 w-9 items-center justify-center"
+          style={{ color: 'var(--app-muted)' }}
+          aria-label={showNewPassword ? '隐藏密码' : '显示密码'}
+        >
+          {showNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
+      </div>
+      <div
+        className="flex items-center rounded-md"
         style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
-      />
+      >
+        <input
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="确认密码"
+          type={showConfirmPassword ? 'text' : 'password'}
+          className="w-full bg-transparent px-2 py-2 text-[13px] outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => setShowConfirmPassword((value) => !value)}
+          className="flex h-9 w-9 items-center justify-center"
+          style={{ color: 'var(--app-muted)' }}
+          aria-label={showConfirmPassword ? '隐藏确认密码' : '显示确认密码'}
+        >
+          {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
+      </div>
       <select
         value={newRole}
         onChange={(e) => setNewRole(e.target.value as 'user' | 'root')}

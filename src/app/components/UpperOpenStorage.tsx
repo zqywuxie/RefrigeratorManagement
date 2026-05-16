@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { UpperItem, getItemTypeConfig, ItemType } from '../types';
 import { ItemCard } from './ItemCard';
+
+const ITEMS_PER_ROW_PAGE = 4;
 
 interface UpperOpenStorageProps {
   items: UpperItem[];
@@ -26,6 +28,7 @@ export function UpperOpenStorage({
   currentUser,
 }: UpperOpenStorageProps) {
   const [filterType, setFilterType] = useState<ItemType | 'all'>('all');
+  const [rowPages, setRowPages] = useState<Record<number, number>>({ 1: 0, 2: 0 });
   const visibleItemTypes = React.useMemo(
     () => Array.from(new Set(items.map((item) => item.item_type).filter(Boolean))),
     [items],
@@ -45,6 +48,18 @@ export function UpperOpenStorage({
 
   const row1Items = filtered.filter((i) => i.row_number === 1);
   const row2Items = filtered.filter((i) => i.row_number === 2);
+
+  const getPagedItems = (rowItems: UpperItem[], page: number) => {
+    const start = page * ITEMS_PER_ROW_PAGE;
+    return rowItems.slice(start, start + ITEMS_PER_ROW_PAGE);
+  };
+
+  useEffect(() => {
+    setRowPages((prev) => ({
+      1: Math.min(prev[1] || 0, Math.max(0, Math.ceil(row1Items.length / ITEMS_PER_ROW_PAGE) - 1)),
+      2: Math.min(prev[2] || 0, Math.max(0, Math.ceil(row2Items.length / ITEMS_PER_ROW_PAGE) - 1)),
+    }));
+  }, [row1Items.length, row2Items.length]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -103,43 +118,92 @@ export function UpperOpenStorage({
         { row: 2, items: row2Items },
       ].map(({ row, items: rowItems }) => (
         <div key={row} className="flex flex-col gap-2">
+          {(() => {
+            const totalPages = Math.max(1, Math.ceil(rowItems.length / ITEMS_PER_ROW_PAGE));
+            const currentPage = Math.min(rowPages[row] || 0, totalPages - 1);
+            const pagedItems = getPagedItems(rowItems, currentPage);
+
+            return (
+              <>
           <div className="flex items-center justify-between">
-            <span className="text-[13px]" style={{ color: 'var(--app-muted)' }}>
-              第 {row} 行 · {rowItems.length} 件
-            </span>
-            <button
-              onClick={() => onAddItem(row)}
-              className="flex items-center gap-1 text-[12px] px-2 py-1 rounded-lg hover:opacity-80 min-h-[44px]"
-              style={{ color: '#2563eb' }}
-            >
-              <Plus size={14} />添加
-            </button>
+                <div className="flex items-center gap-3">
+                  <span className="text-[13px]" style={{ color: 'var(--app-muted)' }}>
+                    第 {row} 行 · {rowItems.length} 件
+                  </span>
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setRowPages((prev) => ({ ...prev, [row]: Math.max(0, currentPage - 1) }))}
+                        disabled={currentPage === 0}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg disabled:opacity-35"
+                        style={{
+                          background: 'var(--app-subtle-bg)',
+                          border: '1px solid var(--app-border)',
+                          color: 'var(--app-muted)',
+                        }}
+                        aria-label={`第 ${row} 行上一页`}
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                      <span className="text-[11px] font-mono" style={{ color: 'var(--app-muted)' }}>
+                        {currentPage + 1}/{totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setRowPages((prev) => ({ ...prev, [row]: Math.min(totalPages - 1, currentPage + 1) }))}
+                        disabled={currentPage >= totalPages - 1}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg disabled:opacity-35"
+                        style={{
+                          background: 'var(--app-subtle-bg)',
+                          border: '1px solid var(--app-border)',
+                          color: 'var(--app-muted)',
+                        }}
+                        aria-label={`第 ${row} 行下一页`}
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => onAddItem(row)}
+                  className="flex items-center gap-1 text-[12px] px-2 py-1 rounded-lg hover:opacity-80 min-h-[44px]"
+                  style={{ color: '#2563eb' }}
+                >
+                  <Plus size={14} />添加
+                </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pb-2">
-            {rowItems.map((item) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  isHighlighted={searchQuery.length > 0}
-                  onClick={() => onItemClick(item.id)}
-                  onDelete={onDeleteItem}
-                  canDelete={!item.owner || item.owner === currentUser}
-                />
-            ))}
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              onClick={() => onAddItem(row)}
-              className="rounded-xl border-2 border-dashed flex items-center justify-center gap-2 cursor-pointer min-h-[88px]"
-              style={{
-                borderColor: 'var(--slot-empty-border)',
-                background: 'var(--slot-empty-bg)',
-                color: 'var(--app-muted)',
-              }}
-            >
-              <Plus size={18} />
-              <span className="text-[13px]">添加物品</span>
-            </motion.button>
-          </div>
+                <div className="grid grid-cols-2 gap-3 pb-2 lg:grid-cols-4">
+                  {pagedItems.map((item) => (
+                    <ItemCard
+                      key={item.id}
+                      item={item}
+                      isHighlighted={searchQuery.length > 0}
+                      onClick={() => onItemClick(item.id)}
+                      onDelete={onDeleteItem}
+                      canDelete={!item.owner || item.owner === currentUser}
+                    />
+                  ))}
+                  {rowItems.length === 0 && (
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      onClick={() => onAddItem(row)}
+                      className="rounded-xl border-2 border-dashed flex items-center justify-center gap-2 cursor-pointer min-h-[88px]"
+                      style={{
+                        borderColor: 'var(--slot-empty-border)',
+                        background: 'var(--slot-empty-bg)',
+                        color: 'var(--app-muted)',
+                      }}
+                    >
+                      <Plus size={18} />
+                      <span className="text-[13px]">添加物品</span>
+                    </motion.button>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </div>
       ))}
     </div>
