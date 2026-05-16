@@ -141,7 +141,7 @@ export function AddSampleRecordModal({
   return (
     <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <ResponsiveDialogContent className="max-w-lg">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col max-h-[85vh]">
           <ResponsiveDialogHeader>
             <ResponsiveDialogTitle>
               {isEdit ? '编辑样本信息' : '添加样本'}
@@ -153,6 +153,7 @@ export function AddSampleRecordModal({
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
+          <div className="flex-1 overflow-y-auto px-1">
           {/* Required fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -331,6 +332,8 @@ export function AddSampleRecordModal({
               )}
             </div>
           )}
+
+          </div>
 
           <ResponsiveDialogFooter>
             <div className="flex items-center justify-between gap-2 w-full">
