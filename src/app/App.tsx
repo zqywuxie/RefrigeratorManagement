@@ -1390,7 +1390,7 @@ function AppContent() {
                         {count}
                       </span>
                     </div>
-                  ))}
+                  );})}
                   {remainingTypeCount > 0 && (
                     <div className="pt-1 text-right text-[12px]" style={{ color: 'var(--app-muted)' }}>
                       另有 {remainingTypeCount} 类样本类型
