@@ -1418,7 +1418,7 @@ function AppContent() {
               </span>
               {isRoot && (
                 <button
-                  onClick={() => handleAddFridge('主冰箱', '默认冰箱')}
+                  onClick={async () => { await handleAddFridge('主冰箱', '默认冰箱', -80, -80, 'drawer'); await handleAddFridge('四层大空间冰箱', '四层固定大空间存储冰箱', -20, 4, 'shelf'); }}
                   className="px-4 py-2 rounded-lg text-[14px]"
                   style={{
                     background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
@@ -1907,7 +1907,7 @@ function AppContent() {
                 </span>
                 {isRoot && (
                   <button
-                    onClick={() => handleAddFridge('主冰箱', '默认冰箱')}
+                    onClick={async () => { await handleAddFridge('主冰箱', '默认冰箱', -80, -80, 'drawer'); await handleAddFridge('四层大空间冰箱', '四层固定大空间存储冰箱', -20, 4, 'shelf'); }}
                     className="px-4 py-2 rounded-lg text-[14px]"
                     style={{
                       background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',

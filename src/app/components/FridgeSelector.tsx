@@ -138,7 +138,7 @@ export function FridgeSelector({
 
       {open && (
         <div
-          className="absolute top-full left-0 z-50 mt-1 w-72 overflow-hidden rounded-xl"
+          className="absolute top-full left-0 z-50 mt-1 w-72 max-w-full overflow-hidden rounded-xl"
           style={{
             background: 'var(--app-header-bg)',
             border: '1px solid var(--app-border)',
