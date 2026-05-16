@@ -948,6 +948,23 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
           )}
         </section>
 
+        {/* Upper Items */}
+        <section className="rounded-xl p-4" style={{ background: "var(--app-card-bg)", border: "1px solid var(--app-border)", boxShadow: "0 14px 40px rgba(15,23,42,0.06)" }}>
+          <div className="mb-4"><h3 className="text-[17px] font-semibold" style={{ color: "var(--app-text)" }}>上层物品</h3><div className="text-[12px]" style={{ color: "var(--app-muted)" }}>{adminUpperItems.length} 件</div></div>
+          {adminUpperItems.length === 0 ? <div className="py-8 text-center text-[13px]" style={{ color: "var(--app-muted)" }}>暂无物品</div> : (
+            <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+              <table className="w-full min-w-[500px] border-separate border-spacing-y-1 text-left">
+                <thead><tr className="text-[12px]" style={{ color: "var(--app-muted)" }}><th className="px-2 py-1">冰箱</th><th className="px-2 py-1">名称</th><th className="px-2 py-1">类型</th><th className="px-2 py-1">行</th><th className="px-2 py-1">数量</th><th className="px-2 py-1">负责人</th></tr></thead>
+                <tbody>{adminUpperItems.map((item) => (
+                  <tr key={item.id}><td className="rounded-l-lg px-2 py-2 text-[13px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-text)" }}>{item.fridge_name}</td>
+                  <td className="px-2 py-2 text-[13px] font-medium" style={{ background: "var(--app-panel-bg)", color: "var(--app-text)" }}>{item.name}</td>
+                  <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>{item.item_type}</td>
+                  <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>{item.row_number}</td>
+                  <td className="px-2 py-2 text-[13px] font-mono" style={{ background: "var(--app-panel-bg)", color: "#2563eb" }}>{item.quantity}</td>
+                  <td className="rounded-r-lg px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>{item.owner || "—"}</td></tr>
+                ))}</tbody></table></div>)}
+        </section>
+
         {/* Sample Records by Box */}
         <section className="rounded-xl p-4" style={{ background: "var(--app-card-bg)", border: "1px solid var(--app-border)", boxShadow: "0 14px 40px rgba(15,23,42,0.06)" }}>
           <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
@@ -1029,7 +1046,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
               )}
             </div>
             {selectedAdminSR && (
-              <div className="w-80 flex-shrink-0 rounded-xl p-4 space-y-3" style={{ background: "var(--app-panel-bg)", border: "1px solid var(--app-border)" }}>
+              <div className="w-full lg:w-80 flex-shrink-0 rounded-xl p-4 space-y-3" style={{ background: "var(--app-panel-bg)", border: "1px solid var(--app-border)" }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2.5 h-2.5 rounded-full" style={{ background: selectedAdminSR.group_color }} />
