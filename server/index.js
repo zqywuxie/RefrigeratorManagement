@@ -14,6 +14,7 @@ import tubesRouter from './routes/tubes.js';
 import upperItemsRouter from './routes/upperItems.js';
 import sampleRecordsRouter from './routes/sampleRecords.js';
 import importRouter from './routes/import.js';
+import exportRouter from './routes/export.js';
 import { runSchemaMigrations } from './schemaMigrations.js';
 import pool from './db.js';
 
@@ -49,6 +50,7 @@ app.use('/api/refrigerators', upperItemsRouter);
 app.use('/api/upper-items', upperItemsRouter);
 app.use('/api/sample-records', sampleRecordsRouter);
 app.use('/api/import', importRouter);
+app.use('/api/export', exportRouter);
 
 const PORT = process.env.PORT || 3001;
 

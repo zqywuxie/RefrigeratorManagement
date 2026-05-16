@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Database,
+  Download,
   Eye,
   FlaskConical,
   KeyRound,
@@ -41,6 +42,7 @@ import {
   deleteBox,
   updateSampleRecord,
   deleteSampleRecord,
+  downloadAdminExport,
 } from '../api';
 import { AddSampleModal } from './AddSampleModal';
 import { Compartment, Sample, SampleStatus, SubSample, SampleRecord, formatChineseShortDate } from '../types';
@@ -517,6 +519,15 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
     ? `${summary.totals.samples} / ${summary.totals.totalCapacity}`
     : '--';
 
+  const handleExport = useCallback(async (type: 'sample-records' | 'boxes') => {
+    try {
+      await downloadAdminExport(type);
+      onNotify(type === 'sample-records' ? '样本记录已导出' : '盒子数据已导出', 'success');
+    } catch (err: any) {
+      onNotify(err.message || '导出失败', 'error');
+    }
+  }, [onNotify]);
+
   return (
     <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6">
       <div className="mx-auto flex w-full max-w-full lg:max-w-7xl flex-col gap-3 sm:gap-5">
@@ -852,6 +863,14 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                 {adminBoxes.length} 个盒子 · {adminBoxes.reduce((s, b) => s + (b.tube_count || 0), 0)} 个试管
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => handleExport('boxes')}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
+              style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)', color: 'var(--app-text)' }}
+            >
+              <Download size={14} />导出Excel
+            </button>
           </div>
           {adminBoxes.length === 0 ? (
             <div className="text-center py-8 text-[13px]" style={{ color: 'var(--app-muted)' }}>
@@ -994,6 +1013,14 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                   批量删除 {selectedSRIde.size} 条
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => handleExport('sample-records')}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] min-h-[44px]"
+                style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)', color: 'var(--app-text)' }}
+              >
+                <Download size={14} />导出Excel
+              </button>
               <input
                 value={srSearchQuery}
                 onChange={(e) => setSrSearchQuery(e.target.value)}

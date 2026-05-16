@@ -487,6 +487,28 @@ export interface ParsedExcel {
   fieldSuggestions: Record<string, string>;
 }
 
+// ── Admin Export ──
+
+export async function downloadAdminExport(type: 'sample-records' | 'boxes'): Promise<void> {
+  const token = localStorage.getItem('biofridge_token');
+  const res = await fetch(`${BASE}/export/${type}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: '导出失败' }));
+    throw new Error(err.error || '导出失败');
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${type}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export async function parseExcel(file: File): Promise<ParsedExcel> {
   const formData = new FormData();
   formData.append('file', file);
