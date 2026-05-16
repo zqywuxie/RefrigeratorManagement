@@ -273,7 +273,7 @@ export function DrawerFridgeView({
     }
   }, [fridge.id, editItem]);
 
-  const handleItemClick = useCallback((itemId: string) => {
+  const handleItemClick = useCallback(async (itemId: string) => {
     const item = upperItems.find((i) => i.id === itemId) || null;
     if (item && item.box_mode === 'precise' && item.grid_rows && item.grid_cols) {
       // Ensure a box record exists for this upper item (so tubes FK works)
