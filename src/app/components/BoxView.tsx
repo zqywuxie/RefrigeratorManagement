@@ -178,7 +178,7 @@ export function BoxView({
               抽屉内部
             </h3>
             <p className="text-[12px] mt-0.5" style={{ color: 'var(--app-muted)' }}>
-              一列盒位，点击空位添加盒子
+              一列盒位 · 从上到下排列，点击空位添加盒子
             </p>
           </div>
           <span className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
@@ -186,7 +186,7 @@ export function BoxView({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+        <div className="flex flex-col gap-2.5">
           {Array.from({ length: capacity }, (_, position) => {
             const box = getBoxAt(position);
             return (
