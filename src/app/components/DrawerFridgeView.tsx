@@ -24,7 +24,6 @@ import { ExcelImportModal } from './ExcelImportModal';
 import { PendingSamplesPanel } from './PendingSamplesPanel';
 import { BatchEditModal } from './BatchEditModal';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 type ViewLevel = 'fridge' | 'drawer' | 'box';
 type MainTab = 'upper' | 'lowerTop' | 'lowerBottom';
@@ -1011,27 +1010,20 @@ export function DrawerFridgeView({
                       Excel 导入 <span className="hidden sm:inline text-[10px] opacity-70">(仅限PC端使用)</span>
                     </button>
                     <Popover>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <PopoverTrigger asChild>
-                            <button
-                              type="button"
-                              className="flex h-9 w-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg transition-colors"
-                              style={{
-                                background: 'var(--app-panel-bg)',
-                                border: '1px solid var(--app-border)',
-                                color: 'var(--app-muted)',
-                              }}
-                              aria-label="查看多选绑定和 Excel 导入帮助"
-                            >
-                              <CircleHelp size={16} />
-                            </button>
-                          </PopoverTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" sideOffset={6}>
-                          查看操作说明
-                        </TooltipContent>
-                      </Tooltip>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex h-9 w-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg transition-colors"
+                          style={{
+                            background: 'var(--app-panel-bg)',
+                            border: '1px solid var(--app-border)',
+                            color: 'var(--app-muted)',
+                          }}
+                          aria-label="查看操作说明"
+                        >
+                          <CircleHelp size={16} />
+                        </button>
+                      </PopoverTrigger>
                       <PopoverContent align="end" sideOffset={8} className="w-80 space-y-3">
                         <div>
                           <div className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>

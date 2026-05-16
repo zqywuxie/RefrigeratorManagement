@@ -45,6 +45,8 @@ export function FridgeSelector({
   const [editDesc, setEditDesc] = useState('');
   const [editUpperTemp, setEditUpperTemp] = useState('-20');
   const [editLowerTemp, setEditLowerTemp] = useState('4');
+  const [addError, setAddError] = useState('');
+  const [editError, setEditError] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -78,7 +80,11 @@ export function FridgeSelector({
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addName.trim()) return;
+    if (!addName.trim()) {
+      setAddError('请输入冰箱名称');
+      return;
+    }
+    setAddError('');
     onAdd(
       addName.trim(),
       addDesc.trim() || undefined,
@@ -96,7 +102,12 @@ export function FridgeSelector({
 
   const handleEdit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editName.trim() || !editingId) return;
+    if (!editName.trim()) {
+      setEditError('请输入冰箱名称');
+      return;
+    }
+    setEditError('');
+    if (!editingId) return;
     onEdit(
       editingId,
       editName.trim(),
@@ -153,11 +164,16 @@ export function FridgeSelector({
                   <input
                     type="text"
                     value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
+                    onChange={(e) => { setEditName(e.target.value); setEditError(''); }}
                     autoFocus
                     className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
                     style={fieldStyle}
                   />
+                  {editError && (
+                    <div className="text-[11px] px-2 py-1 rounded" style={{ background: '#fef2f2', color: '#dc2626' }}>
+                      {editError}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="number"
@@ -263,11 +279,16 @@ export function FridgeSelector({
                   type="text"
                   placeholder="冰箱名称"
                   value={addName}
-                  onChange={(e) => setAddName(e.target.value)}
+                  onChange={(e) => { setAddName(e.target.value); setAddError(''); }}
                   autoFocus
                   className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
                   style={fieldStyle}
                 />
+                {addError && (
+                  <div className="text-[11px] px-2 py-1 rounded" style={{ background: '#fef2f2', color: '#dc2626' }}>
+                    {addError}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   {([
                     { value: 'drawer' as FridgeType, label: '主冰箱/抽屉' },
