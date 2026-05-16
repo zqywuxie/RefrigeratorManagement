@@ -347,7 +347,7 @@ export function FridgeSideMap({
                 drawer={d}
                 isSelected={selectedDrawerId === d.id}
                 onClick={() => onDrawerClick(d.id, d.label)}
-                aspectRatio="2.2 / 1"
+                aspectRatio="1.6 / 1"
               />
             ))}
           </div>
