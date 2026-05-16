@@ -568,7 +568,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
             </button>
           </div>
 
-          <div className="mt-5 grid gap-2 sm:gap-3 grid-cols-2 lg:grid-cols-6">
+          <div className="mt-5 grid gap-2 sm:gap-3 grid-cols-2 lg:grid-cols-4">
             <AdminMetric icon={<Snowflake size={18} />} label="冰箱" value={summary?.totals.refrigerators ?? '--'} color="#2563eb" />
             <AdminMetric
               icon={<FlaskConical size={18} />}
@@ -583,18 +583,6 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
               color="#0f766e"
             />
             <AdminMetric icon={<Users size={18} />} label="用户" value={users.length || '--'} color="#7c3aed" />
-            <AdminMetric
-              icon={<AlertTriangle size={18} />}
-              label="异常警报"
-              value={summary?.totals.abnormal ?? '--'}
-              color={Number(summary?.totals.abnormal || 0) > 0 ? '#dc2626' : '#22c55e'}
-            />
-            <AdminMetric
-              icon={<Shield size={18} />}
-              label="总储存项"
-              value={summary ? summary.totals.totalItems : '--'}
-              color="#ca8a04"
-            />
           </div>
         </section>
 

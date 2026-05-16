@@ -119,7 +119,7 @@ export function BoxView({
           返回抽屉列表
         </button>
         <span className="text-[16px] font-medium" style={{ color: 'var(--app-text)' }}>
-          抽屉 {drawer.label} · {boxes.length}/{capacity} 盒位
+          抽屉 {drawer.label} · {boxes.length}/{capacity}
         </span>
         <div className="relative">
           <motion.button
