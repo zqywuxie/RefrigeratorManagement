@@ -2340,7 +2340,7 @@ function UserMenu({
         className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
         style={{
           background: 'var(--app-panel-bg)',
-          border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+          border: '1px solid var(--app-border)',
           color: 'var(--app-muted)',
         }}
         title={isDark ? '切换浅色模式' : '切换深色模式'}
@@ -2356,7 +2356,7 @@ function UserMenu({
         className="flex items-center gap-2 px-3 py-2 rounded-lg"
         style={{
           background: 'var(--app-panel-bg)',
-          border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+          border: '1px solid var(--app-border)',
           color: 'var(--app-text)',
         }}
       >
@@ -2383,7 +2383,7 @@ function UserMenu({
           className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
           style={{
             background: 'var(--app-panel-bg)',
-            border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+            border: '1px solid var(--app-border)',
             color: '#2563eb',
           }}
           title="创建用户"
@@ -2396,7 +2396,7 @@ function UserMenu({
         className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
         style={{
           background: 'var(--app-panel-bg)',
-          border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+          border: '1px solid var(--app-border)',
           color: '#ef4444',
         }}
         title="退出登录"
@@ -2408,7 +2408,7 @@ function UserMenu({
           className="absolute right-0 top-11 z-50 w-80 rounded-xl p-3"
           style={{
             background: 'var(--app-header-bg)',
-            border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+            border: '1px solid var(--app-border)',
             boxShadow: '0 18px 52px rgba(15,23,42,0.2)',
             backdropFilter: 'blur(12px)',
           }}
@@ -2426,7 +2426,7 @@ function UserMenu({
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{
                 background: 'var(--app-card-bg)',
-                border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+                border: '1px solid var(--app-border)',
                 color: '#2563eb',
               }}
             >
@@ -2439,7 +2439,7 @@ function UserMenu({
               className="rounded-lg px-3 py-5 text-center text-[13px]"
               style={{
                 background: 'var(--app-card-bg)',
-                border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+                border: '1px solid var(--app-border)',
                 color: 'var(--app-muted)',
               }}
             >
@@ -2464,7 +2464,7 @@ function UserMenu({
                     className="w-full rounded-lg px-3 py-2.5 text-left transition-all hover:brightness-95"
                     style={{
                       background: 'var(--app-card-bg)',
-                      border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+                      border: '1px solid var(--app-border)',
                       color: 'var(--app-text)',
                     }}
                   >
@@ -2505,7 +2505,7 @@ function UserMenu({
           className="absolute right-0 top-11 z-50 w-64 space-y-2 rounded-xl p-3"
           style={{
             background: 'var(--app-header-bg)',
-            border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+            border: '1px solid var(--app-border)',
             boxShadow: '0 16px 48px rgba(15,23,42,0.18)',
           }}
         >
