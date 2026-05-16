@@ -620,11 +620,11 @@ export function DrawerFridgeView({
   const layer1Drawers = drawers.filter((d) => d.layer === 1);
   const layer2Drawers = drawers.filter((d) => d.layer === 2);
   const selectedDrawer = drawers.find((d) => d.id === selectedDrawerId) || null;
-  const selectedDrawerZoneLabel = selectedDrawer?.layer === 2 ? '第二层' : '第一层';
+  const selectedDrawerZoneLabel = selectedDrawer?.layer === 2 ? '下层第二层' : '下层第一层';
   const tabs: Array<{ key: MainTab; label: string }> = [
     { key: 'upper', label: '上层' },
-    { key: 'lowerTop', label: '第一层' },
-    { key: 'lowerBottom', label: '第二层' },
+    { key: 'lowerTop', label: '下层第一层' },
+    { key: 'lowerBottom', label: '下层第二层' },
   ];
 
   if (loading && !selectedDrawerId && upperItems.length === 0) {
