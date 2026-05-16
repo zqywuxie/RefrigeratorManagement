@@ -208,7 +208,7 @@ export function FridgeSideMap({
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 flex-shrink-0" style={{ width: `${width}px`, minHeight: '400px' }}>
+      <div className="flex flex-col items-center justify-center gap-2 flex-shrink-0" style={{ width: isMobile ? '100%' : `${width}px`, minHeight: isMobile ? undefined : '400px' }}>
         <Loader2 size={20} className="animate-spin" style={{ color: 'var(--app-muted)' }} />
         <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>加载冰箱...</span>
       </div>
@@ -216,7 +216,7 @@ export function FridgeSideMap({
   }
 
   return (
-    <div className="flex flex-col gap-3 flex-shrink-0 relative group/sidemap" style={{ width: `${width}px` }}>
+    <div className="flex flex-col gap-3 flex-shrink-0 relative group/sidemap" style={{ width: isMobile ? '100%' : `${width}px` }}>
       {/* Fridge outline */}
       <div
         className="rounded-2xl flex flex-col"

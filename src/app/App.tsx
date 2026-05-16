@@ -1693,7 +1693,7 @@ function AppContent() {
           />
 
           {/* Center: Fridge */}
-          <div className="flex w-full w-full max-w-full lg:max-w-[860px] flex-col gap-5">
+          <div className="flex w-full max-w-full lg:max-w-[860px] flex-col gap-5">
             {/* Search bar */}
               <div
                 className="flex w-full items-center gap-3 rounded-xl px-4 py-3"
