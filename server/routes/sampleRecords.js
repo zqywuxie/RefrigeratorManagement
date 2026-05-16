@@ -106,9 +106,12 @@ router.post('/', async (req, res) => {
         const t = tubeInputs[i];
         const tubeId = `tube-${Date.now()}-${i}`;
         const tubeLabel = `Tube${i + 1}`;
+        // Use INSERT ... ON DUPLICATE KEY to handle position reuse
         await pool.query(
           `INSERT INTO tubes (id, sample_id, tube_label, box_id, position, barcode, volume, status, note)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE sample_id = VALUES(sample_id), tube_label = VALUES(tube_label),
+           barcode = VALUES(barcode), volume = VALUES(volume), status = VALUES(status)`,
           [tubeId, sampleId, tubeLabel, t.box_id, t.position, t.barcode || null,
            t.volume || null, t.status || 'normal', t.note || null]
         );
@@ -222,7 +225,9 @@ router.post('/:id/tubes', async (req, res) => {
       const tubeLabel = `Tube${Number(cnt) + i + 1}`;
       await pool.query(
         `INSERT INTO tubes (id, sample_id, tube_label, box_id, position, barcode, volume, status, note)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE sample_id = VALUES(sample_id), tube_label = VALUES(tube_label),
+         barcode = VALUES(barcode), volume = VALUES(volume), status = VALUES(status)`,
         [tubeId, req.params.id, tubeLabel, t.box_id, t.position, t.barcode || null,
          t.volume || null, t.status || 'normal', t.note || null]
       );

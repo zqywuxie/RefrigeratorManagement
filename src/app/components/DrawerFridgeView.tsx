@@ -452,7 +452,7 @@ export function DrawerFridgeView({
     tags?: string[];
     note?: string;
     uploader?: string;
-    tubes?: Array<{ box_id: string; position: number; volume?: string; barcode?: string; status?: string }>;
+    tubes?: Array<{ box_id: string; position: number; volume?: string; barcode?: string; status?: string; note?: string }>;
   }) => {
     if (!selectedBox) return;
     try {

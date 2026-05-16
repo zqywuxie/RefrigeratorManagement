@@ -417,10 +417,18 @@ router.patch('/users/:username', async (req, res) => {
     const [[updated]] = await pool.query('SELECT username, role, created_at FROM users WHERE username = ?', [
       username,
     ]);
+    const [[counts]] = await pool.query(
+      `SELECT
+        COALESCE((SELECT COUNT(*) FROM samples WHERE created_by = ? AND deleted_at IS NULL), 0) AS sample_count,
+        COALESCE((SELECT COUNT(*) FROM sub_samples WHERE created_by = ? AND deleted_at IS NULL), 0) AS sub_sample_count`,
+      [username, username]
+    );
     res.json({
       username: updated.username,
       role: updated.role,
       createdAt: updated.created_at,
+      sampleCount: Number(counts.sample_count || 0),
+      subSampleCount: Number(counts.sub_sample_count || 0),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -107,7 +107,6 @@ router.get('/:fridgeId/samples/:id', async (req, res) => {
 router.post('/:fridgeId/samples', authenticate, async (req, res) => {
   let conn;
   try {
-    const { fridgeId } = req.params;
     const {
       id, name, type, status = 'normal', temperature,
       collectedAt, patientId, tags, compartment, position,

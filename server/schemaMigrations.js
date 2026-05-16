@@ -221,6 +221,39 @@ export async function runSchemaMigrations() {
   await ensureColumn('upper_items', 'box_mode', "`box_mode` ENUM('simple','precise') DEFAULT 'simple' AFTER `item_type`");
   await ensureColumn('upper_items', 'grid_rows', '`grid_rows` INT NULL AFTER `box_mode`');
   await ensureColumn('upper_items', 'grid_cols', '`grid_cols` INT NULL AFTER `grid_rows`');
+
+  // Widen samples/sub_samples PKs from VARCHAR(20) to VARCHAR(36) to match UUIDs
+  try {
+    await pool.query('ALTER TABLE samples MODIFY COLUMN id VARCHAR(36) NOT NULL');
+  } catch (err) {
+    console.warn('Skip samples.id widen:', err.message);
+  }
+  try {
+    await pool.query('ALTER TABLE sub_samples MODIFY COLUMN id VARCHAR(36) NOT NULL');
+  } catch (err) {
+    console.warn('Skip sub_samples.id widen:', err.message);
+  }
+
+  // Allow NULL collected_at since route code passes null when not provided
+  try {
+    await pool.query('ALTER TABLE samples MODIFY COLUMN collected_at DATE NULL');
+  } catch (err) {
+    console.warn('Skip samples.collected_at nullable:', err.message);
+  }
+  try {
+    await pool.query('ALTER TABLE sub_samples MODIFY COLUMN collected_at DATE NULL');
+  } catch (err) {
+    console.warn('Skip sub_samples.collected_at nullable:', err.message);
+  }
+
+  // Add missing deleted_by tracking columns
+  await ensureColumn('upper_items', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
+  await ensureColumn('boxes', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
+  await ensureColumn('drawers', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `created_at`');
+  await ensureColumn('drawers', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
+  await ensureColumn('tubes', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `updated_at`');
+  await ensureColumn('tubes', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
+
   // Allow boxes without drawer (for upper item boxes)
   try {
     await pool.query("ALTER TABLE boxes MODIFY COLUMN drawer_id VARCHAR(36) NULL");

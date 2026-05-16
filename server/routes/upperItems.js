@@ -118,7 +118,7 @@ router.put('/:itemId', async (req, res) => {
       await pool.query('INSERT IGNORE INTO item_types (name) VALUES (?)', [finalItemType]);
     }
     await pool.query(
-      `UPDATE upper_items SET name=?, item_type=?, box_mode=COALESCE(?, box_mode), grid_rows=COALESCE(?, grid_rows), grid_cols=COALESCE(?, grid_cols), \`row_number\`=?, quantity=?, owner=?, tags=?, note=?, image_url=?, qr_code=?, sort_order=? WHERE id=?`,
+      `UPDATE upper_items SET name=?, item_type=?, box_mode=COALESCE(?, box_mode), grid_rows=COALESCE(?, grid_rows), grid_cols=COALESCE(?, grid_cols), \`row_number\`=?, quantity=?, owner=?, tags=?, note=?, image_url=?, qr_code=?, sort_order=? WHERE id=? AND deleted_at IS NULL`,
       [
         name,
         finalItemType,
@@ -145,7 +145,7 @@ router.put('/:itemId', async (req, res) => {
 
 router.delete('/:itemId', authenticate, requireResourceOwner('upper_items', 'itemId', 'owner'), async (req, res) => {
   try {
-    await pool.query('UPDATE upper_items SET deleted_at = NOW() WHERE id = ?', [req.params.itemId]);
+    await pool.query('UPDATE upper_items SET deleted_at = NOW(), deleted_by = ? WHERE id = ?', [req.user.username, req.params.itemId]);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

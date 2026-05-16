@@ -96,7 +96,7 @@ router.put('/:boxId', authenticate, requireResourceOwner('boxes', 'boxId', 'owne
 // DELETE /api/boxes/:boxId (soft delete)
 router.delete('/:boxId', authenticate, requireResourceOwner('boxes', 'boxId', 'owner'), async (req, res) => {
   try {
-    await pool.query('UPDATE boxes SET deleted_at = NOW() WHERE id = ?', [req.params.boxId]);
+    await pool.query('UPDATE boxes SET deleted_at = NOW(), deleted_by = ? WHERE id = ?', [req.user.username, req.params.boxId]);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

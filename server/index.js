@@ -31,7 +31,6 @@ app.use('/api/admin', adminRouter);
 app.use('/api/refrigerators', drawersRouter);
 app.use('/api/drawers', drawersRouter);
 app.use('/api/boxes', boxesRouter);
-app.use('/api/cells', boxesRouter);
 app.use('/api', tubesRouter);
 app.use('/api/refrigerators', upperItemsRouter);
 app.use('/api/upper-items', upperItemsRouter);

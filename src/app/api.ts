@@ -429,7 +429,7 @@ export async function createSampleRecord(data: {
   tags?: string[];
   note?: string;
   uploader?: string;
-  tubes?: Array<{ box_id: string; position: number; volume?: string; barcode?: string; status?: string }>;
+  tubes?: Array<{ box_id: string; position: number; volume?: string; barcode?: string; status?: string; note?: string }>;
 }): Promise<SampleRecord> {
   return fetchJSON(`${BASE}/sample-records`, {
     method: 'POST',
@@ -448,7 +448,7 @@ export async function deleteSampleRecord(id: string): Promise<void> {
   await fetchJSON(`${BASE}/sample-records/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
-export async function addTubesToSample(sampleId: string, tubes: Array<{ box_id: string; position: number; volume?: string; barcode?: string; status?: string }>): Promise<{ tubes: Tube[] }> {
+export async function addTubesToSample(sampleId: string, tubes: Array<{ box_id: string; position: number; volume?: string; barcode?: string; status?: string; note?: string }>): Promise<{ tubes: Tube[] }> {
   return fetchJSON(`${BASE}/sample-records/${encodeURIComponent(sampleId)}/tubes`, {
     method: 'POST',
     body: JSON.stringify({ tubes }),

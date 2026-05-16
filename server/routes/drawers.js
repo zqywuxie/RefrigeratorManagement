@@ -46,15 +46,20 @@ async function normalizeDrawerBoxes(drawerId) {
 
 router.get('/:fridgeId/drawers', async (req, res) => {
   try {
-    const [drawerIds] = await pool.query('SELECT id FROM drawers WHERE refrigerator_id = ?', [req.params.fridgeId]);
+    const [drawerIds] = await pool.query(
+      `SELECT d.id FROM drawers d JOIN refrigerators r ON r.id = d.refrigerator_id WHERE d.refrigerator_id = ? AND r.deleted_at IS NULL`,
+      [req.params.fridgeId]
+    );
     for (const drawer of drawerIds) {
       await normalizeDrawerBoxes(drawer.id);
     }
     const [rows] = await pool.query(
       `SELECT d.*, COUNT(b.id) as box_count
        FROM drawers d
+       JOIN refrigerators r ON r.id = d.refrigerator_id AND r.deleted_at IS NULL
        LEFT JOIN boxes b ON b.drawer_id = d.id AND b.deleted_at IS NULL
        WHERE d.refrigerator_id = ?
+         AND d.deleted_at IS NULL
        GROUP BY d.id
        ORDER BY d.layer, d.row_pos, d.col_pos`,
       [req.params.fridgeId]

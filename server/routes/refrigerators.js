@@ -161,13 +161,17 @@ router.delete('/:id', authenticate, requireRoot, async (req, res) => {
       [req.user.username, req.params.id],
     );
     await pool.query(
-      'UPDATE upper_items SET deleted_at = CURRENT_TIMESTAMP WHERE refrigerator_id = ? AND deleted_at IS NULL',
-      [req.params.id],
+      'UPDATE upper_items SET deleted_at = CURRENT_TIMESTAMP, deleted_by = ? WHERE refrigerator_id = ? AND deleted_at IS NULL',
+      [req.user.username, req.params.id],
     );
     await pool.query(
-      `UPDATE boxes SET deleted_at = CURRENT_TIMESTAMP
+      `UPDATE boxes SET deleted_at = CURRENT_TIMESTAMP, deleted_by = ?
        WHERE drawer_id IN (SELECT id FROM drawers WHERE refrigerator_id = ?) AND deleted_at IS NULL`,
-      [req.params.id],
+      [req.user.username, req.params.id],
+    );
+    await pool.query(
+      'UPDATE drawers SET deleted_at = CURRENT_TIMESTAMP, deleted_by = ? WHERE refrigerator_id = ? AND deleted_at IS NULL',
+      [req.user.username, req.params.id],
     );
     res.json({ success: true });
   } catch (err) {
