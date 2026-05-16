@@ -146,6 +146,18 @@ function AppContent() {
   // Global sample search
   const [globalSampleQuery, setGlobalSampleQuery] = useState('');
 
+  const globalFilteredRecords = React.useMemo(() => {
+    if (!globalSampleQuery.trim()) return [];
+    const q = globalSampleQuery.toLowerCase();
+    return sampleRecords.filter((sr) =>
+      sr.patient_name.toLowerCase().includes(q) ||
+      sr.sample_code.toLowerCase().includes(q) ||
+      (sr.sample_type || '').toLowerCase().includes(q) ||
+      (sr.collection_stage || '').toLowerCase().includes(q) ||
+      (sr.source || '').toLowerCase().includes(q)
+    );
+  }, [sampleRecords, globalSampleQuery]);
+
   const handleImportComplete = useCallback(async (sampleIds: string[]) => {
     if (sampleIds.length === 0) return;
     try {
@@ -1200,6 +1212,53 @@ function AppContent() {
                 </button>
               )}
             </div>
+
+            {/* Global search results */}
+            {globalSampleQuery.trim() && (
+              <div
+                className="rounded-xl p-3 space-y-1 max-h-60 overflow-y-auto"
+                style={{
+                  background: 'var(--app-card-bg)',
+                  border: '1px solid var(--app-border)',
+                  boxShadow: '0 12px 34px rgba(15,23,42,0.06)',
+                }}
+              >
+                {globalFilteredRecords.length === 0 ? (
+                  <div className="text-center py-3 text-[12px]" style={{ color: 'var(--app-muted)' }}>无匹配结果</div>
+                ) : (
+                  globalFilteredRecords.slice(0, 20).map((sr) => (
+                    <div
+                      key={sr.id}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:brightness-95"
+                      style={{
+                        background: sr.group_color + '12',
+                        border: `1px solid ${sr.group_color}20`,
+                      }}
+                      onClick={() => {
+                        setGlobalSampleQuery('');
+                      }}
+                    >
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>{sr.patient_name}</span>
+                        <span className="text-[11px] ml-2" style={{ color: 'var(--app-muted)' }}>{sr.sample_code}</span>
+                      </div>
+                      {sr.sample_type && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--app-subtle-bg)', color: 'var(--app-subtle-text)' }}>
+                          {sr.sample_type}
+                        </span>
+                      )}
+                      <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--app-muted)' }}>{sr.tube_count || 0} 管</span>
+                    </div>
+                  ))
+                )}
+                {globalFilteredRecords.length > 20 && (
+                  <div className="text-center pt-1 text-[11px]" style={{ color: 'var(--app-muted)' }}>
+                    显示前 20 条，另有 {globalFilteredRecords.length - 20} 条
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Stats cards */}
             <div className="grid grid-cols-2 gap-3">
