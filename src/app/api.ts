@@ -564,3 +564,11 @@ export async function fetchAdminBoxDetail(boxId: string): Promise<AdminBoxDetail
 export async function fetchAdminSampleRecords(): Promise<SampleRecord[]> {
   return fetchJSON(`${BASE}/admin/sample-records`);
 }
+
+export async function fetchAdminUpperItems(): Promise<any[]> {
+  return fetchJSON(`${BASE}/admin/upper-items`);
+}
+
+export async function deleteAdminUpperItem(id: string): Promise<void> {
+  await fetchJSON(`${BASE}/admin/upper-items/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
