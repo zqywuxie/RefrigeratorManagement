@@ -38,6 +38,7 @@ import {
   SampleRecord,
   PendingImportSample,
   getSampleTypeColor,
+  UpperItem,
 } from './types';
 import {
   fetchRefrigerators,
@@ -142,7 +143,10 @@ function AppContent() {
   const [drawerCount, setDrawerCount] = useState(0);
   const [drawerBoxCount, setDrawerBoxCount] = useState(0);
   const [drawerMaxBoxes, setDrawerMaxBoxes] = useState(0);
+  const [drawerLayers, setDrawerLayers] = useState<number[]>([]);
+  const [drawerLayerCounts, setDrawerLayerCounts] = useState<Record<number, number>>({});
   const [upperItemsCount, setUpperItemsCount] = useState(0);
+  const [upperItems, setUpperItems] = useState<UpperItem[]>([]);
 
   // Side map state
   const [showSideMap, setShowSideMap] = useState(true);
@@ -225,7 +229,12 @@ function AppContent() {
       setDrawerCount(drawerData.length);
       setDrawerBoxCount(drawerData.reduce((s: number, d: any) => s + (d.box_count ?? 0), 0));
       setDrawerMaxBoxes(drawerData.reduce((s: number, d: any) => s + (d.max_boxes ?? 5), 0));
+      setDrawerLayers([...new Set(drawerData.map((d: any) => d.layer))].sort());
+      const layerCounts: Record<number, number> = {};
+      for (const d of drawerData) { layerCounts[d.layer] = (layerCounts[d.layer] || 0) + 1; }
+      setDrawerLayerCounts(layerCounts);
       setUpperItemsCount(upperItemsData.length);
+      setUpperItems(upperItemsData);
       setLoading(false);
     }).catch((err) => {
       setLoading(false);
@@ -876,10 +885,15 @@ function AppContent() {
       if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
     });
 
+    upperItems.forEach((item) => {
+      const t = item.item_type?.trim();
+      if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
+    });
+
     return Array.from(counts, ([type, count]) => ({ type, count })).sort(
       (a, b) => b.count - a.count || a.type.localeCompare(b.type, 'zh-CN'),
     );
-  }, [sampleRecords]);
+  }, [sampleRecords, upperItems]);
   const displayedTypeStats = typeStats.slice(0, 8);
   const remainingTypeCount = Math.max(typeStats.length - displayedTypeStats.length, 0);
 
@@ -1267,7 +1281,9 @@ function AppContent() {
                 value={selectedFridge?.fridge_type === 'drawer'
                   ? `${drawerBoxCount}/${drawerMaxBoxes} 盒`
                   : `${samples.filter((s) => s.compartment === 'lower').length}/${lowerCapacity}`}
-                sub={`${drawerCount} 个抽屉`}
+                sub={selectedFridge?.fridge_type === 'drawer'
+                  ? drawerLayers.map(l => `${drawerLayerCounts[l] || 0}屉`).join(' + ') + ` · ${drawerCount}总计`
+                  : '下层存储'}
                 color="#34d399"
               />
               <StatsCard
@@ -1298,7 +1314,7 @@ function AppContent() {
                 <div className="flex items-center gap-2">
                   <Tags size={15} color="#38bdf8" />
                   <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>
-                    样本类型
+                    类型分布
                   </span>
                 </div>
                 <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>

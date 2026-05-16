@@ -102,10 +102,10 @@ export function ExcelImportModal({
     }
 
     onImported(pendingSamples);
-    onClose();
     setStep('upload');
     setParsed(null);
     setFieldMapping({});
+    onClose();
   }, [parsed, fieldMapping, currentUser, onImported, onClose]);
 
   const findMappedHeader = (field: string): string => {
