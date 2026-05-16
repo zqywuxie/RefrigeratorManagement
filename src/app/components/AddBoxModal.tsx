@@ -235,7 +235,7 @@ export function AddBoxModal({
             <input
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              placeholder="项目名称"
+              placeholder="项目名称（选填）"
               className="px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
               style={fieldStyle}
             />

@@ -1313,6 +1313,8 @@ export function DrawerFridgeView({
           occupiedPositions={tubes.map((tube) => tube.position)}
           canEdit={!editSampleRecord || editSampleRecord.uploader === currentUser}
           preSelectedPositions={preselectedWells}
+          sampleTypes={sampleTypes}
+          onAddSampleType={onAddSampleType}
           onClose={() => {
             setShowSampleModal(false);
             setEditSampleRecord(null);

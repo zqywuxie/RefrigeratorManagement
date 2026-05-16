@@ -14,6 +14,8 @@ interface AddSampleRecordModalProps {
   occupiedPositions?: number[];
   canEdit?: boolean;
   preSelectedPositions?: number[];
+  sampleTypes: string[];
+  onAddSampleType: (name: string) => void;
   onClose: () => void;
   onSave: (data: {
     patient_name: string;
@@ -43,6 +45,8 @@ export function AddSampleRecordModal({
   occupiedPositions = [],
   canEdit = true,
   preSelectedPositions = [],
+  sampleTypes,
+  onAddSampleType,
   onClose,
   onSave,
   onDelete,
@@ -57,6 +61,8 @@ export function AddSampleRecordModal({
   const [collectedAt, setCollectedAt] = useState('');
   const [tagsStr, setTagsStr] = useState('');
   const [note, setNote] = useState('');
+  const [showNewType, setShowNewType] = useState(false);
+  const [newTypeName, setNewTypeName] = useState('');
 
   // For new positions to add to existing sample
   const [newPositions, setNewPositions] = useState<number[]>([]);
@@ -260,14 +266,67 @@ export function AddSampleRecordModal({
                 </div>
                 <div>
                   <label className="mb-1 block text-[12px]" style={{ color: 'var(--app-muted)' }}>样本类型</label>
-                  <input
-                    value={sampleType}
-                    onChange={(e) => setSampleType(e.target.value)}
-                    placeholder="如: 外周血、脐血"
-                    className="w-full rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"
-                    style={fieldStyle}
-                    disabled={isReadOnly}
-                  />
+                  {showNewType ? (
+                    <div className="flex gap-1">
+                      <input
+                        value={newTypeName}
+                        onChange={(e) => setNewTypeName(e.target.value)}
+                        placeholder="新样本类型"
+                        autoFocus
+                        className="min-w-0 flex-1 rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"
+                        style={fieldStyle}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextType = newTypeName.trim();
+                          if (!nextType) return;
+                          onAddSampleType(nextType);
+                          setSampleType(nextType);
+                          setNewTypeName('');
+                          setShowNewType(false);
+                        }}
+                        className="rounded-lg px-3 text-[12px] min-h-[44px]"
+                        style={{ background: '#2563eb', color: '#fff' }}
+                      >添加</button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowNewType(false); setNewTypeName(''); }}
+                        className="rounded-lg px-2 text-[12px] min-h-[44px]"
+                        style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)', color: 'var(--app-muted)' }}
+                      >取消</button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-1">
+                      <select
+                        value={sampleType}
+                        onChange={(e) => setSampleType(e.target.value)}
+                        className="min-w-0 flex-1 rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"
+                        style={fieldStyle}
+                        disabled={isReadOnly}
+                      >
+                        <option value="">— 选择类型 —</option>
+                        {sampleTypes.map((type) => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                      {!isReadOnly && (
+                        <button
+                          type="button"
+                          onClick={() => setShowNewType(true)}
+                          className="rounded-lg px-2 min-h-[44px]"
+                          title="添加样本类型"
+                          style={{
+                            background: 'var(--app-panel-bg)',
+                            border: '1px solid var(--app-border)',
+                            color: '#2563eb',
+                          }}
+                        >
+                          <Plus size={15} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="mb-1 block text-[12px]" style={{ color: 'var(--app-muted)' }}>采集阶段</label>
