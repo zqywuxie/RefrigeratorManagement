@@ -54,6 +54,7 @@ import {
   fetchItemTypes,
   createItemType,
   fetchSampleRecord,
+  fetchSampleRecords,
 } from './api';
 import { FridgeUnit } from './components/FridgeUnit';
 import { FridgeSelector } from './components/FridgeSelector';

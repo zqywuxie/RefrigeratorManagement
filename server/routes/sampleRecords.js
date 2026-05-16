@@ -36,9 +36,10 @@ router.get('/', async (req, res) => {
     // Attach tubes for each sample
     for (const row of rows) {
       const [tubes] = await pool.query(
-        `SELECT t.*, b.name as box_name, b.grid_cols
+        `SELECT t.*, b.name as box_name, b.grid_cols, b.drawer_id, d.refrigerator_id as fridge_id
          FROM tubes t
          LEFT JOIN boxes b ON b.id = t.box_id
+         LEFT JOIN drawers d ON d.id = b.drawer_id
          WHERE t.sample_id = ?
          ORDER BY t.tube_label`,
         [row.id]
@@ -60,9 +61,10 @@ router.get('/:id', async (req, res) => {
     if (!row) return res.status(404).json({ error: 'Sample record not found' });
 
     const [tubes] = await pool.query(
-      `SELECT t.*, b.name as box_name, b.grid_cols
+      `SELECT t.*, b.name as box_name, b.grid_cols, b.drawer_id, d.refrigerator_id as fridge_id
        FROM tubes t
        LEFT JOIN boxes b ON b.id = t.box_id
+       LEFT JOIN drawers d ON d.id = b.drawer_id
        WHERE t.sample_id = ?
        ORDER BY t.tube_label`,
       [row.id]
@@ -181,7 +183,7 @@ router.put('/:id', authenticate, requireResourceOwner('sample_records', 'id', 'u
 
     const [[row]] = await pool.query('SELECT * FROM sample_records WHERE id = ?', [req.params.id]);
     const [tubes] = await pool.query(
-      `SELECT t.*, b.name as box_name, b.grid_cols FROM tubes t LEFT JOIN boxes b ON b.id = t.box_id WHERE t.sample_id = ? ORDER BY t.tube_label`,
+      `SELECT t.*, b.name as box_name, b.grid_cols, b.drawer_id, d.refrigerator_id as fridge_id FROM tubes t LEFT JOIN boxes b ON b.id = t.box_id LEFT JOIN drawers d ON d.id = b.drawer_id WHERE t.sample_id = ? ORDER BY t.tube_label`,
       [row.id]
     );
     row.tubes = tubes;
