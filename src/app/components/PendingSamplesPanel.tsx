@@ -2,36 +2,34 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useDrag } from 'react-dnd';
 import { FlaskConical, GripVertical, Search } from 'lucide-react';
-import { SampleRecord } from '../types';
+import { PendingImportSample } from '../types';
 
 interface DraggableSampleProps {
-  sample: SampleRecord;
-  onClick: () => void;
+  sample: PendingImportSample;
 }
 
-function DraggableSample({ sample, onClick }: DraggableSampleProps) {
+function DraggableSample({ sample }: DraggableSampleProps) {
   const [{ isDragging }, drag] = useDrag({
     type: 'PENDING_SAMPLE',
-    item: { sample_id: sample.id, patient_name: sample.patient_name, sample_code: sample.sample_code, group_color: sample.group_color },
+    item: () => ({ ...sample }),
     collect: (monitor) => ({ isDragging: monitor.isDragging() }),
   });
 
   return (
     <motion.div
       ref={drag}
-      onClick={onClick}
       whileHover={{ scale: 1.02 }}
       className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-grab active:cursor-grabbing"
       style={{
-        background: sample.group_color + '18',
-        border: `1px solid ${sample.group_color}40`,
+        background: sample._groupColor + '18',
+        border: `1px solid ${sample._groupColor}40`,
         opacity: isDragging ? 0.4 : 1,
       }}
     >
-      <GripVertical size={14} style={{ color: sample.group_color }} />
+      <GripVertical size={14} style={{ color: sample._groupColor }} />
       <div
         className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-        style={{ background: sample.group_color }}
+        style={{ background: sample._groupColor }}
       />
       <div className="min-w-0 flex-1">
         <div className="text-[13px] font-medium truncate" style={{ color: 'var(--app-text)' }}>
@@ -46,12 +44,11 @@ function DraggableSample({ sample, onClick }: DraggableSampleProps) {
 }
 
 interface PendingSamplesPanelProps {
-  samples: SampleRecord[];
-  onSelectSample: (sampleId: string) => void;
+  samples: PendingImportSample[];
   onClear: () => void;
 }
 
-export function PendingSamplesPanel({ samples, onSelectSample, onClear }: PendingSamplesPanelProps) {
+export function PendingSamplesPanel({ samples, onClear }: PendingSamplesPanelProps) {
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -116,15 +113,11 @@ export function PendingSamplesPanel({ samples, onSelectSample, onClear }: Pendin
       </div>
 
       <p className="text-[10px]" style={{ color: 'var(--app-muted)' }}>
-        拖拽到左侧孔位分配
+        拖拽到左侧孔位分配（仅放入孔位时才入库）
       </p>
       <div className="space-y-1 max-h-56 overflow-y-auto">
         {filtered.map((s) => (
-          <DraggableSample
-            key={s.id}
-            sample={s}
-            onClick={() => onSelectSample(s.id)}
-          />
+          <DraggableSample key={s._importId} sample={s} />
         ))}
         {filtered.length === 0 && (
           <div className="text-center py-3 text-[11px]" style={{ color: 'var(--app-muted)' }}>

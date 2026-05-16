@@ -36,6 +36,7 @@ import {
   FridgeType,
   DEFAULT_ITEM_TYPES,
   SampleRecord,
+  PendingImportSample,
   getSampleTypeColor,
 } from './types';
 import {
@@ -55,6 +56,7 @@ import {
   fetchItemTypes,
   createItemType,
   fetchSampleRecord,
+  PendingImportSample,
   fetchSampleRecords,
   fetchDrawers,
   fetchUpperItems,
@@ -140,6 +142,7 @@ function AppContent() {
   const [sampleRecords, setSampleRecords] = useState<SampleRecord[]>([]);
   const [drawerCount, setDrawerCount] = useState(0);
   const [drawerBoxCount, setDrawerBoxCount] = useState(0);
+  const [drawerMaxBoxes, setDrawerMaxBoxes] = useState(0);
   const [upperItemsCount, setUpperItemsCount] = useState(0);
 
   // Side map state
@@ -148,7 +151,7 @@ function AppContent() {
   const [sideMapRefreshKey, setSideMapRefreshKey] = useState(0);
 
   // Pending imported samples (shared with DrawerFridgeView)
-  const [pendingSamples, setPendingSamples] = useState<SampleRecord[]>([]);
+  const [pendingSamples, setPendingSamples] = useState<PendingImportSample[]>([]);
 
   // Global sample records filtered by searchQuery (for dropdown below search bar)
   const globalFilteredRecords = React.useMemo(() => {
@@ -161,17 +164,8 @@ function AppContent() {
     );
   }, [sampleRecords, searchQuery]);
 
-  const handleImportComplete = useCallback(async (sampleIds: string[]) => {
-    if (sampleIds.length === 0) return;
-    try {
-      const all = await Promise.all(
-        sampleIds.map((id) => fetchSampleRecord(id).catch(() => null))
-      );
-      const valid = all.filter(Boolean) as SampleRecord[];
-      setPendingSamples((prev) => [...prev, ...valid]);
-    } catch (err) {
-      console.error('Failed to fetch imported samples:', err);
-    }
+  const handleImportComplete = useCallback((newSamples: PendingImportSample[]) => {
+    setPendingSamples((prev) => [...prev, ...newSamples]);
   }, []);
 
   useEffect(() => {
@@ -231,6 +225,7 @@ function AppContent() {
       setSampleRecords(srData);
       setDrawerCount(drawerData.length);
       setDrawerBoxCount(drawerData.reduce((s: number, d: any) => s + (d.box_count ?? 0), 0));
+      setDrawerMaxBoxes(drawerData.reduce((s: number, d: any) => s + (d.max_boxes ?? 5), 0));
       setUpperItemsCount(upperItemsData.length);
       setLoading(false);
     }).catch((err) => {
@@ -1033,7 +1028,7 @@ function AppContent() {
               />
               <PendingSamplesPanel
                 samples={pendingSamples}
-                onSelectSample={() => {}}
+                
                 onClear={() => setPendingSamples([])}
               />
             </div>
@@ -1200,7 +1195,7 @@ function AppContent() {
                   canManageFridge={isRoot}
                   viewingContainer={viewingContainer}
                   onDropSample={handleDrop}
-                  onSelectSample={setSelectedSampleId}
+                  
                   onDeleteSample={handleDeleteSample}
                   onSlotClick={handleSlotClick}
                   onEnterContainer={handleEnterContainer}
@@ -1253,10 +1248,10 @@ function AppContent() {
               <StatsCard
                 label="总容量"
                 value={isDrawerFridge
-                  ? `${drawerBoxCount} 盒`
+                  ? `${drawerBoxCount}/${drawerMaxBoxes}`
                   : `${usedSlots}/${totalCapacity}`}
                 sub={isDrawerFridge
-                  ? `${drawerCount} 抽屉 · ${upperItemsCount} 件`
+                  ? `使用率 ${drawerMaxBoxes > 0 ? Math.round((drawerBoxCount / drawerMaxBoxes) * 100) : 0}%`
                   : `使用率 ${totalCapacity > 0 ? Math.round((usedSlots / totalCapacity) * 100) : 0}%`}
                 color="#60a5fa"
               />
@@ -1265,15 +1260,15 @@ function AppContent() {
                 value={selectedFridge?.fridge_type === 'drawer'
                   ? `${upperItemsCount} 件`
                   : `${samples.filter((s) => s.compartment === 'upper').length}/${upperCapacity}`}
-                sub="上层存储"
+                sub="物品"
                 color="#818cf8"
               />
               <StatsCard
                 label="下层"
                 value={selectedFridge?.fridge_type === 'drawer'
-                  ? `${drawerCount} 抽屉`
+                  ? `${drawerBoxCount}/${drawerMaxBoxes} 盒`
                   : `${samples.filter((s) => s.compartment === 'lower').length}/${lowerCapacity}`}
-                sub={selectedFridge?.fridge_type === 'drawer' ? `${drawerBoxCount} 盒` : '下层存储'}
+                sub={`${drawerCount} 个抽屉`}
                 color="#34d399"
               />
               <StatsCard

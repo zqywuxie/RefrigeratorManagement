@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Refrigerator, UpperItem, Drawer, Box, BoxCell, Tube, SampleRecord, DRAWER_LAYER1, DRAWER_LAYER2, boxPositionToLabel, cellPositionToLabel } from '../types';
+import { Refrigerator, UpperItem, Drawer, Box, BoxCell, Tube, SampleRecord, PendingImportSample, DRAWER_LAYER1, DRAWER_LAYER2, boxPositionToLabel, cellPositionToLabel } from '../types';
 import {
   fetchUpperItems, createUpperItem, updateUpperItem, deleteUpperItem,
   fetchDrawers, updateDrawer,
@@ -37,9 +37,9 @@ interface DrawerFridgeViewProps {
   onAddItemType: (name: string) => void;
   navigateToDrawer?: { drawerId: string; drawerLabel: string } | null;
   onNavigated?: () => void;
-  pendingSamples?: SampleRecord[];
-  onPendingSamplesChange?: (samples: SampleRecord[]) => void;
-  onImportComplete?: (sampleIds: string[]) => void;
+  pendingSamples?: PendingImportSample[];
+  onPendingSamplesChange?: (samples: PendingImportSample[]) => void;
+  onImportComplete?: (samples: PendingImportSample[]) => void;
   onDataChanged?: () => void;
 }
 
@@ -509,18 +509,31 @@ export function DrawerFridgeView({
   }, []);
 
   // Handle drop from pending samples panel onto a grid position
-  const handlePendingSampleDrop = useCallback(async (sampleId: string, position: number) => {
+  const handlePendingSampleDrop = useCallback(async (importData: PendingImportSample, position: number) => {
     if (!selectedBox) return;
     try {
-      await addTubesToSample(sampleId, [{ box_id: selectedBox.id, position }]);
+      // Create sample record + tube atomically on drop
+      await createSampleRecord({
+        patient_name: importData.patient_name,
+        sample_code: importData.sample_code,
+        source: importData.source,
+        sample_type: importData.sample_type,
+        collection_stage: importData.collection_stage,
+        collected_at: importData.collected_at,
+        tags: importData.tags,
+        note: importData.note,
+        uploader: currentUser,
+        tubes: [{ box_id: selectedBox.id, position }],
+      });
       const updated = await fetchBoxTubes(selectedBox.id);
       setTubes(updated);
+      onDataChanged?.();
       // Remove from pending list
-      onPendingSamplesChange?.(pendingSamples.filter((s) => s.id !== sampleId));
+      onPendingSamplesChange?.(pendingSamples.filter((s) => s._importId !== importData._importId));
     } catch (err) {
       console.error('Failed to drop sample:', err);
     }
-  }, [selectedBox, pendingSamples, onPendingSamplesChange]);
+  }, [selectedBox, pendingSamples, onPendingSamplesChange, currentUser, onDataChanged]);
 
   const handleBatchEdit = useCallback((sampleIds: string[]) => {
     setBatchSampleIds(sampleIds);

@@ -17,7 +17,7 @@ interface BoxGridProps {
   onMultiSelectToggle?: (position: number) => void;
   onMultiSelectConfirm?: (positions: number[]) => void;
   onTubeHover?: (sampleId: string | null) => void;
-  onPendingSampleDrop?: (sampleId: string, position: number) => void;
+  onPendingSampleDrop?: (importData: any, position: number) => void;
 }
 
 function DropCellWrapper({
@@ -29,12 +29,12 @@ function DropCellWrapper({
   position: number;
   isOccupied: boolean;
   children: React.ReactNode;
-  onDrop: (sampleId: string, position: number) => void;
+  onDrop: (importData: any, position: number) => void;
 }) {
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: 'PENDING_SAMPLE',
-    drop: (item: { sample_id: string }) => {
-      onDrop(item.sample_id, position);
+    drop: (item: any) => {
+      onDrop(item, position);
     },
     canDrop: () => !isOccupied,
     collect: (monitor) => ({

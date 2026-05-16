@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Upload, FileSpreadsheet, ArrowRight, Check, ChevronDown } from 'lucide-react';
-import { parseExcel, assignImportedSamples, ParsedExcel, ImportAssignment } from '../api';
+import { X, Upload, FileSpreadsheet, ArrowRight, Check } from 'lucide-react';
+import { parseExcel, ParsedExcel } from '../api';
+import { PendingImportSample, GROUP_COLORS } from '../types';
 
 interface ExcelImportModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ interface ExcelImportModalProps {
   occupiedPositions: Set<number>;
   currentUser: string;
   onClose: () => void;
-  onImported: (sampleIds: string[]) => void;
+  onImported: (samples: PendingImportSample[]) => void;
 }
 
 const SYSTEM_FIELDS: { key: string; label: string }[] = [
@@ -64,9 +65,8 @@ export function ExcelImportModal({
 
   const handleImport = useCallback(async () => {
     if (!parsed) return;
-    setStep('importing');
-
-    const samples: ImportAssignment[] = [];
+    const pendingSamples: PendingImportSample[] = [];
+    let colorIdx = 0;
     for (const row of parsed.rows) {
       const patientName = row[findMappedHeader('patient_name')]?.toString().trim();
       const sampleCode = row[findMappedHeader('sample_code')]?.toString().trim();
@@ -80,7 +80,9 @@ export function ExcelImportModal({
       const tagsStr = row[findMappedHeader('tags')]?.toString().trim() || '';
       const tags = tagsStr ? tagsStr.split(/[,，;；\s]+/).filter(Boolean) : [];
 
-      samples.push({
+      pendingSamples.push({
+        _importId: `import-${Date.now()}-${colorIdx}`,
+        _groupColor: GROUP_COLORS[colorIdx % GROUP_COLORS.length],
         patient_name: patientName,
         sample_code: sampleCode,
         source,
@@ -89,30 +91,22 @@ export function ExcelImportModal({
         collected_at: collectedAt,
         tags,
         note,
-        uploader: currentUser,
-        positions: [],
       });
+      colorIdx++;
     }
 
-    if (samples.length === 0) {
+    if (pendingSamples.length === 0) {
       setError('没有可导入的样本（需要至少填写姓名和编号）');
       setStep('mapping');
       return;
     }
 
-    try {
-      const result = await assignImportedSamples(boxId, samples);
-      const ids = result.results.map((r: any) => r.sample_id);
-      onImported(ids);
-      onClose();
-      setStep('upload');
-      setParsed(null);
-      setFieldMapping({});
-    } catch (err: any) {
-      setError(err.message || '导入失败');
-      setStep('preview');
-    }
-  }, [parsed, fieldMapping, boxId, currentUser, onImported, onClose]);
+    onImported(pendingSamples);
+    onClose();
+    setStep('upload');
+    setParsed(null);
+    setFieldMapping({});
+  }, [parsed, fieldMapping, currentUser, onImported, onClose]);
 
   const findMappedHeader = (field: string): string => {
     for (const [header, mapped] of Object.entries(fieldMapping)) {

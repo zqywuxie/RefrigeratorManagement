@@ -248,6 +248,19 @@ export function getSampleTypeBgColor(type: string): string {
   return getSampleTypeColor(type) + '20';
 }
 
+export interface PendingImportSample {
+  _importId: string;
+  _groupColor: string;
+  patient_name: string;
+  sample_code: string;
+  source?: string;
+  sample_type?: string;
+  collection_stage?: string;
+  collected_at?: string;
+  tags?: string[];
+  note?: string;
+}
+
 export function getOccupancyRate(used: number, total: number): number {
   if (total === 0) return 0;
   return Math.round((used / total) * 100);
