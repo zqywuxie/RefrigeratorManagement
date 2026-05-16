@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Lock, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Lock } from 'lucide-react';
 import { ResponsiveDialog, ResponsiveDialogContent, ResponsiveDialogHeader, ResponsiveDialogFooter, ResponsiveDialogTitle, ResponsiveDialogDescription } from './ui/responsive-dialog';
 import { SampleRecord, Tube, cellPositionToLabel } from '../types';
 
@@ -409,40 +409,37 @@ export function AddSampleRecordModal({
                 </div>
 
                 {canEdit && onAddTubes && (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-                    <div className="relative">
-                      <select
-                      value={positionInput}
-                      onChange={(e) => setPositionInput(e.target.value)}
-                      className="w-full appearance-none rounded-lg px-3 py-2 pr-9 text-[14px] outline-none min-h-[44px]"
-                      style={fieldStyle}
-                      disabled={selectablePositions.length === 0}
-                    >
-                      {selectablePositions.length === 0 ? (
-                        <option value="">当前盒子没有可添加的空孔位</option>
-                      ) : (
-                        selectablePositions.map((position) => (
-                          <option key={position} value={position}>
-                            {positionLabel(position)} · 第 {position + 1} 位
-                          </option>
-                        ))
+                  <div>
+                    <label className="mb-2 block text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                      点击空孔位添加试管 {selectablePositions.length > 0 ? `(${selectablePositions.length} 个可用)` : '(已满)'}
+                    </label>
+                    <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto">
+                      {selectablePositions.map((pos) => {
+                        const label = positionLabel(pos);
+                        const isSelected = newPositions.includes(pos);
+                        return (
+                          <button
+                            key={pos}
+                            type="button"
+                            onClick={() => {
+                              setPositionInput(String(pos));
+                              handleAddPosition();
+                            }}
+                            className="rounded-md px-2.5 py-1.5 text-[11px] font-mono transition-all min-w-[36px] text-center"
+                            style={{
+                              background: isSelected ? '#22c55e' : 'var(--app-input-bg)',
+                              color: isSelected ? '#fff' : 'var(--app-muted)',
+                              border: `1px solid ${isSelected ? '#22c55e' : 'var(--app-input-border)'}`,
+                            }}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                      {selectablePositions.length === 0 && (
+                        <span className="text-[12px]" style={{ color: 'var(--app-muted)' }}>无可用孔位</span>
                       )}
-                    </select>
-                      <ChevronDown
-                        size={16}
-                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
-                        style={{ color: 'var(--app-muted)' }}
-                      />
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleAddPosition}
-                      className="flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-[13px] min-h-[44px]"
-                      style={{ background: '#2563eb', color: '#fff' }}
-                      disabled={selectablePositions.length === 0}
-                    >
-                      <Plus size={14} />添加格位
-                    </button>
                   </div>
                 )}
 

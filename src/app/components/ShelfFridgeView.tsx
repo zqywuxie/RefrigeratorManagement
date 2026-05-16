@@ -76,6 +76,7 @@ export function ShelfFridgeView({ fridge, currentUsername, itemTypes, onAddItemT
   }, [items]);
 
   const handleDeleteItem = useCallback(async (id: string) => {
+    if (!window.confirm('确定删除此物品？')) return;
     try {
       await deleteUpperItem(id);
       setItems((prev) => prev.filter((item) => item.id !== id));

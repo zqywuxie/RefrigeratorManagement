@@ -235,7 +235,7 @@ export function BoxGrid({
               />
             );
 
-            if (onPendingSampleDrop) {
+            if (onPendingSampleDrop || onTubeMove) {
               return (
                 <DropCellWrapper
                   key={`cell-${position}`}
