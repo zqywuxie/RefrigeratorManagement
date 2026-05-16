@@ -723,82 +723,76 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
               创建用户
             </h3>
             <div className="space-y-3">
-              <input
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                placeholder="用户名"
-                className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
-                style={inputStyle}
-              />
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="密码"
-                className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
-                style={inputStyle}
-              />
-              <select
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value as AuthUser['role'])}
-                className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
-                style={inputStyle}
-              >
+              <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="用户名"
+                className="w-full rounded-lg px-3 py-2 text-[14px] outline-none" style={inputStyle} />
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="密码"
+                className="w-full rounded-lg px-3 py-2 text-[14px] outline-none" style={inputStyle} />
+              <select value={newRole} onChange={(e) => setNewRole(e.target.value as AuthUser['role'])}
+                className="w-full rounded-lg px-3 py-2 text-[14px] outline-none" style={inputStyle}>
                 <option value="user">普通用户</option>
                 <option value="root">管理员 root</option>
               </select>
-              <button
-                type="submit"
-                disabled={busyUser === '__new__'}
+              <button type="submit" disabled={busyUser === '__new__'}
                 className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-[14px]"
-                style={{ background: '#2563eb', color: '#ffffff' }}
-              >
-                <Plus size={16} />
-                {busyUser === '__new__' ? '创建中...' : '创建'}
+                style={{ background: '#2563eb', color: '#ffffff' }}>
+                <Plus size={16} />{busyUser === '__new__' ? '创建中...' : '创建'}
               </button>
             </div>
           </form>
 
-          <section
-            className="rounded-xl p-4"
-            style={{
-              background: 'var(--app-card-bg)',
-              border: '1px solid var(--app-border)',
-              boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
-            }}
-          >
-            <div className="mb-4">
-              <h3 className="text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>
-                全局分布
-              </h3>
-              <div className="mt-1 text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                状态与类别的总体视图
-              </div>
+          {/* Dashboard: status & type distribution */}
+          <div className="space-y-4">
+            {/* Sample type distribution */}
+            <div className="rounded-xl p-4" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', boxShadow: '0 14px 40px rgba(15,23,42,0.06)' }}>
+              <h3 className="text-[15px] font-semibold mb-3" style={{ color: 'var(--app-text)' }}>样本类型分布</h3>
+              {(summary?.typeCounts || []).length === 0 ? (
+                <div className="py-4 text-center text-[13px]" style={{ color: 'var(--app-muted)' }}>暂无数据</div>
+              ) : (
+                <div className="space-y-2">
+                  {(summary?.typeCounts || []).slice(0, 8).map((item) => {
+                    const total = (summary?.typeCounts || []).reduce((s, i) => s + i.count, 0) || 1;
+                    const pct = Math.round((item.count / total) * 100);
+                    return (
+                      <div key={item.type}>
+                        <div className="flex justify-between text-[12px] mb-0.5">
+                          <span style={{ color: 'var(--app-text)' }}>{item.type}</span>
+                          <span className="font-mono" style={{ color: 'var(--app-muted)' }}>{item.count} ({pct}%)</span>
+                        </div>
+                        <div className="h-1.5 rounded-full" style={{ background: 'var(--app-progress-track)' }}>
+                          <div className="h-full rounded-full transition-all" style={{ width: `${Math.max(pct, 2)}%`, background: '#06b6d4' }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            <DistributionPanel
-              title="样本类别分布"
-              items={(summary?.typeCounts || []).map((item) => ({
-                key: item.type,
-                label: item.type,
-                count: item.count,
-              }))}
-              total={Math.max((summary?.typeCounts || []).reduce((s, i) => s + i.count, 0), 1)}
-              emptyMessage="暂无样本类别数据"
-            />
-          </section>
+
+            {/* Status distribution */}
+            <div className="rounded-xl p-4" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', boxShadow: '0 14px 40px rgba(15,23,42,0.06)' }}>
+              <h3 className="text-[15px] font-semibold mb-3" style={{ color: 'var(--app-text)' }}>状态分布</h3>
+              {(summary?.statusCounts || []).length === 0 ? (
+                <div className="py-4 text-center text-[13px]" style={{ color: 'var(--app-muted)' }}>暂无数据</div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {(summary?.statusCounts || []).map((item) => {
+                    const color = STATUS_COLORS[item.status] || '#64748b';
+                    return (
+                      <div key={item.status} className="rounded-full px-3 py-1.5 text-[12px]"
+                        style={{ background: `${color}18`, border: `1px solid ${color}40`, color }}>
+                        {STATUS_LABELS[item.status] || item.status} · {item.count}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        <section
-          className="rounded-xl p-4"
-          style={{
-            background: 'var(--app-card-bg)',
-            border: '1px solid var(--app-border)',
-            boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
-          }}
-        >
-          <h3 className="mb-3 text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>
-            冰箱概览
-          </h3>
+        {/* Fridge overview */}
+        <section className="rounded-xl p-4" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', boxShadow: '0 14px 40px rgba(15,23,42,0.06)' }}>
+          <h3 className="mb-3 text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>冰箱概览</h3>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {summary?.refrigerators.map((fridge) => {
               const usage = fridge.capacity > 0 ? Math.round((fridge.sampleCount / fridge.capacity) * 100) : 0;
@@ -806,32 +800,27 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                 <div key={fridge.id} className="rounded-lg p-3" style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)' }}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="truncate text-[15px] font-medium" style={{ color: 'var(--app-text)' }}>
-                        {fridge.name}
-                      </div>
-                      <div className="mt-1 text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                        {fridge.id}
-                      </div>
+                      <div className="truncate text-[15px] font-medium" style={{ color: 'var(--app-text)' }}>{fridge.name}</div>
+                      <div className="mt-1 text-[12px]" style={{ color: 'var(--app-muted)' }}>{fridge.id}</div>
                     </div>
-                    <span className="text-[13px] font-mono" style={{ color: '#2563eb' }}>
-                      {usage}%
-                    </span>
+                    <span className="text-[13px] font-mono flex-shrink-0" style={{ color: usage > 80 ? '#ef4444' : usage > 50 ? '#f59e0b' : '#22c55e' }}>{usage}%</span>
                   </div>
                   <div className="mt-3 h-2 overflow-hidden rounded-full" style={{ background: 'var(--app-progress-track)' }}>
-                    <div className="h-full rounded-full" style={{ width: `${Math.min(usage, 100)}%`, background: '#2563eb' }} />
+                    <div className="h-full rounded-full transition-all" style={{
+                      width: `${Math.min(usage, 100)}%`,
+                      background: usage > 80 ? '#ef4444' : usage > 50 ? '#f59e0b' : '#22c55e',
+                    }} />
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-[12px]" style={{ color: 'var(--app-muted)' }}>
                     <span>样本 {fridge.sampleCount}/{fridge.capacity}</span>
                     <span>副样本 {fridge.subSampleCount}</span>
-                    <span>异常 {fridge.criticalCount + fridge.warningCount}</span>
+                    <span style={{ color: fridge.criticalCount > 0 ? '#ef4444' : 'var(--app-muted)' }}>异常 {fridge.criticalCount + fridge.warningCount}</span>
                   </div>
                 </div>
               );
             })}
             {summary && summary.refrigerators.length === 0 && (
-              <div className="rounded-lg px-3 py-8 text-center text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
-                暂无冰箱
-              </div>
+              <div className="rounded-lg px-3 py-8 text-center text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>暂无冰箱</div>
             )}
           </div>
         </section>
