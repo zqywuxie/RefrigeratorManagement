@@ -394,7 +394,10 @@ export function AddSampleRecordModal({
                       {canEdit && onDeleteTube && (
                         <button
                           type="button"
-                          onClick={() => onDeleteTube(tube.id)}
+                          onClick={() => {
+                            if (!window.confirm('确定移除此试管？')) return;
+                            onDeleteTube(tube.id);
+                          }}
                           className="self-start text-[12px] sm:self-auto"
                           style={{ color: '#f87171' }}
                         >
@@ -476,7 +479,10 @@ export function AddSampleRecordModal({
               {isEdit && canEdit && onDelete && editRecord && (
                 <button
                   type="button"
-                  onClick={() => onDelete(editRecord.id)}
+                  onClick={() => {
+                    if (!window.confirm('确定删除此样本记录？关联试管也会被删除。')) return;
+                    onDelete(editRecord.id);
+                  }}
                   className="flex min-h-[44px] items-center justify-center gap-1 rounded-lg px-3 py-2 text-[13px] sm:justify-start"
                   style={{ color: '#dc2626', background: '#fee2e2' }}
                 >

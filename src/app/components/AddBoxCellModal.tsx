@@ -125,7 +125,10 @@ export function AddBoxCellModal({
               {cell ? (
                 <button
                   type="button"
-                  onClick={() => onDelete(cell.id)}
+                  onClick={() => {
+                    if (!window.confirm('确定清空此格位信息？')) return;
+                    onDelete(cell.id);
+                  }}
                   className="flex items-center gap-1 px-3 py-2 rounded-lg text-[13px] min-h-[44px]"
                   style={{ color: '#dc2626', background: '#fee2e2' }}
                 >

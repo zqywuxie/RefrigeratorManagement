@@ -1500,7 +1500,6 @@ function AppContent() {
               <div className="px-4 pb-8 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <StatsCard
-                  <StatsCard
                     label="上层"
                     value={selectedFridge?.fridge_type === 'drawer'
                       ? `${upperItemsCount} 件`
@@ -1518,7 +1517,6 @@ function AppContent() {
                       : '下层存储'}
                     color="#34d399"
                   />
-                  <StatsCard
                 </div>
 
                 {boxViewTubes.length === 0 ? (
@@ -1932,7 +1930,6 @@ function AppContent() {
             {/* Stats cards */}
             <div className="grid grid-cols-2 gap-3">
               <StatsCard
-              <StatsCard
                 label="上层"
                 value={selectedFridge?.fridge_type === 'drawer'
                   ? `${upperItemsCount} 件`
@@ -1950,7 +1947,6 @@ function AppContent() {
                   : '下层存储'}
                 color="#34d399"
               />
-              <StatsCard
             </div>
 
             {boxViewTubes.length === 0 ? (
@@ -2570,7 +2566,10 @@ function UserMenu({
         </button>
       )}
       <button
-        onClick={onLogout}
+        onClick={() => {
+          if (!window.confirm('确定退出登录？')) return;
+          onLogout();
+        }}
         className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
         style={{
           background: 'var(--app-panel-bg)',
