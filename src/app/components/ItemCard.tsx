@@ -28,9 +28,8 @@ export function ItemCard({ item, isHighlighted, onClick, onDelete, canDelete = f
       whileHover={{ scale: 1.03, y: -2 }}
       whileTap={{ scale: 0.97 }}
       animate={{ opacity: isDragging ? 0.4 : 1 }}
-      className="relative flex-shrink-0 rounded-xl px-4 py-3 text-left cursor-pointer transition-shadow"
+      className="relative w-full rounded-xl px-4 py-3 text-left cursor-pointer transition-shadow min-h-[88px]"
       style={{
-        width: '200px',
         background: 'var(--app-card-bg)',
         border: isHighlighted
           ? '2px solid #3b82f6'

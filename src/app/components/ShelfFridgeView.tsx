@@ -85,7 +85,7 @@ export function ShelfFridgeView({ fridge, currentUsername, itemTypes, onAddItemT
   }, []);
 
   return (
-    <div className="flex w-full max-w-[680px] flex-col gap-4">
+    <div className="flex w-full max-w-full lg:max-w-[680px] flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-[16px] font-medium" style={{ color: 'var(--app-text)' }}>

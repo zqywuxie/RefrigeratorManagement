@@ -95,6 +95,7 @@ function GridControls({
         <button
           onClick={() => onRowsChange(rows - 1)}
           disabled={rows <= GRID_MIN}
+          className="min-h-[44px] min-w-[44px] lg:min-h-[22px] lg:min-w-[22px]"
           style={btnStyle(rows <= GRID_MIN)}
         >
           −
@@ -108,6 +109,7 @@ function GridControls({
         <button
           onClick={() => onRowsChange(rows + 1)}
           disabled={rows >= GRID_MAX_ROWS}
+          className="min-h-[44px] min-w-[44px] lg:min-h-[22px] lg:min-w-[22px]"
           style={btnStyle(rows >= GRID_MAX_ROWS)}
         >
           +
@@ -120,6 +122,7 @@ function GridControls({
         <button
           onClick={() => onColsChange(cols - 1)}
           disabled={cols <= GRID_MIN}
+          className="min-h-[44px] min-w-[44px] lg:min-h-[22px] lg:min-w-[22px]"
           style={btnStyle(cols <= GRID_MIN)}
         >
           −
@@ -133,6 +136,7 @@ function GridControls({
         <button
           onClick={() => onColsChange(cols + 1)}
           disabled={cols >= GRID_MAX_COLS}
+          className="min-h-[44px] min-w-[44px] lg:min-h-[22px] lg:min-w-[22px]"
           style={btnStyle(cols >= GRID_MAX_COLS)}
         >
           +
@@ -202,25 +206,22 @@ export function FridgeUnit({
     samples.find((s) => s.compartment === comp && s.position === pos);
 
   return (
-    <div className="flex w-full max-w-[560px] flex-col items-center gap-5">
+    <div className="flex w-full max-w-full lg:max-w-[560px] flex-col items-center gap-5">
       {/* Fridge Outer Body */}
       <div
-        className="relative w-full rounded-3xl select-none"
+        className="relative w-full rounded-3xl select-none p-3 sm:p-4 lg:p-[24px_28px_28px_24px]"
         style={{
           background: 'var(--fridge-body)',
           boxShadow: 'var(--fridge-shadow)',
           border: '1.5px solid var(--fridge-border)',
-          padding: '24px 28px 28px 24px',
         }}
       >
         {/* Door Handle */}
         <div
-          className="absolute right-5 top-1/2 -translate-y-1/2"
+          className="absolute right-5 top-1/2 -translate-y-1/2 w-[8px] h-[80px] sm:w-[14px] sm:h-[120px]"
           style={{
-            width: '14px',
-            height: '120px',
             background: 'var(--fridge-handle-bg)',
-            borderRadius: '7px',
+            borderRadius: '4px',
             boxShadow: 'var(--fridge-handle-shadow)',
           }}
         />
@@ -324,10 +325,11 @@ export function FridgeUnit({
                 <div className="flex items-center gap-2">
                   <Thermometer
                     size={18}
+                    className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]"
                     color={hasWarning ? '#f59e0b' : 'var(--fridge-accent)'}
                   />
                   <span
-                    className="text-[18px] font-mono tabular-nums"
+                    className="text-[15px] sm:text-[18px] font-mono tabular-nums"
                     style={{ color: hasWarning ? '#f59e0b' : 'var(--fridge-accent)' }}
                   >
                     {upperTemp}°C
@@ -460,9 +462,9 @@ export function FridgeUnit({
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Thermometer size={18} color="var(--fridge-accent)" />
+              <Thermometer size={18} className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" color="var(--fridge-accent)" />
               <span
-                className="text-[18px] font-mono"
+                className="text-[15px] sm:text-[18px] font-mono"
                 style={{ color: 'var(--fridge-accent)' }}
               >
                 {lowerTemp}°C

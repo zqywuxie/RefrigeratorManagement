@@ -21,6 +21,9 @@ import {
   Shield,
   PanelLeftClose,
   PanelLeft,
+  Menu,
+  Map,
+  BarChart3,
 } from 'lucide-react';
 
 import {
@@ -75,6 +78,10 @@ import { FridgeSideMap } from './components/FridgeSideMap';
 import { PendingSamplesPanel } from './components/PendingSamplesPanel';
 import { SampleListPanel } from './components/SampleListPanel';
 import { LoginPage } from './components/LoginPage';
+import { useIsMobile } from './components/ui/use-mobile';
+import { Button } from './components/ui/button';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './components/ui/sheet';
+import { Drawer, DrawerContent } from './components/ui/drawer';
 
 type UploadedSampleItem = {
   id: string;
@@ -168,6 +175,12 @@ function AppContent() {
 
   // Pending imported samples (shared with DrawerFridgeView)
   const [pendingSamples, setPendingSamples] = useState<PendingImportSample[]>([]);
+
+  // Mobile state
+  const isMobile = useIsMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
+  const [mobileSideMapOpen, setMobileSideMapOpen] = useState(false);
 
   // Global sample records filtered by searchQuery (for dropdown below search bar)
   const globalFilteredRecords = React.useMemo(() => {
@@ -957,6 +970,114 @@ function AppContent() {
         }}
       >
         {/* ── HEADER ── */}
+        {isMobile ? (
+          <header
+            className="relative z-40 flex items-center justify-between px-4 py-3 flex-shrink-0"
+            style={{
+              background: 'var(--app-header-bg)',
+              borderBottom: '1px solid var(--app-border)',
+              backdropFilter: 'blur(10px)',
+            }}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: 'var(--app-logo-bg)',
+                  border: '1px solid var(--app-logo-border)',
+                  boxShadow: '0 10px 22px rgba(37,99,235,0.12)',
+                }}
+              >
+                <Database size={20} color="var(--app-logo-icon)" />
+              </div>
+              <h1 className="text-[16px] truncate" style={{ color: 'var(--app-text)' }}>
+                冰箱管理系统
+              </h1>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {criticalCount + criticalSubCount > 0 && (
+                <div
+                  className="min-w-[22px] h-[22px] rounded-full flex items-center justify-center text-[11px] font-bold"
+                  style={{ background: '#ef4444', color: '#fff' }}
+                >
+                  {criticalCount + criticalSubCount}
+                </div>
+              )}
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="min-h-[44px] min-w-[44px] rounded-lg"
+                    style={{
+                      background: 'var(--app-panel-bg)',
+                      border: '1px solid var(--app-border)',
+                    }}
+                  >
+                    <Menu size={20} color="var(--app-text)" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[280px] p-0">
+                  <SheetHeader className="px-4 py-3 border-b" style={{ borderColor: 'var(--app-border)' }}>
+                    <SheetTitle className="text-[15px]" style={{ color: 'var(--app-text)' }}>菜单</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col gap-2 p-4 overflow-y-auto">
+                    <FridgeSelector
+                      refrigerators={refrigerators}
+                      selectedId={selectedFridgeId}
+                      canManage={isRoot}
+                      onSelect={(id) => { setSelectedFridgeId(id); setMobileMenuOpen(false); }}
+                      onAdd={handleAddFridge}
+                      onDelete={handleDeleteFridge}
+                      onEdit={handleEditFridge}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setShowSideMap((v) => !v); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-2 w-full rounded-lg px-3 py-2.5 text-[14px] min-h-[44px]"
+                      style={{
+                        background: showSideMap ? '#2563eb15' : 'var(--app-panel-bg)',
+                        border: showSideMap ? '1px solid #3b82f680' : '1px solid var(--app-border)',
+                        color: showSideMap ? '#2563eb' : 'var(--app-text)',
+                      }}
+                    >
+                      <PanelLeft size={16} />
+                      {showSideMap ? '隐藏冰箱图' : '显示冰箱图'}
+                    </button>
+                    {isRoot && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveView((view) => (view === 'admin' ? 'fridge' : 'admin'));
+                          setMobileMenuOpen(false);
+                        }}
+                        className="flex items-center gap-2 w-full rounded-lg px-3 py-2.5 text-[14px] min-h-[44px]"
+                        style={{
+                          background: activeView === 'admin' ? '#2563eb' : 'var(--app-panel-bg)',
+                          border: activeView === 'admin' ? '1px solid #3b82f6' : '1px solid var(--app-border)',
+                          color: activeView === 'admin' ? '#ffffff' : 'var(--app-text)',
+                        }}
+                      >
+                        <Shield size={15} />
+                        {activeView === 'admin' ? '返回冰箱' : '全局管理'}
+                      </button>
+                    )}
+                    <div className="border-t my-1" style={{ borderColor: 'var(--app-border)' }} />
+                    <UserMenu
+                      username={user!.username}
+                      role={user!.role}
+                      uploadedItems={myUploadedItems}
+                      hasBoxViewTubes={boxViewTubes.length > 0}
+                      onOpenSample={(item) => { handleOpenUploadedItem(item); setMobileMenuOpen(false); }}
+                      onLogout={logout}
+                    />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+          </header>
+        ) : (
         <header
           className="relative z-40 flex items-center justify-between px-6 py-4 flex-shrink-0"
           style={{
@@ -1064,11 +1185,474 @@ function AppContent() {
             </div>
           </div>
         </header>
+        )}
 
         {activeView === 'admin' && isRoot ? (
           <RootAdminPanel currentUsername={user!.username} onNotify={showNotif} />
+        ) : isMobile ? (
+    <main className="flex-1 flex flex-col gap-3 p-3 overflow-auto">
+          {/* Search bar */}
+          <div
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3"
+            style={{
+              background: 'var(--app-card-bg)',
+              border: `1px solid ${searchQuery ? 'rgba(37,99,235,0.35)' : 'var(--app-border)'}`,
+              boxShadow: searchQuery ? '0 12px 34px rgba(37,99,235,0.08)' : '0 12px 34px rgba(15,23,42,0.06)',
+            }}
+          >
+            <Search size={20} color={searchQuery ? '#2563eb' : 'var(--app-muted)'} />
+            <input
+              type="text"
+              placeholder="搜索..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 bg-transparent outline-none text-[16px] placeholder:text-slate-600"
+              style={{ color: 'var(--app-text)' }}
+            />
+            {searchQuery && (
+              <div className="flex items-center gap-1">
+                <span className="text-[14px]" style={{ color: '#2563eb' }}>
+                  {matchedIds.size} 个
+                </span>
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-[14px] px-2 py-1 rounded"
+                  style={{ color: 'var(--app-muted)' }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Global search results dropdown */}
+          {searchQuery.trim() && globalFilteredRecords.length > 0 && (
+            <div
+              className="rounded-xl p-3 space-y-1 max-h-56 overflow-y-auto"
+              style={{
+                background: 'var(--app-card-bg)',
+                border: '1px solid var(--app-border)',
+                boxShadow: '0 12px 34px rgba(15,23,42,0.06)',
+              }}
+            >
+              <div className="text-[11px] px-1 mb-1" style={{ color: 'var(--app-muted)' }}>
+                全局匹配 · {globalFilteredRecords.length} 条
+              </div>
+              {globalFilteredRecords.slice(0, 15).map((sr) => (
+                <div
+                  key={sr.id}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:brightness-95"
+                  style={{
+                    background: sr.group_color + '12',
+                    border: `1px solid ${sr.group_color}20`,
+                  }}
+                  onClick={() => {
+                    setSearchQuery('');
+                    if (sr.tubes && sr.tubes.length > 0) {
+                      const locTube = sr.tubes.find(t => t.fridge_id && t.drawer_id);
+                      if (locTube?.fridge_id) {
+                        setSelectedFridgeId(locTube.fridge_id);
+                        if (locTube.drawer_id) {
+                          setSideMapNavTarget({ drawerId: locTube.drawer_id, drawerLabel: '' });
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>{sr.patient_name}</span>
+                    <span className="text-[11px] ml-2" style={{ color: 'var(--app-muted)' }}>{sr.sample_code}</span>
+                  </div>
+                  {sr.sample_type && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--app-subtle-bg)', color: 'var(--app-subtle-text)' }}>
+                      {sr.sample_type}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Loading state */}
+          {loading && !viewingContainer && (
+            <div
+              className="flex h-[200px] w-full items-center justify-center rounded-2xl"
+              style={{
+                background: 'var(--app-card-bg)',
+                border: '1px solid var(--app-border)',
+              }}
+            >
+              <span style={{ color: 'var(--app-muted)' }}>加载中...</span>
+            </div>
+          )}
+
+          {/* The fridge */}
+          {(!loading || viewingContainer) && selectedFridgeId && selectedFridge && (
+            selectedFridge.fridge_type === 'drawer' ? (
+              <DrawerFridgeView
+                fridge={selectedFridge}
+                currentUser={user!.username}
+                sampleTypes={sampleTypes}
+                onAddSampleType={handleAddSampleType}
+                itemTypes={itemTypes}
+                onAddItemType={handleAddItemType}
+                navigateToDrawer={sideMapNavTarget}
+                onNavigated={() => setSideMapNavTarget(null)}
+                pendingSamples={pendingSamples}
+                onPendingSamplesChange={setPendingSamples}
+                onImportComplete={handleImportComplete}
+                onBoxViewChange={setBoxViewTubes}
+                onBoxSamplePanelChange={setBoxSamplePanel}
+                onFridgeDataChange={setFridgeItems}
+                onDataChanged={() => {
+                  setSideMapRefreshKey((k) => k + 1);
+                  Promise.all([
+                    fetchSampleRecords({}).catch(() => []),
+                    fetchDrawers(selectedFridge!.id).catch(() => []),
+                    fetchUpperItems(selectedFridge!.id).catch(() => []),
+                  ]).then(([srData, drawerData, upperItemsData]) => {
+                    setSampleRecords(srData);
+                    setDrawerCount(drawerData.length);
+                    setDrawerBoxCount(drawerData.reduce((s: number, d: any) => s + (d.box_count ?? 0), 0));
+                    setDrawerMaxBoxes(drawerData.reduce((s: number, d: any) => s + (d.max_boxes ?? 5), 0));
+                    setDrawerLayers([...new Set(drawerData.map((d: any) => d.layer))].sort());
+                    const layerCounts: Record<number, number> = {};
+                    for (const d of drawerData) { layerCounts[d.layer] = (layerCounts[d.layer] || 0) + 1; }
+                    setDrawerLayerCounts(layerCounts);
+                    setUpperItemsCount(upperItemsData.length);
+                    setUpperItems(upperItemsData);
+                    setFridgeItems(upperItemsData);
+                  });
+                }}
+              />
+            ) : selectedFridge.fridge_type === 'shelf' && !viewingContainer ? (
+              <ShelfFridgeView
+                fridge={selectedFridge}
+                currentUsername={user!.username}
+                itemTypes={itemTypes}
+                onAddItemType={handleAddItemType}
+              />
+            ) : (
+              <FridgeUnit
+                samples={samples}
+                selectedSampleId={selectedSampleId}
+                matchedIds={matchedIds}
+                searchQuery={searchQuery}
+                compartmentGrids={compartmentGrids}
+                upperTemperature={selectedFridge?.upperTemperature ?? -80}
+                lowerTemperature={selectedFridge?.lowerTemperature ?? -80}
+                canManageFridge={isRoot}
+                viewingContainer={viewingContainer}
+                onDropSample={handleDrop}
+                onDeleteSample={handleDeleteSample}
+                onSlotClick={handleSlotClick}
+                onEnterContainer={handleEnterContainer}
+                onExitContainer={handleExitContainer}
+                onDropSubSample={handleDropSubSample}
+                onAddSubSample={handleOpenAddSubSample}
+                onDeleteSubSample={handleDeleteSubSample}
+                onUpdateCompartmentGrid={handleUpdateCompartmentGrid}
+                onUpdateContainerGrid={handleUpdateContainerGrid}
+              />
+            )
+          )}
+
+          {/* No fridge state */}
+          {!loading && !selectedFridgeId && (
+            <div
+              className="flex h-[200px] w-full flex-col items-center justify-center gap-4 rounded-2xl"
+              style={{
+                background: 'var(--app-card-bg)',
+                border: '1px solid var(--app-border)',
+              }}
+            >
+              <span style={{ color: 'var(--app-muted)' }}>
+                {isRoot ? '没有冰箱，请先创建一个' : '暂无可用冰箱，请联系 root 创建'}
+              </span>
+              {isRoot && (
+                <button
+                  onClick={() => handleAddFridge('主冰箱', '默认冰箱')}
+                  className="px-4 py-2 rounded-lg text-[14px]"
+                  style={{
+                    background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
+                    border: '1px solid #3b82f6',
+                    color: '#fff',
+                  }}
+                >
+                  创建默认冰箱
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── MOBILE: Floating action buttons ── */}
+          <div className="fixed bottom-6 right-4 flex flex-col gap-3 z-40">
+            {selectedFridge && selectedFridge.fridge_type === 'drawer' && (
+              <button
+                onClick={() => setMobileSideMapOpen(true)}
+                className="rounded-full flex items-center justify-center shadow-lg"
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  background: 'var(--app-card-bg)',
+                  border: '1px solid var(--app-border)',
+                  color: 'var(--app-text)',
+                }}
+              >
+                <Map size={20} />
+              </button>
+            )}
+            <button
+              onClick={() => setMobileStatsOpen(true)}
+              className="rounded-full flex items-center justify-center shadow-lg"
+              style={{
+                width: '48px',
+                height: '48px',
+                background: 'var(--app-card-bg)',
+                border: '1px solid var(--app-border)',
+                color: 'var(--app-text)',
+              }}
+            >
+              <BarChart3 size={20} />
+            </button>
+          </div>
+
+          {/* ── MOBILE: SideMap Sheet (left) ── */}
+          {selectedFridge && selectedFridge.fridge_type === 'drawer' && (
+            <Sheet open={mobileSideMapOpen} onOpenChange={setMobileSideMapOpen}>
+              <SheetContent side="left" className="w-[85vw] max-w-[360px] p-0 overflow-y-auto">
+                <SheetHeader className="px-4 py-3 border-b" style={{ borderColor: 'var(--app-border)' }}>
+                  <SheetTitle className="text-[15px]" style={{ color: 'var(--app-text)' }}>冰箱图</SheetTitle>
+                </SheetHeader>
+                <div className="p-3">
+                  <FridgeSideMap
+                    fridgeId={selectedFridge.id}
+                    fridgeName={selectedFridge.name}
+                    upperTemperature={selectedFridge.upperTemperature}
+                    lowerTemperature={selectedFridge.lowerTemperature}
+                    onDrawerClick={(drawerId, drawerLabel) => {
+                      setSideMapNavTarget({ drawerId, drawerLabel });
+                      setMobileSideMapOpen(false);
+                    }}
+                    refreshKey={sideMapRefreshKey}
+                  />
+                  <div className="mt-3">
+                    <PendingSamplesPanel
+                      samples={pendingSamples}
+                      onClear={() => setPendingSamples([])}
+                    />
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
+
+          {/* ── MOBILE: Stats Drawer (bottom) ── */}
+          <Drawer open={mobileStatsOpen} onOpenChange={setMobileStatsOpen}>
+            <DrawerContent className="max-h-[85vh]">
+              <div className="px-4 pb-8 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <StatsCard
+                    label="总容量"
+                    value={isDrawerFridge
+                      ? `${drawerBoxCount}/${drawerMaxBoxes}`
+                      : `${usedSlots}/${totalCapacity}`}
+                    sub={isDrawerFridge
+                      ? `使用率 ${drawerMaxBoxes > 0 ? Math.round((drawerBoxCount / drawerMaxBoxes) * 100) : 0}%`
+                      : `使用率 ${totalCapacity > 0 ? Math.round((usedSlots / totalCapacity) * 100) : 0}%`}
+                    color="#60a5fa"
+                  />
+                  <StatsCard
+                    label="上层"
+                    value={selectedFridge?.fridge_type === 'drawer'
+                      ? `${upperItemsCount} 件`
+                      : `${samples.filter((s) => s.compartment === 'upper').length}/${upperCapacity}`}
+                    sub="物品"
+                    color="#818cf8"
+                  />
+                  <StatsCard
+                    label="下层"
+                    value={selectedFridge?.fridge_type === 'drawer'
+                      ? `${drawerBoxCount}/${drawerMaxBoxes} 盒`
+                      : `${samples.filter((s) => s.compartment === 'lower').length}/${lowerCapacity}`}
+                    sub={selectedFridge?.fridge_type === 'drawer'
+                      ? drawerLayers.map(l => `${drawerLayerCounts[l] || 0}屉`).join(' + ') + ` · ${drawerCount}总计`
+                      : '下层存储'}
+                    color="#34d399"
+                  />
+                  <StatsCard
+                    label="异常警报"
+                    value={`${criticalCount + warningCount + criticalSubCount + warningSubCount}`}
+                    sub={`${criticalCount + criticalSubCount}严重 ${warningCount + warningSubCount}警告`}
+                    color={
+                      criticalCount + criticalSubCount > 0
+                        ? '#f87171'
+                        : warningCount + warningSubCount > 0
+                          ? '#fbbf24'
+                          : '#22c55e'
+                    }
+                    pulse={criticalCount + criticalSubCount > 0}
+                  />
+                </div>
+
+                {boxViewTubes.length === 0 ? (
+                  <>
+                    <div
+                      className="rounded-xl p-4 mb-3"
+                      style={{
+                        background: 'var(--app-card-bg)',
+                        border: '1px solid var(--app-border)',
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2">
+                          <Tags size={15} color="#38bdf8" />
+                          <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>上层物品类型</span>
+                        </div>
+                        <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>{upperItemTypeStats.length} 类</span>
+                      </div>
+                      {displayedUpperItemTypeStats.length > 0 ? (
+                        <div className="space-y-2">
+                          {displayedUpperItemTypeStats.map(({ type, count }) => {
+                            const cfg = getItemTypeConfig(type);
+                            return (
+                              <div key={type} className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
+                                <span
+                                  className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
+                                  title={type}
+                                  style={{
+                                    background: cfg.bgColor,
+                                    border: '1px solid ' + cfg.color + '30',
+                                    color: cfg.color,
+                                  }}
+                                >{cfg.label}</span>
+                                <span className="min-w-8 text-right text-[14px] font-mono" style={{ color: '#2563eb' }}>{count}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="rounded-lg px-3 py-4 text-center text-[13px]" style={{ background: 'var(--app-subtle-bg)', border: '1px dashed var(--app-subtle-border)', color: 'var(--app-muted)' }}>暂无物品</div>
+                      )}
+                    </div>
+                    <div
+                      className="rounded-xl p-4"
+                      style={{
+                        background: 'var(--app-card-bg)',
+                        border: '1px solid var(--app-border)',
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2">
+                          <Tags size={15} color="#38bdf8" />
+                          <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>样本类型</span>
+                        </div>
+                        <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>{sampleTypeStats.length} 类</span>
+                      </div>
+                      {displayedSampleTypeStats.length > 0 ? (
+                        <div className="space-y-2">
+                          {displayedSampleTypeStats.map(({ type, count }) => {
+                            const typeColor = getSampleTypeColor(type);
+                            return (
+                              <div key={type} className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: typeColor }} />
+                                <span
+                                  className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
+                                  title={type}
+                                  style={{
+                                    background: typeColor + '18',
+                                    border: `1px solid ${typeColor}30`,
+                                    color: 'var(--app-text)',
+                                  }}
+                                >{type}</span>
+                                <span className="min-w-8 text-right text-[14px] font-mono" style={{ color: '#2563eb' }}>{count}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="rounded-lg px-3 py-4 text-center text-[13px]" style={{ background: 'var(--app-subtle-bg)', border: '1px dashed var(--app-subtle-border)', color: 'var(--app-muted)' }}>暂无标签数据</div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div
+                      className="rounded-xl p-4 mb-3"
+                      style={{
+                        background: 'var(--app-card-bg)',
+                        border: '1px solid var(--app-border)',
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2">
+                          <Tags size={15} color="#38bdf8" />
+                          <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>当前盒子的样本类型</span>
+                        </div>
+                        <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>{boxTypeStats.length} 类</span>
+                      </div>
+                      {boxTypeStats.length > 0 ? (
+                        <div className="space-y-2">
+                          {boxTypeStats.slice(0, 8).map(({ type, count }) => {
+                            const typeColor = getSampleTypeColor(type);
+                            return (
+                              <div key={type} className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: typeColor }} />
+                                <span
+                                  className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
+                                  title={type}
+                                  style={{
+                                    background: typeColor + '18',
+                                    border: `1px solid ${typeColor}30`,
+                                    color: 'var(--app-text)',
+                                  }}
+                                >{type}</span>
+                                <span className="min-w-8 text-right text-[14px] font-mono" style={{ color: '#2563eb' }}>{count}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="rounded-lg px-3 py-4 text-center text-[13px]" style={{ background: 'var(--app-subtle-bg)', border: '1px dashed var(--app-subtle-border)', color: 'var(--app-muted)' }}>暂无标签数据</div>
+                      )}
+                    </div>
+                    {boxSamplePanel && boxSamplePanel.tubes.length > 0 && (
+                      <SampleListPanel
+                        tubes={boxSamplePanel.tubes}
+                        onTubeHover={boxSamplePanel.onTubeHover}
+                        onBatchEdit={boxSamplePanel.onBatchEdit}
+                        onSelectSample={boxSamplePanel.onSelectSample}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+            </DrawerContent>
+          </Drawer>
+
+          {/* ── MOBILE: DetailPanel Drawer (bottom) ── */}
+          <Drawer open={!!selectedDetailItem} onOpenChange={(open) => { if (!open) setSelectedSampleId(null); }}>
+            <DrawerContent className="max-h-[85vh]">
+              <DetailPanel
+                item={selectedDetailItem}
+                onClose={() => setSelectedSampleId(null)}
+                onStatusChange={handleStatusChange}
+                onDelete={(id, containerId) => {
+                  if (containerId) { handleDeleteSubSample(containerId, id); }
+                  else { handleDeleteSample(id); }
+                  setSelectedSampleId(null);
+                }}
+                onEdit={handleOpenEdit}
+                currentUser={user!.username}
+                isRoot={isRoot}
+              />
+            </DrawerContent>
+          </Drawer>
+        </main>
         ) : (
-    <main className="flex-1 flex gap-3 lg:gap-6 p-3 lg:p-6 overflow-auto items-start">
+    <main className="flex-1 flex gap-3 lg:gap-6 p-3 lg:p-6 overflow-auto items-start">{/* DESKTOP LAYOUT — UNCHANGED */}
           {/* ── Far Left: 2D Fridge Map + Pending Samples ── */}
           {selectedFridge && selectedFridge.fridge_type === 'drawer' && showSideMap && (
             <div className="flex flex-col gap-3 flex-shrink-0">
@@ -1084,7 +1668,7 @@ function AppContent() {
               />
               <PendingSamplesPanel
                 samples={pendingSamples}
-                
+
                 onClear={() => setPendingSamples([])}
               />
             </div>

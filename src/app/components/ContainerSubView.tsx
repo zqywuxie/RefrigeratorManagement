@@ -82,7 +82,7 @@ export function ContainerSubView({
   });
 
   return (
-    <div className="flex w-full max-w-[560px] flex-col items-center gap-4">
+    <div className="flex w-full max-w-full lg:max-w-[560px] flex-col items-center gap-4">
       {/* Breadcrumb */}
       <div
         className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5"
@@ -116,12 +116,11 @@ export function ContainerSubView({
 
       {/* Container interior */}
       <div
-        className="relative w-full rounded-2xl select-none"
+        className="relative w-full rounded-2xl select-none p-3 sm:p-4 lg:p-[24px_28px_28px_24px]"
         style={{
           background: isUpper ? 'var(--container-body-upper)' : 'var(--container-body-lower)',
           boxShadow: `0 20px 58px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.82), 0 0 6px ${config.glowColor}22`,
           border: `1.5px solid ${config.borderColor}35`,
-          padding: '24px 28px 28px 24px',
         }}
       >
         {/* Header */}
@@ -198,10 +197,11 @@ export function ContainerSubView({
             <div className="flex items-center gap-2">
               <Thermometer
                 size={18}
+                className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]"
                 color={hasWarning ? '#f59e0b' : config.color}
               />
               <span
-                className="text-[16px] font-mono tabular-nums"
+                className="text-[14px] sm:text-[16px] font-mono tabular-nums"
                 style={{ color: hasWarning ? '#f59e0b' : config.color }}
               >
                 {containerTemp}°C
@@ -227,6 +227,7 @@ export function ContainerSubView({
                   )
                 }
                 disabled={container.gridRows <= GRID_MIN}
+                className="min-h-[44px] min-w-[44px] lg:min-h-[22px] lg:min-w-[22px]"
                 style={btnStyle(container.gridRows <= GRID_MIN)}
               >
                 −
@@ -246,6 +247,7 @@ export function ContainerSubView({
                   )
                 }
                 disabled={container.gridRows >= GRID_MAX_ROWS}
+                className="min-h-[44px] min-w-[44px] lg:min-h-[22px] lg:min-w-[22px]"
                 style={btnStyle(container.gridRows >= GRID_MAX_ROWS)}
               >
                 +
@@ -264,6 +266,7 @@ export function ContainerSubView({
                   )
                 }
                 disabled={container.gridCols <= GRID_MIN}
+                className="min-h-[44px] min-w-[44px] lg:min-h-[22px] lg:min-w-[22px]"
                 style={btnStyle(container.gridCols <= GRID_MIN)}
               >
                 −
@@ -283,6 +286,7 @@ export function ContainerSubView({
                   )
                 }
                 disabled={container.gridCols >= GRID_MAX_COLS}
+                className="min-h-[44px] min-w-[44px] lg:min-h-[22px] lg:min-w-[22px]"
                 style={btnStyle(container.gridCols >= GRID_MAX_COLS)}
               >
                 +

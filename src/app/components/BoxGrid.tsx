@@ -128,7 +128,7 @@ export function BoxGrid({
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-1 text-[14px] hover:opacity-80"
+          className="flex items-center gap-1 text-[14px] hover:opacity-80 min-h-[44px]"
           style={{ color: '#60a5fa' }}
         >
           <ArrowLeft size={18} />
@@ -167,7 +167,7 @@ export function BoxGrid({
       </div>
 
       <div
-        className="rounded-xl p-4"
+        className="rounded-xl p-4 overflow-x-auto"
         style={{
           background: 'var(--app-card-bg)',
           border: '1px solid var(--app-border)',
@@ -175,7 +175,7 @@ export function BoxGrid({
         }}
       >
         <div
-          className="grid gap-1"
+          className="grid gap-1 min-w-max"
           style={{
             gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
             gridTemplateRows: `repeat(${rows}, auto)`,

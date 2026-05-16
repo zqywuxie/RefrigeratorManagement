@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { X, FlaskConical, Plus } from 'lucide-react';
+import { FlaskConical, Plus } from 'lucide-react';
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogFooter,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from './ui/responsive-dialog';
 import {
   Sample,
   SubSample,
@@ -240,90 +247,33 @@ export function AddSampleModal({
   const optionStyle: React.CSSProperties = { background: 'var(--app-card-bg)', color: 'var(--app-text)' };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-[60]"
-            style={{ background: 'rgba(15,23,42,0.28)', backdropFilter: 'blur(4px)' }}
-          />
-
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: -20 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
-            style={{ pointerEvents: 'none' }}
-          >
-            <div
-              className="rounded-2xl overflow-hidden w-full max-w-md flex flex-col"
-              style={{
-                maxHeight: '90vh',
-                background: 'var(--app-card-bg)',
-                border: isEdit
-                  ? `1.5px solid ${accentColor}55`
+    <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <ResponsiveDialogContent className="max-w-md">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>
+            <div className="flex items-center gap-2">
+              <FlaskConical size={24} color={accentColor} />
+              <span style={{ color: accentColor }}>
+                {isEdit
+                  ? editSample
+                    ? '编辑样本'
+                    : '编辑副样本'
                   : isSubSampleMode
-                    ? '1.5px solid rgba(167,139,250,0.35)'
-                    : '1.5px solid rgba(59,130,246,0.35)',
-                boxShadow: '0 24px 80px rgba(15,23,42,0.16)',
-                pointerEvents: 'all',
-              }}
-            >
-              {/* Modal header */}
-              <div
-                className="px-5 py-4 flex items-center justify-between"
-                style={{
-                  background: isEdit
-                    ? `linear-gradient(135deg, ${accentColor}22, var(--app-card-bg))`
-                    : isSubSampleMode
-                      ? 'linear-gradient(135deg, rgba(167,139,250,0.18), var(--app-card-bg))'
-                      : 'linear-gradient(135deg, rgba(219,234,254,0.18), var(--app-card-bg))',
-                  borderBottom: isEdit
-                    ? `1px solid ${accentColor}20`
-                    : isSubSampleMode
-                      ? '1px solid rgba(167,139,250,0.2)'
-                      : '1px solid rgba(59,130,246,0.2)',
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <FlaskConical size={24} color={accentColor} />
-                  <div>
-                    <div className="text-[20px]" style={{ color: accentColor }}>
-                      {isEdit
-                        ? editSample
-                          ? '编辑样本'
-                          : '编辑副样本'
-                        : isSubSampleMode
-                          ? '添加副样本'
-                          : '添加新样本'}
-                    </div>
-                    <div className="text-[14px]" style={labelStyle}>
-                      {isEdit
-                        ? `${editData!.id}`
-                        : isSubSampleMode && parentContainer
-                          ? `${parentContainer.id} 容器内 · 格位 ${targetPosition != null ? targetPosition + 1 : '—'}`
-                          : `${targetCompartment === 'upper' ? '上层' : '下层'} · 格位 ${targetPosition != null ? targetPosition + 1 : '—'}`}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-                  style={{ color: 'var(--app-subtle-text)' }}
-                >
-                  <X size={20} />
-                </button>
-              </div>
+                    ? '添加副样本'
+                    : '添加新样本'}
+              </span>
+            </div>
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
+            {isEdit
+              ? `${editData!.id}`
+              : isSubSampleMode && parentContainer
+                ? `${parentContainer.id} 容器内 · 格位 ${targetPosition != null ? targetPosition + 1 : '—'}`
+                : `${targetCompartment === 'upper' ? '上层' : '下层'} · 格位 ${targetPosition != null ? targetPosition + 1 : '—'}`}
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 overflow-y-auto">
                 {/* Name (only for edit mode) */}
                 {isEdit && (
                   <div>
@@ -334,14 +284,14 @@ export function AddSampleModal({
                       type="text"
                       value={form.name}
                       onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                      className="w-full px-3 py-2 rounded text-[16px] outline-none"
+                      className="w-full px-3 py-2 rounded text-[16px] sm:text-[14px] min-h-[44px] outline-none"
                       style={fieldStyle}
                     />
                   </div>
                 )}
 
                 {/* Type + Status row */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label
                       className="block text-[14px] mb-1"
@@ -357,7 +307,7 @@ export function AddSampleModal({
                           value={newTypeName}
                           onChange={(e) => setNewTypeName(e.target.value)}
                           autoFocus
-                          className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
+                          className="w-full px-2 py-1.5 rounded text-[16px] sm:text-[14px] outline-none min-h-[44px]"
                           style={fieldStyle}
                         />
                         <div className="flex gap-1">
@@ -371,7 +321,7 @@ export function AddSampleModal({
                                 setShowNewType(false);
                               }
                             }}
-                            className="flex-1 py-1 rounded text-[12px]"
+                            className="flex-1 py-1 rounded text-[12px] min-h-[44px]"
                             style={{
                               background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
                               color: '#ffffff',
@@ -382,7 +332,7 @@ export function AddSampleModal({
                           <button
                             type="button"
                             onClick={() => setShowNewType(false)}
-                            className="flex-1 py-1 rounded text-[12px]"
+                            className="flex-1 py-1 rounded text-[12px] min-h-[44px]"
                             style={{
                               background: 'var(--app-subtle-bg)',
                               border: '1px solid var(--app-subtle-border)',
@@ -403,7 +353,7 @@ export function AddSampleModal({
                               type: e.target.value as SampleType,
                             }))
                           }
-                          className="flex-1 px-3 py-2 rounded text-[16px] outline-none"
+                          className="flex-1 px-3 py-2 rounded text-[16px] sm:text-[14px] min-h-[44px] outline-none"
                           style={fieldStyle}
                         >
                           {sampleTypes.map((t) => (
@@ -415,7 +365,7 @@ export function AddSampleModal({
                         <button
                           type="button"
                           onClick={() => setShowNewType(true)}
-                          className="px-2 py-2 rounded text-[14px] flex items-center justify-center"
+                          className="px-2 py-2 rounded text-[14px] flex items-center justify-center min-h-[44px]"
                           style={{
                             background: 'var(--app-input-bg)',
                             border: '1px solid var(--app-input-border)',
@@ -443,7 +393,7 @@ export function AddSampleModal({
                           status: e.target.value as SampleStatus,
                         }))
                       }
-                      className="w-full px-3 py-2 rounded text-[16px] outline-none"
+                      className="w-full px-3 py-2 rounded text-[16px] sm:text-[14px] min-h-[44px] outline-none"
                       style={{
                         background: 'var(--app-input-bg)',
                         border: '1px solid var(--app-input-border)',
@@ -472,7 +422,7 @@ export function AddSampleModal({
                       type="text"
                       value={`${tempValue}°C`}
                       readOnly
-                      className="w-full px-3 py-2 rounded text-[16px] outline-none"
+                      className="w-full px-3 py-2 rounded text-[16px] sm:text-[14px] min-h-[44px] outline-none"
                       style={mutedFieldStyle}
                     />
                   </div>
@@ -490,7 +440,7 @@ export function AddSampleModal({
                     type="date"
                     value={form.collectedAt}
                     onChange={(e) => setForm((f) => ({ ...f, collectedAt: e.target.value }))}
-                    className="w-full px-3 py-2 rounded text-[16px] outline-none"
+                    className="w-full px-3 py-2 rounded text-[16px] sm:text-[14px] min-h-[44px] outline-none"
                     style={fieldStyle}
                   />
                 </div>
@@ -510,7 +460,7 @@ export function AddSampleModal({
                     onChange={(e) =>
                       setForm((f) => ({ ...f, patientId: e.target.value }))
                     }
-                    className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-500"
+                    className="w-full px-3 py-2 rounded text-[16px] sm:text-[14px] min-h-[44px] outline-none placeholder:text-slate-500"
                     style={fieldStyle}
                   />
                 </div>
@@ -530,13 +480,13 @@ export function AddSampleModal({
                     onChange={(e) =>
                       setForm((f) => ({ ...f, uploader: e.target.value }))
                     }
-                    className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-500"
+                    className="w-full px-3 py-2 rounded text-[16px] sm:text-[14px] min-h-[44px] outline-none placeholder:text-slate-500"
                     style={fieldStyle}
                   />
                 </div>
 
                 {/* Volume + Tags row */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label
                       className="block text-[14px] mb-1"
@@ -551,7 +501,7 @@ export function AddSampleModal({
                       onChange={(e) =>
                         setForm((f) => ({ ...f, volume: e.target.value }))
                       }
-                      className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-500"
+                      className="w-full px-3 py-2 rounded text-[16px] sm:text-[14px] min-h-[44px] outline-none placeholder:text-slate-500"
                       style={fieldStyle}
                     />
                   </div>
@@ -569,7 +519,7 @@ export function AddSampleModal({
                       onChange={(e) =>
                         setForm((f) => ({ ...f, tags: e.target.value }))
                       }
-                      className="w-full px-3 py-2 rounded text-[16px] outline-none placeholder:text-slate-500"
+                      className="w-full px-3 py-2 rounded text-[16px] sm:text-[14px] min-h-[44px] outline-none placeholder:text-slate-500"
                       style={fieldStyle}
                     />
                   </div>
@@ -590,7 +540,7 @@ export function AddSampleModal({
                     onChange={(e) =>
                       setForm((f) => ({ ...f, note: e.target.value }))
                     }
-                    className="w-full px-3 py-2 rounded text-[16px] outline-none resize-none placeholder:text-slate-500"
+                    className="w-full px-3 py-2 rounded text-[16px] sm:text-[14px] min-h-[44px] outline-none resize-none placeholder:text-slate-500"
                     style={fieldStyle}
                   />
                 </div>
@@ -621,12 +571,11 @@ export function AddSampleModal({
                   </span>
                 </div>
 
-                {/* Buttons */}
-                <div className="flex gap-2 pt-1">
+                <ResponsiveDialogFooter className="flex gap-2 pt-1">
                   <button
                     type="button"
                     onClick={onClose}
-                    className="flex-1 py-2.5 rounded text-[16px] transition-colors"
+                    className="flex-1 py-2.5 rounded text-[16px] sm:text-[14px] min-h-[44px] transition-colors"
                     style={{
                       background: 'var(--app-subtle-bg)',
                       border: '1px solid var(--app-subtle-border)',
@@ -637,7 +586,7 @@ export function AddSampleModal({
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2.5 rounded text-[16px] transition-all hover:brightness-110"
+                    className="flex-1 py-2.5 rounded text-[16px] sm:text-[14px] min-h-[44px] transition-all hover:brightness-110"
                     style={{
                       background: isEdit
                         ? `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`
@@ -659,12 +608,9 @@ export function AddSampleModal({
                         ? '添加副样本'
                         : '确认添加'}
                   </button>
-                </div>
-              </form>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+                </ResponsiveDialogFooter>
+        </form>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

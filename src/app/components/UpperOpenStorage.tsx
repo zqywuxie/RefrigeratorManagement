@@ -59,7 +59,7 @@ export function UpperOpenStorage({
             <button
               key={t}
               onClick={() => setFilterType(t)}
-              className="text-[11px] px-2 py-1 rounded-full transition-all"
+              className="text-[11px] px-2 py-1 rounded-full transition-all min-h-[44px] flex items-center"
               style={{
                 background: filterType === t
                   ? t === 'all'
@@ -81,7 +81,7 @@ export function UpperOpenStorage({
       </div>
 
       <div
-        className="flex items-center gap-2 rounded-lg px-3 py-2"
+        className="flex items-center gap-2 rounded-lg px-3 py-2 min-h-[44px]"
         style={{
           background: 'var(--app-input-bg)',
           border: '1px solid var(--app-input-border)',
@@ -109,13 +109,13 @@ export function UpperOpenStorage({
             </span>
             <button
               onClick={() => onAddItem(row)}
-              className="flex items-center gap-1 text-[12px] px-2 py-1 rounded-lg hover:opacity-80"
+              className="flex items-center gap-1 text-[12px] px-2 py-1 rounded-lg hover:opacity-80 min-h-[44px]"
               style={{ color: '#2563eb' }}
             >
               <Plus size={14} />添加
             </button>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pb-2">
             {rowItems.map((item) => (
                 <ItemCard
                   key={item.id}
@@ -129,10 +129,8 @@ export function UpperOpenStorage({
             <motion.button
               whileHover={{ scale: 1.03 }}
               onClick={() => onAddItem(row)}
-              className="flex-shrink-0 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 cursor-pointer"
+              className="rounded-xl border-2 border-dashed flex items-center justify-center gap-2 cursor-pointer min-h-[88px]"
               style={{
-                width: '200px',
-                height: '88px',
                 borderColor: 'var(--slot-empty-border)',
                 background: 'var(--slot-empty-bg)',
                 color: 'var(--app-muted)',

@@ -112,7 +112,7 @@ export function BoxView({
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-1 text-[14px] hover:opacity-80"
+          className="flex items-center gap-1 text-[14px] hover:opacity-80 min-h-[44px]"
           style={{ color: '#60a5fa' }}
         >
           <ArrowLeft size={18} />
@@ -126,7 +126,7 @@ export function BoxView({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setShowInsertMenu((value) => !value)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[14px]"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[14px] min-h-[44px]"
             style={{
               background: 'var(--app-panel-bg)',
               border: '1px solid var(--app-border)',
@@ -153,7 +153,7 @@ export function BoxView({
                     onAddPosition(position);
                     setShowInsertMenu(false);
                   }}
-                  className="w-full rounded-lg px-3 py-2 text-left text-[13px] hover:bg-slate-100"
+                  className="w-full rounded-lg px-3 py-2 text-left text-[13px] hover:bg-slate-100 min-h-[44px]"
                   style={{ color: 'var(--app-text)' }}
                 >
                   插入到第 {position + 1} 位
@@ -186,7 +186,7 @@ export function BoxView({
           </span>
         </div>
 
-        <div className="flex flex-col gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
           {Array.from({ length: capacity }, (_, position) => {
             const box = getBoxAt(position);
             return (

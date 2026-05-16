@@ -52,7 +52,7 @@ export function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
+      className="min-h-dvh flex items-center justify-center px-4"
       style={{
         background: 'var(--app-bg)',
         color: 'var(--app-text)',
@@ -123,7 +123,7 @@ export function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={isRegister ? '3-32 位字母、数字、_ 或 -' : '请输入用户名'}
-              className="w-full rounded-lg border px-3 py-2.5 outline-none"
+              className="w-full rounded-lg border px-3 py-2.5 outline-none text-[16px] min-h-[44px]"
               style={{ borderColor: 'var(--app-input-border)', background: 'var(--app-input-bg)', color: 'var(--app-text)' }}
             />
           </div>
@@ -135,7 +135,7 @@ export function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border px-3 py-2.5 outline-none"
+              className="w-full rounded-lg border px-3 py-2.5 outline-none text-[16px] min-h-[44px]"
               style={{ borderColor: 'var(--app-input-border)', background: 'var(--app-input-bg)', color: 'var(--app-text)' }}
             />
           </div>
@@ -148,14 +148,14 @@ export function LoginPage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full rounded-lg border px-3 py-2.5 outline-none"
+                className="w-full rounded-lg border px-3 py-2.5 outline-none text-[16px] min-h-[44px]"
                 style={{ borderColor: 'var(--app-input-border)', background: 'var(--app-input-bg)', color: 'var(--app-text)' }}
               />
             </div>
           )}
           <button
             disabled={loading}
-            className="w-full rounded-lg py-2.5 flex items-center justify-center gap-2 text-white"
+            className="w-full rounded-lg py-2.5 flex items-center justify-center gap-2 text-white min-h-[48px]"
             style={{ background: loading ? '#94a3b8' : '#2563eb' }}
           >
             {isRegister ? <UserPlus size={17} /> : <Lock size={17} />}

@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Plus, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Box, BoxMode, BOX_GRID_PRESETS, boxPositionToLabel } from '../types';
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogFooter,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from './ui/responsive-dialog';
 
 interface AddBoxModalProps {
   isOpen: boolean;
@@ -89,229 +96,193 @@ export function AddBoxModal({
     color: 'var(--app-text)',
   };
 
+  const title = editBox ? '编辑盒子' : '添加盒子';
+  const subtitle = `抽屉外部：${drawerLabel || '—'} · 抽屉内部：${targetPosition != null ? boxPositionToLabel(targetPosition) : '—'}`;
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={onClose}
+    <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <ResponsiveDialogContent className="max-w-md">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>{title}</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>{subtitle}</ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="盒子名称"
+            autoFocus
+            className="w-full px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
+            style={fieldStyle}
           />
-          <motion.form
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            onSubmit={handleSubmit}
-            className="relative z-10 w-full max-w-md rounded-2xl p-6 space-y-4"
-            style={{
-              background: 'var(--app-header-bg)',
-              border: '1px solid var(--app-border)',
-              boxShadow: '0 24px 60px rgba(15,23,42,0.25)',
-              backdropFilter: 'blur(12px)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-[18px]" style={{ color: 'var(--app-text)' }}>
-                  {editBox ? '编辑盒子' : '添加盒子'}
-                </h3>
-                <p className="text-[12px] mt-0.5" style={{ color: 'var(--app-muted)' }}>
-                  抽屉外部：{drawerLabel || '—'} · 抽屉内部：
-                  {targetPosition != null ? boxPositionToLabel(targetPosition) : '—'}
-                </p>
-              </div>
-              <button type="button" onClick={onClose}>
-                <X size={18} color="var(--app-muted)" />
+
+          <div className="flex gap-2">
+            {(['simple', 'precise'] as BoxMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className="flex-1 py-2 rounded-lg text-[14px] transition-all min-h-[44px]"
+                style={{
+                  background: mode === m ? '#2563eb' : 'var(--app-panel-bg)',
+                  color: mode === m ? '#fff' : 'var(--app-muted)',
+                  border: mode === m ? '1px solid #3b82f6' : '1px solid var(--app-border)',
+                }}
+              >
+                {m === 'precise' ? '精细样本' : '简略模式'}
               </button>
-            </div>
+            ))}
+          </div>
 
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="盒子名称"
-              autoFocus
-              className="w-full px-3 py-2 rounded-lg text-[14px] outline-none"
-              style={fieldStyle}
-            />
-
-            <div className="flex gap-2">
-              {(['simple', 'precise'] as BoxMode[]).map((m) => (
+          {mode === 'precise' && (
+            <div className="flex gap-2 flex-wrap">
+              {BOX_GRID_PRESETS.map((preset, i) => (
                 <button
-                  key={m}
+                  key={preset.label}
                   type="button"
-                  onClick={() => setMode(m)}
-                  className="flex-1 py-2 rounded-lg text-[14px] transition-all"
+                  onClick={() => setGridPreset(i)}
+                  className="text-[12px] px-3 py-1 rounded-lg transition-all min-h-[44px]"
                   style={{
-                    background: mode === m ? '#2563eb' : 'var(--app-panel-bg)',
-                    color: mode === m ? '#fff' : 'var(--app-muted)',
-                    border: mode === m ? '1px solid #3b82f6' : '1px solid var(--app-border)',
+                    background: gridPreset === i ? '#dbeafe' : 'var(--app-panel-bg)',
+                    color: gridPreset === i ? '#1d4ed8' : 'var(--app-muted)',
+                    border: gridPreset === i ? '1px solid #3b82f6' : '1px solid var(--app-border)',
                   }}
                 >
-                  {m === 'precise' ? '精细样本' : '简略模式'}
+                  {preset.label}
                 </button>
               ))}
             </div>
+          )}
 
-            {mode === 'precise' && (
-              <div className="flex gap-2 flex-wrap">
-                {BOX_GRID_PRESETS.map((preset, i) => (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    onClick={() => setGridPreset(i)}
-                    className="text-[12px] px-3 py-1 rounded-lg transition-all"
-                    style={{
-                      background: gridPreset === i ? '#dbeafe' : 'var(--app-panel-bg)',
-                      color: gridPreset === i ? '#1d4ed8' : 'var(--app-muted)',
-                      border: gridPreset === i ? '1px solid #3b82f6' : '1px solid var(--app-border)',
-                    }}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {mode === 'precise' && BOX_GRID_PRESETS[gridPreset].label === '自定义' && (
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={customRows}
-                  onChange={(e) => setCustomRows(Number(e.target.value))}
-                  placeholder="行数"
-                  className="px-3 py-2 rounded-lg text-[14px] outline-none"
-                  style={fieldStyle}
-                />
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={customCols}
-                  onChange={(e) => setCustomCols(Number(e.target.value))}
-                  placeholder="列数"
-                  className="px-3 py-2 rounded-lg text-[14px] outline-none"
-                  style={fieldStyle}
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                {showNewType ? (
-                  <div className="flex gap-1">
-                    <input
-                      value={newTypeName}
-                      onChange={(e) => setNewTypeName(e.target.value)}
-                      placeholder="新样本类型"
-                      autoFocus
-                      className="min-w-0 flex-1 px-3 py-2 rounded-lg text-[14px] outline-none"
-                      style={fieldStyle}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const nextType = newTypeName.trim();
-                        if (!nextType) return;
-                        onAddSampleType(nextType);
-                        setSampleType(nextType);
-                        setNewTypeName('');
-                        setShowNewType(false);
-                      }}
-                      className="px-2 rounded-lg text-[12px]"
-                      style={{ background: '#2563eb', color: '#fff' }}
-                    >
-                      添加
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-1">
-                    <select
-                      value={sampleType}
-                      onChange={(e) => setSampleType(e.target.value)}
-                      className="min-w-0 flex-1 px-3 py-2 rounded-lg text-[14px] outline-none"
-                      style={fieldStyle}
-                    >
-                      {sampleTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => setShowNewType(true)}
-                      className="px-2 rounded-lg"
-                      title="添加样本类型"
-                      style={{
-                        background: 'var(--app-panel-bg)',
-                        border: '1px solid var(--app-border)',
-                        color: '#2563eb',
-                      }}
-                    >
-                      <Plus size={15} />
-                    </button>
-                  </div>
-                )}
-              </div>
+          {mode === 'precise' && BOX_GRID_PRESETS[gridPreset].label === '自定义' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                placeholder="项目名称"
-                className="px-3 py-2 rounded-lg text-[14px] outline-none"
+                type="number"
+                min={1} max={20}
+                value={customRows}
+                onChange={(e) => setCustomRows(Number(e.target.value))}
+                placeholder="行数"
+                className="px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
+                style={fieldStyle}
+              />
+              <input
+                type="number"
+                min={1} max={20}
+                value={customCols}
+                onChange={(e) => setCustomCols(Number(e.target.value))}
+                placeholder="列数"
+                className="px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
                 style={fieldStyle}
               />
             </div>
+          )}
 
-            <input
-              value={owner}
-              onChange={(e) => setOwner(e.target.value)}
-              placeholder="负责人"
-              className="w-full px-3 py-2 rounded-lg text-[14px] outline-none"
-              style={fieldStyle}
-            />
-
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="备注（选填）"
-              rows={2}
-              className="w-full px-3 py-2 rounded-lg text-[14px] outline-none resize-none"
-              style={fieldStyle}
-            />
-
-            <input
-              value={dataPath}
-              onChange={(e) => setDataPath(e.target.value)}
-              placeholder="数据路径（选填，如 /data/project/sample/、s3://bucket/）"
-              className="w-full px-3 py-2 rounded-lg text-[14px] outline-none"
-              style={fieldStyle}
-            />
-
-            <div className="flex gap-2 justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-lg text-[14px]"
-                style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)', border: '1px solid var(--app-border)' }}
-              >
-                取消
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-lg text-[14px]"
-                style={{ background: '#2563eb', color: '#fff' }}
-              >
-                保存
-              </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              {showNewType ? (
+                <div className="flex gap-1">
+                  <input
+                    value={newTypeName}
+                    onChange={(e) => setNewTypeName(e.target.value)}
+                    placeholder="新样本类型"
+                    autoFocus
+                    className="min-w-0 flex-1 px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
+                    style={fieldStyle}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextType = newTypeName.trim();
+                      if (!nextType) return;
+                      onAddSampleType(nextType);
+                      setSampleType(nextType);
+                      setNewTypeName('');
+                      setShowNewType(false);
+                    }}
+                    className="px-2 rounded-lg text-[12px] min-h-[44px]"
+                    style={{ background: '#2563eb', color: '#fff' }}
+                  >添加</button>
+                </div>
+              ) : (
+                <div className="flex gap-1">
+                  <select
+                    value={sampleType}
+                    onChange={(e) => setSampleType(e.target.value)}
+                    className="min-w-0 flex-1 px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
+                    style={fieldStyle}
+                  >
+                    {sampleTypes.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewType(true)}
+                    className="px-2 rounded-lg min-h-[44px]"
+                    title="添加样本类型"
+                    style={{
+                      background: 'var(--app-panel-bg)',
+                      border: '1px solid var(--app-border)',
+                      color: '#2563eb',
+                    }}
+                  >
+                    <Plus size={15} />
+                  </button>
+                </div>
+              )}
             </div>
-          </motion.form>
-        </div>
-      )}
-    </AnimatePresence>
+            <input
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              placeholder="项目名称"
+              className="px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
+              style={fieldStyle}
+            />
+          </div>
+
+          <input
+            value={owner}
+            onChange={(e) => setOwner(e.target.value)}
+            placeholder="负责人"
+            className="w-full px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
+            style={fieldStyle}
+          />
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="备注（选填）"
+            rows={2}
+            className="w-full px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none resize-none"
+            style={fieldStyle}
+          />
+          <input
+            value={dataPath}
+            onChange={(e) => setDataPath(e.target.value)}
+            placeholder="数据路径（选填，如 /data/project/sample/、s3://bucket/）"
+            className="w-full px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
+            style={fieldStyle}
+          />
+
+          <ResponsiveDialogFooter>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-[14px] min-h-[44px]"
+              style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)', border: '1px solid var(--app-border)' }}
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg text-[14px] min-h-[44px]"
+              style={{ background: '#2563eb', color: '#fff' }}
+            >
+              保存
+            </button>
+          </ResponsiveDialogFooter>
+        </form>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

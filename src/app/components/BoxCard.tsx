@@ -73,7 +73,7 @@ export function BoxCard({ box, onClick, onDelete, canDelete = true }: BoxCardPro
         {canDelete && (
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(box.id); }}
-            className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors"
+            className="flex-shrink-0 w-7 h-7 min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors"
             style={{ color: '#f87171' }}
             title="删除盒子"
           >

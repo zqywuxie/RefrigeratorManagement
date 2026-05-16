@@ -69,6 +69,7 @@ export function CellSlot({
       className="relative w-full flex flex-col items-center justify-center gap-0.5 cursor-pointer overflow-hidden"
       style={{
         aspectRatio: '1 / 1',
+        minHeight: '44px',
         borderRadius: '6px',
         border,
         background,

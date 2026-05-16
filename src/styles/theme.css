@@ -287,3 +287,8 @@
     line-height: 1.5;
   }
 }
+
+@utility touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}

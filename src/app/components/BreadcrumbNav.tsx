@@ -13,7 +13,7 @@ interface BreadcrumbNavProps {
 export function BreadcrumbNav({ nodes }: BreadcrumbNavProps) {
   return (
     <nav
-      className="flex items-center gap-1.5 px-4 py-3 rounded-xl text-[14px]"
+      className="flex items-center gap-1.5 px-4 py-3 rounded-xl text-[14px] overflow-x-auto"
       style={{
         background: 'var(--app-card-bg)',
         border: '1px solid var(--app-border)',

@@ -7,6 +7,7 @@ import {
   DRAWER_LAYER1, DRAWER_LAYER2, getItemTypeConfig,
 } from '../types';
 import { fetchUpperItems, fetchDrawers, fetchBoxes } from '../api';
+import { useIsMobile } from './ui/use-mobile';
 
 interface FridgeSideMapProps {
   fridgeId: string;
@@ -177,6 +178,7 @@ export function FridgeSideMap({
   const overallRate = totalCapacity > 0 ? Math.round((totalBoxes / totalCapacity) * 100) : 0;
 
   const [width, setWidth] = useState(240);
+  const isMobile = useIsMobile();
   const resizeRef = React.useRef<HTMLDivElement>(null);
   const isResizing = React.useRef(false);
 
@@ -352,18 +354,20 @@ export function FridgeSideMap({
         </div>
       </div>
 
-      {/* Resize handle */}
-      <div
-        ref={resizeRef}
-        onMouseDown={handleResizeStart}
-        className="absolute top-0 bottom-0 right-0 w-2 cursor-col-resize opacity-0 group-hover/sidemap:opacity-100 transition-opacity z-10"
-        style={{
-          background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.3))',
-          transform: 'translateX(50%)',
-        }}
-      >
-        <div className="absolute top-1/2 -translate-y-1/2 right-0 w-0.5 h-12 rounded" style={{ background: '#2563eb60' }} />
-      </div>
+      {/* Resize handle — desktop only */}
+      {!isMobile && (
+        <div
+          ref={resizeRef}
+          onMouseDown={handleResizeStart}
+          className="absolute top-0 bottom-0 right-0 w-2 cursor-col-resize opacity-0 group-hover/sidemap:opacity-100 transition-opacity z-10"
+          style={{
+            background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.3))',
+            transform: 'translateX(50%)',
+          }}
+        >
+          <div className="absolute top-1/2 -translate-y-1/2 right-0 w-0.5 h-12 rounded" style={{ background: '#2563eb60' }} />
+        </div>
+      )}
 
       {/* Legend */}
       <div

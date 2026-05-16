@@ -27,7 +27,7 @@ export function DrawerLayer({ label, rows, cols, drawers, onDrawerClick, variant
         {label}
       </h3>
       <div
-        className="grid gap-2.5"
+        className="grid gap-2.5 overflow-x-auto"
         style={{
           gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${rows}, auto)`,

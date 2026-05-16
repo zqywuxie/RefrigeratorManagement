@@ -93,7 +93,7 @@ export function SampleSlot({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="w-full h-full flex items-center justify-center group/add"
+            className="w-full h-full flex items-center justify-center group/add min-h-[44px] min-w-[44px]"
             onClick={() => onAddClick(compartment, position)}
             title="点击添加样本"
           >

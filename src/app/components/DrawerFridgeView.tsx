@@ -698,7 +698,7 @@ export function DrawerFridgeView({
   }
 
   return (
-    <div className="flex flex-col gap-5 w-full" style={{ maxWidth: '100%' }}>
+    <div className="flex flex-col gap-5 w-full max-w-full lg:max-w-[860px]">
       <BreadcrumbNav nodes={breadcrumbNodes} />
 
       <AnimatePresence mode="wait">
@@ -711,7 +711,7 @@ export function DrawerFridgeView({
             className="flex flex-col gap-4"
           >
             <div
-              className="grid grid-cols-3 gap-2 rounded-xl p-1"
+              className="flex overflow-x-auto flex-shrink-0 gap-2 rounded-xl p-1"
               style={{
                 background: 'var(--app-input-bg)',
                 border: '1px solid var(--app-input-border)',
@@ -722,7 +722,7 @@ export function DrawerFridgeView({
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveMainTab(tab.key)}
-                  className="rounded-lg px-3 py-2 text-[14px] transition-all"
+                  className="flex-shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-[14px] transition-all min-h-[44px]"
                   style={{
                     background: activeMainTab === tab.key ? '#2563eb' : 'transparent',
                     color: activeMainTab === tab.key ? '#fff' : 'var(--app-muted)',
@@ -836,7 +836,7 @@ export function DrawerFridgeView({
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <div
-                    className="flex items-center gap-2 rounded-lg px-3 py-2 flex-1 min-w-0"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 flex-1 min-w-0 min-h-[44px]"
                     style={{
                       background: 'var(--app-input-bg)',
                       border: '1px solid var(--app-input-border)',
@@ -847,7 +847,7 @@ export function DrawerFridgeView({
                       placeholder="搜索样本条码、姓名、编号..."
                       value={searchCellQuery}
                       onChange={(e) => setSearchCellQuery(e.target.value)}
-                      className="flex-1 bg-transparent outline-none text-[14px]"
+                      className="flex-1 bg-transparent outline-none text-[14px] min-h-[44px]"
                       style={{ color: 'var(--app-text)' }}
                     />
                     {searchCellQuery && (
@@ -866,7 +866,7 @@ export function DrawerFridgeView({
                         setSelectedPositions(new Set());
                       }
                     }}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] transition-all"
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] transition-all min-h-[44px]"
                     style={{
                       background: multiSelectMode ? '#2563eb' : 'var(--app-panel-bg)',
                       border: multiSelectMode ? '1px solid #3b82f6' : '1px solid var(--app-border)',
@@ -884,7 +884,7 @@ export function DrawerFridgeView({
                       setEditSampleRecord(null);
                       setShowSampleModal(true);
                     }}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px]"
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
                     style={{
                       background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
                       border: '1px solid #3b82f6',
@@ -896,7 +896,7 @@ export function DrawerFridgeView({
                   <button
                     type="button"
                     onClick={() => setShowImportModal(true)}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px]"
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
                     style={{
                       background: 'linear-gradient(135deg, #059669, #10b981)',
                       border: '1px solid #34d399',
@@ -912,7 +912,7 @@ export function DrawerFridgeView({
                         <PopoverTrigger asChild>
                           <button
                             type="button"
-                            className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
+                            className="flex h-9 w-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg transition-colors"
                             style={{
                               background: 'var(--app-panel-bg)',
                               border: '1px solid var(--app-border)',
@@ -1003,7 +1003,7 @@ export function DrawerFridgeView({
                 <div className="flex items-center justify-between">
                   <button
                     onClick={handleBackToDrawer}
-                    className="flex items-center gap-1 text-[14px] hover:opacity-80"
+                    className="flex items-center gap-1 text-[14px] hover:opacity-80 min-h-[44px]"
                     style={{ color: '#60a5fa' }}
                   >
                     返回盒子列表
