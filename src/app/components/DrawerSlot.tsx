@@ -33,11 +33,11 @@ export function DrawerSlot({ drawer, onClick, variant = 'standard' }: DrawerSlot
         onMouseLeave={() => setIsHovered(false)}
         className="relative rounded-xl flex flex-col items-center justify-center gap-1.5 cursor-pointer overflow-hidden w-full"
         style={{
-          aspectRatio: isCompact ? '2.35 / 1' : '1 / 1',
+          aspectRatio: isCompact ? '2.1 / 1' : '1 / 1',
           background: oc.bg,
           border: `1.5px solid ${oc.border}`,
           boxShadow: isHovered ? `0 8px 24px ${oc.border}40` : '0 4px 16px rgba(15,23,42,0.06)',
-          minHeight: isCompact ? 54 : 92,
+          minHeight: isCompact ? 68 : 92,
         }}
       >
         <div

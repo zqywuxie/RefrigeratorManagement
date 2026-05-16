@@ -15,11 +15,24 @@ import upperItemsRouter from './routes/upperItems.js';
 import sampleRecordsRouter from './routes/sampleRecords.js';
 import importRouter from './routes/import.js';
 import { runSchemaMigrations } from './schemaMigrations.js';
+import pool from './db.js';
 
 dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.get('/api/health', async (_req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.status(200).json({ status: 'ok' });
+  } catch (err) {
+    res.status(503).json({
+      status: 'degraded',
+      error: err instanceof Error ? err.message : 'Database unavailable',
+    });
+  }
+});
 
 app.use('/api/refrigerators', refrigeratorsRouter);
 app.use('/api/refrigerators', samplesRouter);
@@ -38,10 +51,16 @@ app.use('/api/sample-records', sampleRecordsRouter);
 app.use('/api/import', importRouter);
 
 const PORT = process.env.PORT || 3001;
-runSchemaMigrations()
-  .catch((err) => {
-    console.warn('Schema migration skipped:', err.message);
-  })
-  .finally(() => {
+
+async function start() {
+  try {
+    await runSchemaMigrations();
+    console.log('Schema migrations completed.');
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  });
+  } catch (err) {
+    console.error('Failed to start server:', err instanceof Error ? err.message : err);
+    process.exit(1);
+  }
+}
+
+start();

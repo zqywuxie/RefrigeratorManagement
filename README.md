@@ -235,16 +235,30 @@ docker compose up -d --build
 
 # 后续更新
 git pull origin main
-docker compose up -d --build
+docker compose up -d --build --remove-orphans
 ```
 
 - 后端启动时自动执行结构迁移和 root 账号兜底创建
+- 后端如果迁移失败或数据库不可用，会直接退出并由 Docker 自动重启，不再带病启动
 - 只要未删除 `mysql_data` volume，`docker compose up -d --build` 不会覆盖现有数据
 - 不要执行 `docker compose down -v`，也不要在生产环境运行 `npm run seed`
 - 仅在本地测试环境需要模拟数据时，才执行：
 
 ```bash
 docker compose exec -T -e SEED_DEMO_DATA=true backend npm run seed
+```
+
+### 部署健康检查
+
+```bash
+# 查看容器健康状态
+docker compose ps
+
+# 前端健康检查
+curl http://localhost:${FRONTEND_PORT:-80}/healthz
+
+# 后端健康检查
+docker compose exec backend node -e "fetch('http://127.0.0.1:3001/api/health').then(r => r.text().then(t => console.log(r.status, t)))"
 ```
 
 ### 数据库备份

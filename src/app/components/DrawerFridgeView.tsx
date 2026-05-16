@@ -10,7 +10,7 @@ import {
   addTubesToSample, deleteTube, batchUpdateSampleRecords,
   fetchSampleRecord,
 } from '../api';
-import { CircleHelp, FolderOpen, FileSpreadsheet } from 'lucide-react';
+import { CircleHelp, FolderOpen, FileSpreadsheet, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { BreadcrumbNav, BreadcrumbNode } from './BreadcrumbNav';
 import { UpperOpenStorage } from './UpperOpenStorage';
 import { DrawerLayer } from './DrawerLayer';
@@ -28,6 +28,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 type ViewLevel = 'fridge' | 'drawer' | 'box';
 type MainTab = 'upper' | 'lowerTop' | 'lowerBottom';
+const BOX_GRID_PAGE_ROWS = 5;
 
 interface DrawerFridgeViewProps {
   fridge: Refrigerator;
@@ -38,6 +39,13 @@ interface DrawerFridgeViewProps {
   onAddItemType: (name: string) => void;
   navigateToDrawer?: { drawerId: string; drawerLabel: string } | null;
   onNavigated?: () => void;
+  navigateToSampleRecord?: {
+    sampleId: string;
+    drawerId: string;
+    drawerLabel: string;
+    boxId: string;
+  } | null;
+  onSampleRecordNavigated?: () => void;
   pendingSamples?: PendingImportSample[];
   onPendingSamplesChange?: (samples: PendingImportSample[]) => void;
   onImportComplete?: (samples: PendingImportSample[]) => void;
@@ -61,6 +69,8 @@ export function DrawerFridgeView({
   onAddItemType,
   navigateToDrawer,
   onNavigated,
+  navigateToSampleRecord,
+  onSampleRecordNavigated,
   pendingSamples = [],
   onPendingSamplesChange,
   onImportComplete,
@@ -111,6 +121,13 @@ export function DrawerFridgeView({
   // Batch edit modal
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [batchSampleIds, setBatchSampleIds] = useState<string[]>([]);
+  const [currentBoxPage, setCurrentBoxPage] = useState(0);
+  const [pendingSampleNavigation, setPendingSampleNavigation] = useState<{
+    sampleId: string;
+    drawerId: string;
+    drawerLabel: string;
+    boxId: string;
+  } | null>(null);
 
   // Handle external navigation from side map
   useEffect(() => {
@@ -130,6 +147,26 @@ export function DrawerFridgeView({
     }
     onNavigated?.();
   }, [navigateToDrawer, drawers, onNavigated]);
+
+  useEffect(() => {
+    if (!navigateToSampleRecord) return;
+    setPendingSampleNavigation(navigateToSampleRecord);
+    onSampleRecordNavigated?.();
+  }, [navigateToSampleRecord, onSampleRecordNavigated]);
+
+  useEffect(() => {
+    if (!pendingSampleNavigation) return;
+    const drawer = drawers.find((d) => d.id === pendingSampleNavigation.drawerId);
+    if (!drawer) return;
+    setSelectedDrawerId(drawer.id);
+    setSelectedDrawerLabel(drawer.label || pendingSampleNavigation.drawerLabel);
+    setSelectedBoxId(null);
+    setSelectedBox(null);
+    setViewLevel('drawer');
+    setSearchCellQuery('');
+    setTargetBoxPosition(null);
+    setActiveMainTab(drawer.layer === 1 ? 'lowerTop' : 'lowerBottom');
+  }, [pendingSampleNavigation, drawers]);
 
   useEffect(() => {
     setLoading(true);
@@ -153,9 +190,19 @@ export function DrawerFridgeView({
   }, [selectedDrawerId]);
 
   useEffect(() => {
+    if (!pendingSampleNavigation || selectedDrawerId !== pendingSampleNavigation.drawerId) return;
+    const box = boxes.find((candidate) => candidate.id === pendingSampleNavigation.boxId) || null;
+    if (!box) return;
+    setSelectedBoxId(box.id);
+    setSelectedBox(box);
+    setViewLevel('box');
+  }, [pendingSampleNavigation, selectedDrawerId, boxes]);
+
+  useEffect(() => {
     if (!selectedBox || selectedBox.mode !== 'precise') {
       setCells([]);
       setTubes([]);
+      setCurrentBoxPage(0);
       return;
     }
     // Load tubes for all boxes (upper item boxes now have FK-safe box records)
@@ -176,10 +223,43 @@ export function DrawerFridgeView({
           .catch(() => setCells([]));
       });
     // Reset multi-select on box change
+    setCurrentBoxPage(0);
     setMultiSelectMode(false);
     setSelectedPositions(new Set());
     setHoveredSampleId(null);
   }, [selectedBox]);
+
+  const preciseBoxRows = selectedBox?.mode === 'precise' ? selectedBox.grid_rows || 10 : 0;
+  const boxPageCount = preciseBoxRows > 0 ? Math.max(1, Math.ceil(preciseBoxRows / BOX_GRID_PAGE_ROWS)) : 1;
+  const visibleRowStart = currentBoxPage * BOX_GRID_PAGE_ROWS;
+  const visibleRowEnd = Math.min(visibleRowStart + BOX_GRID_PAGE_ROWS - 1, Math.max(preciseBoxRows - 1, 0));
+
+  useEffect(() => {
+    if (currentBoxPage >= boxPageCount) {
+      setCurrentBoxPage(Math.max(0, boxPageCount - 1));
+    }
+  }, [boxPageCount, currentBoxPage]);
+
+  useEffect(() => {
+    if (selectedPositions.size === 0) return;
+    setSelectedPositions(new Set());
+  }, [currentBoxPage]);
+
+  useEffect(() => {
+    if (!pendingSampleNavigation || viewLevel !== 'box' || selectedBox?.id !== pendingSampleNavigation.boxId) return;
+    fetchSampleRecord(pendingSampleNavigation.sampleId)
+      .then((record) => {
+        setEditSampleRecord(record);
+        setPreselectedWells([]);
+        setShowSampleModal(true);
+      })
+      .catch((err) => {
+        console.error('Failed to open navigated sample record:', err);
+      })
+      .finally(() => {
+        setPendingSampleNavigation(null);
+      });
+  }, [pendingSampleNavigation, viewLevel, selectedBox]);
 
   // Notify parent when box view state changes
   useEffect(() => {
@@ -834,141 +914,144 @@ export function DrawerFridgeView({
           >
             {selectedBox.mode === 'precise' ? (
               <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
                   <div
-                    className="flex items-center gap-2 rounded-lg px-3 py-2 flex-1 min-w-0 min-h-[44px]"
+                    className="flex w-full min-w-0 items-center gap-2 rounded-lg px-3 py-2 min-h-[44px] lg:flex-1"
                     style={{
                       background: 'var(--app-input-bg)',
                       border: '1px solid var(--app-input-border)',
                     }}
                   >
+                    <Search size={15} className="flex-shrink-0" style={{ color: 'var(--app-muted)' }} />
                     <input
                       type="text"
-                      placeholder="搜索样本条码、姓名、编号..."
+                      placeholder="搜索条码 / 姓名 / 编号"
                       value={searchCellQuery}
                       onChange={(e) => setSearchCellQuery(e.target.value)}
-                      className="flex-1 bg-transparent outline-none text-[14px] min-h-[44px]"
+                      className="min-w-0 flex-1 bg-transparent outline-none text-[14px] min-h-[44px] placeholder:text-[13px]"
                       style={{ color: 'var(--app-text)' }}
                     />
                     {searchCellQuery && (
-                      <span className="text-[12px]" style={{ color: '#2563eb' }}>
+                      <span className="flex-shrink-0 text-right text-[12px]" style={{ color: '#2563eb' }}>
                         {matchedCellIds.size} 匹配
                       </span>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (multiSelectMode && selectedPositions.size > 0) {
-                        handleMultiSelectConfirm();
-                      } else {
-                        setMultiSelectMode((v) => !v);
-                        setSelectedPositions(new Set());
-                      }
-                    }}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] transition-all min-h-[44px]"
-                    style={{
-                      background: multiSelectMode ? '#2563eb' : 'var(--app-panel-bg)',
-                      border: multiSelectMode ? '1px solid #3b82f6' : '1px solid var(--app-border)',
-                      color: multiSelectMode ? '#fff' : 'var(--app-muted)',
-                    }}
-                  >
-                    {multiSelectMode
-                      ? (selectedPositions.size > 0 ? `确认 ${selectedPositions.size} 孔位` : '多选模式')
-                      : '多选绑定'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPreselectedWells([]);
-                      setEditSampleRecord(null);
-                      setShowSampleModal(true);
-                    }}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
-                    style={{
-                      background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
-                      border: '1px solid #3b82f6',
-                      color: '#fff',
-                    }}
-                  >
-                    + 添加样本
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowImportModal(true)}
-                    className="hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
-                    style={{
-                      background: 'linear-gradient(135deg, #059669, #10b981)',
-                      border: '1px solid #34d399',
-                      color: '#fff',
-                    }}
-                  >
-                    <FileSpreadsheet size={15} />
-                    Excel 导入
-                  </button>
-                  <Popover>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className="flex h-9 w-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg transition-colors"
+                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (multiSelectMode && selectedPositions.size > 0) {
+                          handleMultiSelectConfirm();
+                        } else {
+                          setMultiSelectMode((v) => !v);
+                          setSelectedPositions(new Set());
+                        }
+                      }}
+                      className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[13px] transition-all min-h-[44px]"
+                      style={{
+                        background: multiSelectMode ? '#2563eb' : 'var(--app-panel-bg)',
+                        border: multiSelectMode ? '1px solid #3b82f6' : '1px solid var(--app-border)',
+                        color: multiSelectMode ? '#fff' : 'var(--app-muted)',
+                      }}
+                    >
+                      {multiSelectMode
+                        ? (selectedPositions.size > 0 ? `确认 ${selectedPositions.size} 孔位` : '多选模式')
+                        : '多选绑定'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreselectedWells([]);
+                        setEditSampleRecord(null);
+                        setShowSampleModal(true);
+                      }}
+                      className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
+                      style={{
+                        background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
+                        border: '1px solid #3b82f6',
+                        color: '#fff',
+                      }}
+                    >
+                      + 添加样本
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowImportModal(true)}
+                      className="hidden sm:flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
+                      style={{
+                        background: 'linear-gradient(135deg, #059669, #10b981)',
+                        border: '1px solid #34d399',
+                        color: '#fff',
+                      }}
+                    >
+                      <FileSpreadsheet size={15} />
+                      Excel 导入
+                    </button>
+                    <Popover>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex h-9 w-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg transition-colors"
+                              style={{
+                                background: 'var(--app-panel-bg)',
+                                border: '1px solid var(--app-border)',
+                                color: 'var(--app-muted)',
+                              }}
+                              aria-label="查看多选绑定和 Excel 导入帮助"
+                            >
+                              <CircleHelp size={16} />
+                            </button>
+                          </PopoverTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" sideOffset={6}>
+                          查看操作说明
+                        </TooltipContent>
+                      </Tooltip>
+                      <PopoverContent align="end" sideOffset={8} className="w-80 space-y-3">
+                        <div>
+                          <div className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>
+                            操作说明
+                          </div>
+                          <div className="mt-1 text-[11px]" style={{ color: 'var(--app-muted)' }}>
+                            这里的操作都只针对当前盒子。
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div
+                            className="rounded-lg px-3 py-2"
                             style={{
-                              background: 'var(--app-panel-bg)',
-                              border: '1px solid var(--app-border)',
-                              color: 'var(--app-muted)',
+                              background: 'var(--app-input-bg)',
+                              border: '1px solid var(--app-input-border)',
                             }}
-                            aria-label="查看多选绑定和 Excel 导入帮助"
                           >
-                            <CircleHelp size={16} />
-                          </button>
-                        </PopoverTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" sideOffset={6}>
-                        查看操作说明
-                      </TooltipContent>
-                    </Tooltip>
-                    <PopoverContent align="end" sideOffset={8} className="w-80 space-y-3">
-                      <div>
-                        <div className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>
-                          操作说明
-                        </div>
-                        <div className="mt-1 text-[11px]" style={{ color: 'var(--app-muted)' }}>
-                          这里的操作都只针对当前盒子。
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div
-                          className="rounded-lg px-3 py-2"
-                          style={{
-                            background: 'var(--app-input-bg)',
-                            border: '1px solid var(--app-input-border)',
-                          }}
-                        >
-                          <div className="text-[12px] font-medium" style={{ color: 'var(--app-text)' }}>
-                            多选绑定
+                            <div className="text-[12px] font-medium" style={{ color: 'var(--app-text)' }}>
+                              多选绑定
+                            </div>
+                            <div className="mt-1 text-[11px] leading-5" style={{ color: 'var(--app-muted)' }}>
+                              点击后进入多选模式，先点选多个孔位，再点一次按钮确认。系统会按同一样本创建多个试管位置。
+                            </div>
                           </div>
-                          <div className="mt-1 text-[11px] leading-5" style={{ color: 'var(--app-muted)' }}>
-                            点击后进入多选模式，先点选多个孔位，再点一次按钮确认。系统会按同一样本创建多个试管位置。
+                          <div
+                            className="rounded-lg px-3 py-2"
+                            style={{
+                              background: 'var(--app-input-bg)',
+                              border: '1px solid var(--app-input-border)',
+                            }}
+                          >
+                            <div className="text-[12px] font-medium" style={{ color: 'var(--app-text)' }}>
+                              Excel 导入
+                            </div>
+                            <div className="mt-1 text-[11px] leading-5" style={{ color: 'var(--app-muted)' }}>
+                              先导入表格生成待分配样本，再把样本拖到盒子孔位里。只有拖放到孔位后，样本才会真正录入当前盒子。
+                            </div>
                           </div>
                         </div>
-                        <div
-                          className="rounded-lg px-3 py-2"
-                          style={{
-                            background: 'var(--app-input-bg)',
-                            border: '1px solid var(--app-input-border)',
-                          }}
-                        >
-                          <div className="text-[12px] font-medium" style={{ color: 'var(--app-text)' }}>
-                            Excel 导入
-                          </div>
-                          <div className="mt-1 text-[11px] leading-5" style={{ color: 'var(--app-muted)' }}>
-                            先导入表格生成待分配样本，再把样本拖到盒子孔位里。只有拖放到孔位后，样本才会真正录入当前盒子。
-                          </div>
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
                 {multiSelectMode && (
                   <div
@@ -979,7 +1062,66 @@ export function DrawerFridgeView({
                       color: '#0891b2',
                     }}
                   >
-                    点击多个孔位以选中，再点击"确认"创建同一样本的多个试管
+                    点击多个孔位以选中，再点击"确认"创建同一样本的多个试管。切换分页会清空当前选择。
+                  </div>
+                )}
+                {boxPageCount > 1 && (
+                  <div
+                    className="flex flex-col gap-3 rounded-xl px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    style={{
+                      background: 'var(--app-card-bg)',
+                      border: '1px solid var(--app-border)',
+                      boxShadow: '0 12px 34px rgba(15,23,42,0.06)',
+                    }}
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>
+                        孔位分段浏览
+                      </div>
+                      <div className="mt-0.5 text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                        第 {visibleRowStart + 1}-{visibleRowEnd + 1} 行 · 共 {preciseBoxRows} 行
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentBoxPage((page) => Math.max(0, page - 1))}
+                        disabled={currentBoxPage === 0}
+                        className="flex items-center gap-1 rounded-lg px-3 py-2 text-[13px] disabled:opacity-40"
+                        style={{
+                          background: 'var(--app-panel-bg)',
+                          border: '1px solid var(--app-border)',
+                          color: 'var(--app-muted)',
+                        }}
+                      >
+                        <ChevronLeft size={14} />
+                        上一段
+                      </button>
+                      <span
+                        className="rounded-lg px-2.5 py-2 text-[12px] font-mono"
+                        style={{
+                          background: 'var(--app-input-bg)',
+                          border: '1px solid var(--app-input-border)',
+                          color: 'var(--app-muted)',
+                        }}
+                      >
+                        {currentBoxPage + 1}/{boxPageCount}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentBoxPage((page) => Math.min(boxPageCount - 1, page + 1))}
+                        disabled={currentBoxPage >= boxPageCount - 1}
+                        className="flex items-center gap-1 rounded-lg px-3 py-2 text-[13px] disabled:opacity-40"
+                        style={{
+                          background: 'var(--app-panel-bg)',
+                          border: '1px solid var(--app-border)',
+                          color: 'var(--app-muted)',
+                        }}
+                      >
+                        下一段
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
                   </div>
                 )}
                 <BoxGrid
@@ -990,6 +1132,8 @@ export function DrawerFridgeView({
                   multiSelect={multiSelectMode}
                   selectedPositions={selectedPositions}
                   hoveredSampleId={hoveredSampleId}
+                  visibleRowStart={visibleRowStart}
+                  visibleRowEnd={visibleRowEnd}
                   onBack={handleBackToDrawer}
                   onCellClick={handleCellClick}
                   onMultiSelectToggle={handleMultiSelectToggle}

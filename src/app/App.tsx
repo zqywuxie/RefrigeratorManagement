@@ -104,6 +104,14 @@ type BoxSamplePanelState = {
   onSelectSample: (sampleId: string) => void;
 };
 
+type DrawerSampleNavTarget = {
+  fridgeId: string;
+  drawerId: string;
+  drawerLabel: string;
+  boxId: string;
+  sampleId: string;
+};
+
 export default function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
@@ -172,6 +180,7 @@ function AppContent() {
   const [boxViewTubes, setBoxViewTubes] = useState<Tube[]>([]);
   const [fridgeItems, setFridgeItems] = useState<UpperItem[]>([]);
   const [boxSamplePanel, setBoxSamplePanel] = useState<BoxSamplePanelState | null>(null);
+  const [drawerSampleNavTarget, setDrawerSampleNavTarget] = useState<DrawerSampleNavTarget | null>(null);
 
   // Pending imported samples (shared with DrawerFridgeView)
   const [pendingSamples, setPendingSamples] = useState<PendingImportSample[]>([]);
@@ -381,9 +390,41 @@ function AppContent() {
   }, [samples, sampleRecords, user]);
 
   const handleOpenUploadedItem = useCallback((item: UploadedSampleItem) => {
+    if (item.kind === 'subsample') {
+      setSelectedSampleId(item.id);
+      setViewingContainerId(item.parentId ?? null);
+      return;
+    }
+
+    const sample = samples.find((candidate) => candidate.id === item.id);
+    if (sample) {
+      setSelectedSampleId(item.id);
+      setViewingContainerId(null);
+      return;
+    }
+
+    const sampleRecord = sampleRecords.find((record) => record.id === item.id);
+    const locTube = sampleRecord?.tubes.find((tube) => tube.fridge_id && tube.drawer_id && tube.box_id);
+    if (sampleRecord && locTube?.fridge_id && locTube.drawer_id && locTube.box_id) {
+      setActiveView('fridge');
+      setSelectedSampleId(null);
+      setViewingContainerId(null);
+      if (selectedFridgeId !== locTube.fridge_id) {
+        setSelectedFridgeId(locTube.fridge_id);
+      }
+      setDrawerSampleNavTarget({
+        fridgeId: locTube.fridge_id,
+        drawerId: locTube.drawer_id,
+        drawerLabel: '',
+        boxId: locTube.box_id,
+        sampleId: sampleRecord.id,
+      });
+      return;
+    }
+
     setSelectedSampleId(item.id);
-    setViewingContainerId(item.kind === 'subsample' ? item.parentId ?? null : null);
-  }, []);
+    setViewingContainerId(null);
+  }, [sampleRecords, samples, selectedFridgeId]);
 
   // ── Fridge handlers ──
 
@@ -1295,6 +1336,10 @@ function AppContent() {
                 onAddItemType={handleAddItemType}
                 navigateToDrawer={sideMapNavTarget}
                 onNavigated={() => setSideMapNavTarget(null)}
+                navigateToSampleRecord={
+                  drawerSampleNavTarget?.fridgeId === selectedFridge.id ? drawerSampleNavTarget : null
+                }
+                onSampleRecordNavigated={() => setDrawerSampleNavTarget(null)}
                 pendingSamples={pendingSamples}
                 onPendingSamplesChange={setPendingSamples}
                 onImportComplete={handleImportComplete}
@@ -2266,6 +2311,7 @@ function UserMenu({
 }) {
   const { theme, setTheme } = useTheme();
   const { register, isRoot } = useAuth();
+  const isMobile = useIsMobile();
   const isDark = theme === 'dark';
   const [showRegister, setShowRegister] = useState(false);
   const [newUsername, setNewUsername] = useState('');
@@ -2278,7 +2324,7 @@ function UserMenu({
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!showUploads && !showRegister) return;
+    if (isMobile || (!showUploads && !showRegister)) return;
 
     function handlePointerDown(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -2301,7 +2347,7 @@ function UserMenu({
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showRegister, showUploads]);
+  }, [isMobile, showRegister, showUploads]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2330,9 +2376,148 @@ function UserMenu({
     }
   };
 
+  const uploadsPanelContent = (
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <div className="min-w-0">
+          <div className="text-[13px]" style={{ color: 'var(--app-text)' }}>
+            我的上传样本
+          </div>
+          <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
+            当前冰箱 · {uploadedItems.length} 个
+          </div>
+        </div>
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{
+            background: 'var(--app-card-bg)',
+            border: '1px solid var(--app-border)',
+            color: '#2563eb',
+          }}
+        >
+          <FlaskConical size={16} />
+        </div>
+      </div>
+
+      {uploadedItems.length === 0 ? (
+        <div
+          className="rounded-lg px-3 py-5 text-center text-[13px]"
+          style={{
+            background: 'var(--app-card-bg)',
+            border: '1px solid var(--app-border)',
+            color: 'var(--app-muted)',
+          }}
+        >
+          当前冰箱暂无你上传的样本
+        </div>
+      ) : (
+        <div className={`${isMobile ? 'max-h-[60vh]' : 'max-h-80'} overflow-y-auto pr-1 space-y-2`}>
+          {uploadedItems.map((item) => {
+            const config = STATUS_CONFIG[item.status];
+            const isNewRecord = item.id.startsWith('sr-');
+            const location = isNewRecord
+              ? `样本记录 · ${item.position} 管`
+              : item.kind === 'subsample'
+                ? `${item.parentId} · 子格 ${item.position + 1}`
+                : `${item.compartment === 'upper' ? '上层' : '下层'} · 格位 ${item.position + 1}`;
+            return (
+              <button
+                key={`${item.kind}-${item.id}`}
+                type="button"
+                onClick={() => {
+                  onOpenSample(item);
+                  setShowUploads(false);
+                }}
+                className="w-full rounded-lg px-3 py-2.5 text-left transition-all hover:brightness-95"
+                style={{
+                  background: 'var(--app-card-bg)',
+                  border: '1px solid var(--app-border)',
+                  color: 'var(--app-text)',
+                }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ background: config.borderColor }}
+                      />
+                      <span className="text-[13px] truncate">
+                        {item.id} · {item.name}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[11px] truncate" style={{ color: 'var(--app-muted)' }}>
+                      {item.type} · {location}
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-[11px]" style={{ color: config.color }}>
+                      {config.label}
+                    </div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--app-muted)' }}>
+                      {item.temperature}°C
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+
+  const registerPanelContent = (
+    <form onSubmit={handleRegister} className="space-y-2">
+      <div className="text-[13px]" style={{ color: 'var(--app-text)' }}>
+        创建用户
+      </div>
+      <input
+        value={newUsername}
+        onChange={(e) => setNewUsername(e.target.value)}
+        placeholder="用户名"
+        className="w-full rounded-md px-2 py-2 text-[13px] outline-none"
+        style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
+      />
+      <input
+        value={newPassword}
+        onChange={(e) => setNewPassword(e.target.value)}
+        placeholder="密码"
+        type="password"
+        className="w-full rounded-md px-2 py-2 text-[13px] outline-none"
+        style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
+      />
+      <input
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        placeholder="确认密码"
+        type="password"
+        className="w-full rounded-md px-2 py-2 text-[13px] outline-none"
+        style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
+      />
+      <select
+        value={newRole}
+        onChange={(e) => setNewRole(e.target.value as 'user' | 'root')}
+        className="w-full rounded-md px-2 py-2 text-[13px] outline-none"
+        style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
+      >
+        <option value="user">普通用户</option>
+        <option value="root">管理员 root</option>
+      </select>
+      <button
+        disabled={registering}
+        className="w-full rounded-md py-2 text-[13px]"
+        style={{ background: registering ? '#94a3b8' : '#2563eb', color: '#fff' }}
+      >
+        {registering ? '创建中...' : '创建'}
+      </button>
+      {message && <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>{message}</div>}
+    </form>
+  );
+
   return (
     <div
-      className={`relative flex items-center gap-2 ${showUploads || showRegister ? 'z-50' : 'z-10'}`}
+      className={`relative flex min-w-0 items-center gap-2 ${showUploads || showRegister ? 'z-50' : 'z-10'}`}
       ref={menuRef}
     >
       <button
@@ -2361,8 +2546,8 @@ function UserMenu({
         }}
       >
         <UserCircle size={16} />
-        <span className="text-[13px]">{username}</span>
-        <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
+        <span className="max-w-[88px] truncate text-[13px] sm:max-w-[140px]">{username}</span>
+        <span className="hidden text-[11px] sm:inline" style={{ color: 'var(--app-muted)' }}>
           {role}
         </span>
         <ChevronDown
@@ -2403,7 +2588,7 @@ function UserMenu({
       >
         <LogOut size={16} />
       </button>
-      {showUploads && (
+      {!isMobile && showUploads && (
         <div
           className="absolute right-0 top-11 z-50 w-80 rounded-xl p-3"
           style={{
@@ -2413,148 +2598,38 @@ function UserMenu({
             backdropFilter: 'blur(12px)',
           }}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <div className="text-[13px]" style={{ color: 'var(--app-text)' }}>
-                我的上传样本
-              </div>
-              <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
-                当前冰箱 · {uploadedItems.length} 个
-              </div>
-            </div>
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{
-                background: 'var(--app-card-bg)',
-                border: '1px solid var(--app-border)',
-                color: '#2563eb',
-              }}
-            >
-              <FlaskConical size={16} />
-            </div>
-          </div>
-
-          {uploadedItems.length === 0 ? (
-            <div
-              className="rounded-lg px-3 py-5 text-center text-[13px]"
-              style={{
-                background: 'var(--app-card-bg)',
-                border: '1px solid var(--app-border)',
-                color: 'var(--app-muted)',
-              }}
-            >
-              当前冰箱暂无你上传的样本
-            </div>
-          ) : (
-            <div className="max-h-80 overflow-y-auto pr-1 space-y-2">
-              {uploadedItems.map((item) => {
-                const config = STATUS_CONFIG[item.status];
-                const isNewRecord = item.id.startsWith('sr-');
-                const location = isNewRecord
-                  ? `样本记录 · ${item.position} 管`
-                  : item.kind === 'subsample'
-                    ? `${item.parentId} · 子格 ${item.position + 1}`
-                    : `${item.compartment === 'upper' ? '上层' : '下层'} · 格位 ${item.position + 1}`;
-                return (
-                  <button
-                    key={`${item.kind}-${item.id}`}
-                    type="button"
-                    onClick={() => {
-                      onOpenSample(item);
-                      setShowUploads(false);
-                    }}
-                    className="w-full rounded-lg px-3 py-2.5 text-left transition-all hover:brightness-95"
-                    style={{
-                      background: 'var(--app-card-bg)',
-                      border: '1px solid var(--app-border)',
-                      color: 'var(--app-text)',
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ background: config.borderColor }}
-                          />
-                          <span className="text-[13px] truncate">
-                            {item.id} · {item.name}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-[11px] truncate" style={{ color: 'var(--app-muted)' }}>
-                          {item.type} · {location}
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className="text-[11px]" style={{ color: config.color }}>
-                          {config.label}
-                        </div>
-                        <div className="text-[11px] mt-1" style={{ color: 'var(--app-muted)' }}>
-                          {item.temperature}°C
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          {uploadsPanelContent}
         </div>
       )}
-      {showRegister && (
-        <form
-          onSubmit={handleRegister}
-          className="absolute right-0 top-11 z-50 w-64 space-y-2 rounded-xl p-3"
+      {!isMobile && showRegister && (
+        <div
+          className="absolute right-0 top-11 z-50 w-64 rounded-xl p-3"
           style={{
             background: 'var(--app-header-bg)',
             border: '1px solid var(--app-border)',
             boxShadow: '0 16px 48px rgba(15,23,42,0.18)',
           }}
         >
-          <div className="text-[13px]" style={{ color: 'var(--app-text)' }}>
-            创建用户
-          </div>
-          <input
-            value={newUsername}
-            onChange={(e) => setNewUsername(e.target.value)}
-            placeholder="用户名"
-            className="w-full rounded-md px-2 py-1.5 text-[13px] outline-none"
-            style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
-          />
-          <input
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="密码"
-            type="password"
-            className="w-full rounded-md px-2 py-1.5 text-[13px] outline-none"
-            style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
-          />
-          <input
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="确认密码"
-            type="password"
-            className="w-full rounded-md px-2 py-1.5 text-[13px] outline-none"
-            style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
-          />
-          <select
-            value={newRole}
-            onChange={(e) => setNewRole(e.target.value as 'user' | 'root')}
-            className="w-full rounded-md px-2 py-1.5 text-[13px] outline-none"
-            style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}
-          >
-            <option value="user">普通用户</option>
-            <option value="root">管理员 root</option>
-          </select>
-          <button
-            disabled={registering}
-            className="w-full rounded-md py-1.5 text-[13px]"
-            style={{ background: registering ? '#94a3b8' : '#2563eb', color: '#fff' }}
-          >
-            {registering ? '创建中...' : '创建'}
-          </button>
-          {message && <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>{message}</div>}
-        </form>
+          {registerPanelContent}
+        </div>
+      )}
+      {isMobile && (
+        <>
+          <Drawer open={showUploads} onOpenChange={setShowUploads}>
+            <DrawerContent className="max-h-[85vh] px-0">
+              <div className="px-4 pb-5 pt-2">
+                {uploadsPanelContent}
+              </div>
+            </DrawerContent>
+          </Drawer>
+          <Drawer open={showRegister} onOpenChange={setShowRegister}>
+            <DrawerContent className="max-h-[75vh] px-0">
+              <div className="px-4 pb-5 pt-2">
+                {registerPanelContent}
+              </div>
+            </DrawerContent>
+          </Drawer>
+        </>
       )}
     </div>
   );

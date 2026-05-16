@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import { useDrop } from 'react-dnd';
-import { ArrowLeft, Grid3X3, CheckSquare, Square } from 'lucide-react';
+import { ArrowLeft, Grid3X3 } from 'lucide-react';
 import { Box, BoxCell, Tube, STATUS_CONFIG } from '../types';
 import { CellSlot } from './CellSlot';
 
@@ -12,6 +12,8 @@ interface BoxGridProps {
   multiSelect?: boolean;
   selectedPositions?: Set<number>;
   hoveredSampleId?: string | null;
+  visibleRowStart?: number;
+  visibleRowEnd?: number;
   onBack: () => void;
   onCellClick: (position: number) => void;
   onMultiSelectToggle?: (position: number) => void;
@@ -67,6 +69,8 @@ export function BoxGrid({
   multiSelect = false,
   selectedPositions = new Set(),
   hoveredSampleId,
+  visibleRowStart,
+  visibleRowEnd,
   onBack,
   onCellClick,
   onMultiSelectToggle,
@@ -77,6 +81,13 @@ export function BoxGrid({
   const rows = box.grid_rows || 10;
   const cols = box.grid_cols || 10;
   const capacity = rows * cols;
+  const startRow = Math.max(0, Math.min(visibleRowStart ?? 0, rows - 1));
+  const endRow = Math.max(startRow, Math.min(visibleRowEnd ?? rows - 1, rows - 1));
+  const visibleRowCount = endRow - startRow + 1;
+  const visiblePositions = React.useMemo(
+    () => Array.from({ length: visibleRowCount * cols }, (_, index) => startRow * cols + index),
+    [cols, startRow, visibleRowCount],
+  );
 
   // Build tube or cell lookup by position
   const tubeByPosition = React.useMemo(() => {
@@ -178,10 +189,10 @@ export function BoxGrid({
           className="grid gap-1"
           style={{
             gridTemplateColumns: `repeat(${cols}, minmax(28px, 1fr))`,
-            gridTemplateRows: `repeat(${rows}, minmax(28px, auto))`,
+            gridTemplateRows: `repeat(${visibleRowCount}, minmax(28px, auto))`,
           }}
         >
-          {Array.from({ length: capacity }, (_, position) => {
+          {visiblePositions.map((position) => {
             const tube = tubeByPosition.get(position);
             const cell = cellByPosition.get(position);
             const isCellHighlighted = cell ? matchedIds.has(cell.id) : false;
