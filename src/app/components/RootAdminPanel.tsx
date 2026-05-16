@@ -42,6 +42,7 @@ import {
 } from '../api';
 import { AddSampleModal } from './AddSampleModal';
 import { Compartment, Sample, SampleStatus, SubSample, SampleRecord, formatChineseShortDate } from '../types';
+import { useIsMobile } from './ui/use-mobile';
 
 type NotifyType = 'info' | 'warn' | 'success' | 'error';
 
@@ -98,6 +99,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   const [editSRDate, setEditSRDate] = useState('');
   const [busySRId, setBusySRId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
   const [busyUser, setBusyUser] = useState<string | null>(null);
   const [busySampleId, setBusySampleId] = useState<string | null>(null);
   const [newUsername, setNewUsername] = useState('');
@@ -509,8 +511,8 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
     : '--';
 
   return (
-    <main className="flex-1 overflow-auto p-6">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+    <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6">
+      <div className="mx-auto flex w-full max-w-full lg:max-w-7xl flex-col gap-3 sm:gap-5">
         <section
           className="rounded-xl p-5"
           style={{
@@ -548,7 +550,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
             </button>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="mt-5 grid gap-2 sm:gap-3 grid-cols-2 lg:grid-cols-6">
             <AdminMetric icon={<Snowflake size={18} />} label="冰箱" value={summary?.totals.refrigerators ?? '--'} color="#2563eb" />
             <AdminMetric
               icon={<FlaskConical size={18} />}
@@ -709,7 +711,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
           </div>
         </section>
 
-        <div className="grid items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
+        <div className="grid items-start gap-3 sm:gap-5 grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)]">
           <form
             onSubmit={handleCreateUser}
             className="rounded-xl p-4"
@@ -724,11 +726,11 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
             </h3>
             <div className="space-y-3">
               <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="用户名"
-                className="w-full rounded-lg px-3 py-2 text-[14px] outline-none" style={inputStyle} />
+                className="w-full rounded-lg px-3 py-2 text-[16px] sm:text-[14px] outline-none min-h-[44px]" style={inputStyle} />
               <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="密码"
-                className="w-full rounded-lg px-3 py-2 text-[14px] outline-none" style={inputStyle} />
+                className="w-full rounded-lg px-3 py-2 text-[16px] sm:text-[14px] outline-none min-h-[44px]" style={inputStyle} />
               <select value={newRole} onChange={(e) => setNewRole(e.target.value as AuthUser['role'])}
-                className="w-full rounded-lg px-3 py-2 text-[14px] outline-none" style={inputStyle}>
+                className="w-full rounded-lg px-3 py-2 text-[16px] sm:text-[14px] outline-none min-h-[44px]" style={inputStyle}>
                 <option value="user">普通用户</option>
                 <option value="root">管理员 root</option>
               </select>
@@ -793,7 +795,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
         {/* Fridge overview */}
         <section className="rounded-xl p-4" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', boxShadow: '0 14px 40px rgba(15,23,42,0.06)' }}>
           <h3 className="mb-3 text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>冰箱概览</h3>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-2 sm:gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {summary?.refrigerators.map((fridge) => {
               const usage = fridge.capacity > 0 ? Math.round((fridge.sampleCount / fridge.capacity) * 100) : 0;
               return (
