@@ -194,12 +194,12 @@ router.get('/summary', async (_req, res) => {
       Number(sampleTotals.warning_count || 0) + Number(subSampleTotals.warning_count || 0);
 
     // Merge status counts (old + new)
-    const mergedStatus = new Map<string, number>();
+    const mergedStatus = new Map();
     for (const row of statusRows) mergedStatus.set(row.status, (mergedStatus.get(row.status) || 0) + Number(row.count || 0));
     for (const row of srStatusRows) mergedStatus.set(row.status, (mergedStatus.get(row.status) || 0) + Number(row.count || 0));
 
     // Merge type counts (old + new)
-    const mergedTypes = new Map<string, number>();
+    const mergedTypes = new Map();
     for (const row of typeRows) mergedTypes.set(row.type || '未分类', (mergedTypes.get(row.type || '未分类') || 0) + Number(row.count || 0));
     for (const row of srTypeRows) mergedTypes.set(row.type || '未分类', (mergedTypes.get(row.type || '未分类') || 0) + Number(row.count || 0));
 

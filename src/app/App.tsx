@@ -145,20 +145,16 @@ function AppContent() {
   // Pending imported samples (shared with DrawerFridgeView)
   const [pendingSamples, setPendingSamples] = useState<SampleRecord[]>([]);
 
-  // Global sample search
-  const [globalSampleQuery, setGlobalSampleQuery] = useState('');
-
+  // Global sample records filtered by searchQuery (for dropdown below search bar)
   const globalFilteredRecords = React.useMemo(() => {
-    if (!globalSampleQuery.trim()) return [];
-    const q = globalSampleQuery.toLowerCase();
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
     return sampleRecords.filter((sr) =>
       sr.patient_name.toLowerCase().includes(q) ||
       sr.sample_code.toLowerCase().includes(q) ||
-      (sr.sample_type || '').toLowerCase().includes(q) ||
-      (sr.collection_stage || '').toLowerCase().includes(q) ||
-      (sr.source || '').toLowerCase().includes(q)
+      (sr.sample_type || '').toLowerCase().includes(q)
     );
-  }, [sampleRecords, globalSampleQuery]);
+  }, [sampleRecords, searchQuery]);
 
   const handleImportComplete = useCallback(async (sampleIds: string[]) => {
     if (sampleIds.length === 0) return;
@@ -1064,7 +1060,7 @@ function AppContent() {
               <Search size={20} color={searchQuery ? '#2563eb' : 'var(--app-muted)'} />
               <input
                 type="text"
-                placeholder="搜索样本 ID、类型、患者编号、上传者、标签..."
+                placeholder="搜索样本 ID / 类型 / 患者编号 / 上传者 / 姓名 / 标签..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 bg-transparent outline-none text-[16px] placeholder:text-slate-600"
@@ -1085,6 +1081,61 @@ function AppContent() {
                 </div>
               )}
             </div>
+
+            {/* Global search results dropdown */}
+            {searchQuery.trim() && globalFilteredRecords.length > 0 && (
+              <div
+                className="rounded-xl p-3 space-y-1 max-h-56 overflow-y-auto"
+                style={{
+                  background: 'var(--app-card-bg)',
+                  border: '1px solid var(--app-border)',
+                  boxShadow: '0 12px 34px rgba(15,23,42,0.06)',
+                }}
+              >
+                <div className="text-[11px] px-1 mb-1" style={{ color: 'var(--app-muted)' }}>
+                  全局样本记录匹配 · {globalFilteredRecords.length} 条
+                </div>
+                {globalFilteredRecords.slice(0, 15).map((sr) => (
+                  <div
+                    key={sr.id}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:brightness-95"
+                    style={{
+                      background: sr.group_color + '12',
+                      border: `1px solid ${sr.group_color}20`,
+                    }}
+                    onClick={() => {
+                      setSearchQuery('');
+                      if (sr.tubes && sr.tubes.length > 0) {
+                        const locTube = sr.tubes.find(t => t.fridge_id && t.drawer_id);
+                        if (locTube?.fridge_id) {
+                          setSelectedFridgeId(locTube.fridge_id);
+                          if (locTube.drawer_id) {
+                            setSideMapNavTarget({ drawerId: locTube.drawer_id, drawerLabel: '' });
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>{sr.patient_name}</span>
+                      <span className="text-[11px] ml-2" style={{ color: 'var(--app-muted)' }}>{sr.sample_code}</span>
+                    </div>
+                    {sr.sample_type && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--app-subtle-bg)', color: 'var(--app-subtle-text)' }}>
+                        {sr.sample_type}
+                      </span>
+                    )}
+                    <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--app-muted)' }}>{sr.tube_count || 0} 管</span>
+                  </div>
+                ))}
+                {globalFilteredRecords.length > 15 && (
+                  <div className="text-center pt-1 text-[11px]" style={{ color: 'var(--app-muted)' }}>
+                    还有 {globalFilteredRecords.length - 15} 条...
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Loading state */}
             {loading && !viewingContainer && (
@@ -1186,88 +1237,6 @@ function AppContent() {
             className="flex w-full flex-col gap-4"
             style={{ maxWidth: '400px' }}
           >
-            {/* Global sample search */}
-            <div
-              className="flex items-center gap-2 rounded-xl px-4 py-3"
-              style={{
-                background: 'var(--app-card-bg)',
-                border: `1px solid ${globalSampleQuery ? 'rgba(37,99,235,0.35)' : 'var(--app-border)'}`,
-                boxShadow: globalSampleQuery ? '0 12px 34px rgba(37,99,235,0.08)' : '0 12px 34px rgba(15,23,42,0.06)',
-              }}
-            >
-              <Search size={18} color={globalSampleQuery ? '#2563eb' : 'var(--app-muted)'} />
-              <input
-                type="text"
-                placeholder="全局搜索样本（姓名、编号、类型）..."
-                value={globalSampleQuery}
-                onChange={(e) => setGlobalSampleQuery(e.target.value)}
-                className="flex-1 bg-transparent outline-none text-[13px]"
-                style={{ color: 'var(--app-text)' }}
-              />
-              {globalSampleQuery && (
-                <button onClick={() => setGlobalSampleQuery('')} className="text-[13px]" style={{ color: 'var(--app-muted)' }}>
-                  ✕
-                </button>
-              )}
-            </div>
-
-            {/* Global search results */}
-            {globalSampleQuery.trim() && (
-              <div
-                className="rounded-xl p-3 space-y-1 max-h-60 overflow-y-auto"
-                style={{
-                  background: 'var(--app-card-bg)',
-                  border: '1px solid var(--app-border)',
-                  boxShadow: '0 12px 34px rgba(15,23,42,0.06)',
-                }}
-              >
-                {globalFilteredRecords.length === 0 ? (
-                  <div className="text-center py-3 text-[12px]" style={{ color: 'var(--app-muted)' }}>无匹配结果</div>
-                ) : (
-                  globalFilteredRecords.slice(0, 20).map((sr) => (
-                    <div
-                      key={sr.id}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:brightness-95"
-                      style={{
-                        background: sr.group_color + '12',
-                        border: `1px solid ${sr.group_color}20`,
-                      }}
-                      onClick={() => {
-                        setGlobalSampleQuery('');
-                        // Navigate to the sample's storage location
-                        if (sr.tubes && sr.tubes.length > 0) {
-                          const locTube = sr.tubes.find(t => t.fridge_id && t.drawer_id);
-                          if (locTube?.fridge_id) {
-                            setSelectedFridgeId(locTube.fridge_id);
-                            if (locTube.drawer_id) {
-                              setSideMapNavTarget({ drawerId: locTube.drawer_id, drawerLabel: '' });
-                            }
-                          }
-                        }
-                      }}
-                    >
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />
-                      <div className="min-w-0 flex-1">
-                        <span className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>{sr.patient_name}</span>
-                        <span className="text-[11px] ml-2" style={{ color: 'var(--app-muted)' }}>{sr.sample_code}</span>
-                      </div>
-                      {sr.sample_type && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--app-subtle-bg)', color: 'var(--app-subtle-text)' }}>
-                          {sr.sample_type}
-                        </span>
-                      )}
-                      <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--app-muted)' }}>{sr.tube_count || 0} 管</span>
-                    </div>
-                  ))
-                )}
-                {globalFilteredRecords.length > 20 && (
-                  <div className="text-center pt-1 text-[11px]" style={{ color: 'var(--app-muted)' }}>
-                    显示前 20 条，另有 {globalFilteredRecords.length - 20} 条
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Stats cards */}
             <div className="grid grid-cols-2 gap-3">
               <StatsCard

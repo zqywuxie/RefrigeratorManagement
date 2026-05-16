@@ -620,11 +620,11 @@ export function DrawerFridgeView({
   const layer1Drawers = drawers.filter((d) => d.layer === 1);
   const layer2Drawers = drawers.filter((d) => d.layer === 2);
   const selectedDrawer = drawers.find((d) => d.id === selectedDrawerId) || null;
-  const selectedDrawerZoneLabel = selectedDrawer?.layer === 2 ? '下层-下层' : '下层-上层';
+  const selectedDrawerZoneLabel = selectedDrawer?.layer === 2 ? '第二层' : '第一层';
   const tabs: Array<{ key: MainTab; label: string }> = [
     { key: 'upper', label: '上层' },
-    { key: 'lowerTop', label: '下层-上层' },
-    { key: 'lowerBottom', label: '下层-下层' },
+    { key: 'lowerTop', label: '第一层' },
+    { key: 'lowerBottom', label: '第二层' },
   ];
 
   if (loading && !selectedDrawerId && upperItems.length === 0) {
@@ -708,7 +708,7 @@ export function DrawerFridgeView({
                 >
                   <DrawerLayer
                     layer={1}
-                    label="下层-上层抽屉区"
+                    label="第一层抽屉区"
                     rows={DRAWER_LAYER1.rows}
                     cols={DRAWER_LAYER1.cols}
                     drawers={layer1Drawers}
@@ -726,7 +726,7 @@ export function DrawerFridgeView({
                 >
                   <DrawerLayer
                     layer={2}
-                    label="下层-下层抽屉区"
+                    label="第二层抽屉区"
                     rows={DRAWER_LAYER2.rows}
                     cols={DRAWER_LAYER2.cols}
                     drawers={layer2Drawers}

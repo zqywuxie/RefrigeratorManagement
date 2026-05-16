@@ -654,28 +654,16 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                 状态与类别的总体视图
               </div>
             </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              <DistributionPanel
-                title="状态分布"
-                items={(summary?.statusCounts || []).map((item) => ({
-                  key: item.status,
-                  label: STATUS_LABELS[item.status] || item.status,
-                  count: item.count,
-                }))}
-                total={Math.max(summary?.totals.totalItems || 0, 1)}
-                emptyMessage="暂无样本状态数据"
-              />
-              <DistributionPanel
-                title="样本类别"
-                items={(summary?.typeCounts || []).map((item) => ({
-                  key: item.type,
-                  label: item.type,
-                  count: item.count,
-                }))}
-                total={Math.max(summary?.totals.totalItems || 0, 1)}
-                emptyMessage="暂无样本类别数据"
-              />
-            </div>
+            <DistributionPanel
+              title="样本类别分布"
+              items={(summary?.typeCounts || []).map((item) => ({
+                key: item.type,
+                label: item.type,
+                count: item.count,
+              }))}
+              total={Math.max((summary?.typeCounts || []).reduce((s, i) => s + i.count, 0), 1)}
+              emptyMessage="暂无样本类别数据"
+            />
           </section>
         </div>
 
@@ -841,172 +829,81 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
           )}
         </section>
 
+
+        {/* Sample Records List */}
         <section
           className="rounded-xl p-4"
           style={{
-            background: 'var(--app-card-bg)',
-            border: '1px solid var(--app-border)',
-            boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
+            background: "var(--app-card-bg)",
+            border: "1px solid var(--app-border)",
+            boxShadow: "0 14px 40px rgba(15,23,42,0.06)",
           }}
         >
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>
-                样本详情
+              <h3 className="text-[17px] font-semibold" style={{ color: "var(--app-text)" }}>
+                样本记录
               </h3>
-              <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                全部冰箱 · {filteredSamples.length}/{samples.length} 条
+              <div className="text-[12px]" style={{ color: "var(--app-muted)" }}>
+                {adminSampleRecords.length} 条样本记录
               </div>
-            </div>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-              <select
-                value={sampleTypeFilter}
-                onChange={(e) => setSampleTypeFilter(e.target.value)}
-                className="rounded-lg px-3 py-2 text-[13px] outline-none sm:w-44"
-                style={inputStyle}
-              >
-                <option value="__all__">全部类别</option>
-                {availableSampleTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-              <input
-                value={sampleQuery}
-                onChange={(e) => setSampleQuery(e.target.value)}
-                placeholder="搜索样本、患者、上传者、标签..."
-                className="w-full rounded-lg px-3 py-2 text-[13px] outline-none sm:w-80"
-                style={inputStyle}
-              />
             </div>
           </div>
-
-          <div className="grid items-start gap-4 xl:grid-cols-[minmax(320px,0.92fr)_minmax(420px,1.08fr)]">
-            <div
-              className="order-2 rounded-xl p-2 xl:order-1"
-              style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)' }}
-            >
-              <div className="mb-2 flex items-center justify-between px-2 pt-2">
-                <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                  样本列表
-                </div>
-                <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
-                  已筛选 {filteredSamples.length} 条
-                </div>
-              </div>
-              <div className="max-h-[620px] overflow-y-auto pr-1 xl:max-h-[calc(100vh-250px)]">
-                <div className="space-y-2">
-                  {filteredSamples.map((sample) => {
-                    const selected = selectedSample?.id === sample.id;
-                    const statusColor = STATUS_COLORS[sample.status] || '#2563eb';
-                    const busy = busySampleId === sample.id;
-                    return (
-                      <div
-                        key={`${sample.kind}-${sample.id}`}
-                        className="rounded-lg p-2 transition-all"
-                        style={{
-                          background: selected ? 'var(--app-selected-bg)' : 'var(--app-card-bg)',
-                          border: selected ? '1px solid var(--app-selected-border)' : '1px solid var(--app-border)',
-                          color: 'var(--app-text)',
-                          boxShadow: selected ? '0 10px 28px rgba(37,99,235,0.12)' : 'none',
-                        }}
-                      >
-                        <div className="flex items-start gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedSampleId(sample.id)}
-                            className="min-w-0 flex-1 rounded-md p-1 text-left"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className="h-2.5 w-2.5 rounded-full"
-                                    style={{ background: statusColor }}
-                                  />
-                                  <span className="truncate text-[14px] font-medium">
-                                    {sample.id} · {sample.name}
-                                  </span>
-                                </div>
-                                <div className="mt-1 truncate text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                                  {sample.refrigeratorName} · {formatLocation(sample)} · {sample.type}
-                                </div>
-                              </div>
-                              <div className="flex flex-col items-end gap-1">
-                                <span
-                                  className="rounded-full px-2 py-0.5 text-[11px]"
-                                  style={{ background: `${statusColor}18`, color: statusColor }}
-                                >
-                                  {STATUS_LABELS[sample.status] || sample.status}
-                                </span>
-                                <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
-                                  {sample.kind === 'sample' ? `副样本 ${sample.subSampleCount}` : '副样本'}
-                                </span>
-                              </div>
-                            </div>
-                          </button>
-                          <div className="flex flex-col gap-1 pt-1">
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => handleEditOpen(sample)}
-                              className="rounded-md p-2 disabled:opacity-50"
-                              style={{ background: 'var(--app-info-soft-bg)', color: 'var(--app-info-soft-text)' }}
-                              title="编辑样本"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => handleDeleteSelectedSample(sample)}
-                              className="rounded-md p-2 disabled:opacity-50"
-                              style={{ background: 'var(--app-danger-soft-bg)', color: 'var(--app-danger-soft-text)' }}
-                              title="删除样本"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
+          {adminSampleRecords.length === 0 ? (
+            <div className="py-8 text-center text-[13px]" style={{ color: "var(--app-muted)" }}>
+              暂无样本记录
+            </div>
+          ) : (
+            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+              <table className="w-full min-w-[700px] border-separate border-spacing-y-1.5 text-left">
+                <thead>
+                  <tr className="text-[12px]" style={{ color: "var(--app-muted)" }}>
+                    <th className="px-2 py-1 font-medium">姓名</th>
+                    <th className="px-2 py-1 font-medium">编号</th>
+                    <th className="px-2 py-1 font-medium">类型</th>
+                    <th className="px-2 py-1 font-medium">来源</th>
+                    <th className="px-2 py-1 font-medium">阶段</th>
+                    <th className="px-2 py-1 font-medium">试管数</th>
+                    <th className="px-2 py-1 font-medium">上传者</th>
+                    <th className="px-2 py-1 font-medium">时间</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminSampleRecords.map((sr) => (
+                    <tr key={sr.id}>
+                      <td className="rounded-l-lg px-2 py-2 text-[13px] font-medium" style={{ background: "var(--app-panel-bg)", color: "var(--app-text)" }}>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />
+                          {sr.patient_name}
                         </div>
-                      </div>
-                    );
-                  })}
-                  {!loading && filteredSamples.length === 0 && (
-                    <div
-                      className="rounded-lg px-3 py-8 text-center text-[13px]"
-                      style={{ background: 'var(--app-card-bg)', color: 'var(--app-muted)' }}
-                    >
-                      暂无匹配样本
-                    </div>
-                  )}
-                </div>
-              </div>
+                      </td>
+                      <td className="px-2 py-2 text-[13px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-text)" }}>
+                        {sr.sample_code}
+                      </td>
+                      <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>
+                        {sr.sample_type || "—"}
+                      </td>
+                      <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>
+                        {sr.source || "—"}
+                      </td>
+                      <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>
+                        {sr.collection_stage || "—"}
+                      </td>
+                      <td className="px-2 py-2 text-[13px] font-mono" style={{ background: "var(--app-panel-bg)", color: "#2563eb" }}>
+                        {sr.tube_count || 0}
+                      </td>
+                      <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>
+                        {sr.uploader || "—"}
+                      </td>
+                      <td className="rounded-r-lg px-2 py-2 text-[11px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>
+                        {formatChineseShortDate(sr.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-
-            <div
-              className="order-1 rounded-xl p-2 xl:order-2 xl:sticky xl:top-4"
-              style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)' }}
-            >
-              <div className="mb-2 flex items-center justify-between px-2 pt-2">
-                <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                  当前详情
-                </div>
-                <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
-                  当前选中样本
-                </div>
-              </div>
-              <div className="max-h-[620px] overflow-y-auto pr-1 xl:max-h-[calc(100vh-250px)]">
-                <SampleDetailCard
-                  sample={selectedSample}
-                  busy={busySampleId === selectedSample?.id}
-                  onEdit={handleEditOpen}
-                  onDelete={handleDeleteSelectedSample}
-                  onStatusChange={handleSampleStatusChange}
-                />
-              </div>
-            </div>
-          </div>
+          )}
         </section>
 
       </div>
