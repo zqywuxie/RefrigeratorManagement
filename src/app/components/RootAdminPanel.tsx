@@ -30,6 +30,8 @@ import {
   fetchAdminUsers,
   fetchAdminBoxes,
   fetchAdminSampleRecords,
+  fetchAdminUpperItems,
+  deleteAdminUpperItem,
   fetchSampleRecords,
   fetchSampleTypes,
   updateAdminUser,
@@ -84,6 +86,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   const [editingSample, setEditingSample] = useState<AdminSampleItem | null>(null);
   const [adminBoxes, setAdminBoxes] = useState<AdminBox[]>([]);
   const [adminSampleRecords, setAdminSampleRecords] = useState<SampleRecord[]>([]);
+  const [adminUpperItems, setAdminUpperItems] = useState<any[]>([]);
   const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
   const [editBoxName, setEditBoxName] = useState('');
   const [editBoxOwner, setEditBoxOwner] = useState('');
@@ -210,6 +213,10 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
     }
     setSelectedSRIde(new Set());
   }, [srBoxId]);
+
+  useEffect(() => {
+    fetchAdminUpperItems().then(setAdminUpperItems).catch(() => {});
+  }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();

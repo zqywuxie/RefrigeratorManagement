@@ -559,4 +559,33 @@ router.get('/sample-records', async (req, res) => {
   }
 });
 
+// GET /api/admin/upper-items
+router.get('/upper-items', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT ui.*, r.name as fridge_name
+       FROM upper_items ui
+       JOIN refrigerators r ON r.id = ui.refrigerator_id
+       WHERE ui.deleted_at IS NULL AND r.deleted_at IS NULL
+       ORDER BY r.name, ui.row_number, ui.sort_order`
+    );
+    for (const row of rows) {
+      row.tags = typeof row.tags === 'string' ? JSON.parse(row.tags || '[]') : (row.tags || []);
+    }
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/admin/upper-items/:id
+router.delete('/upper-items/:id', async (req, res) => {
+  try {
+    await pool.query('UPDATE upper_items SET deleted_at = NOW() WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
