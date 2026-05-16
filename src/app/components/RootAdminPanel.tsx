@@ -550,11 +550,31 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
             <AdminMetric icon={<Snowflake size={18} />} label="冰箱" value={summary?.totals.refrigerators ?? '--'} color="#2563eb" />
-            <AdminMetric icon={<Database size={18} />} label="样本容量" value={totalSamplesText} color="#0f766e" />
-            <AdminMetric icon={<FlaskConical size={18} />} label="样本记录" value={summary?.totals.sampleRecords ?? '--'} color="#06b6d4" />
+            <AdminMetric
+              icon={<FlaskConical size={18} />}
+              label="样本记录"
+              value={summary ? (summary.totals.sampleRecords ?? adminSampleRecords.length) : '--'}
+              color="#06b6d4"
+            />
+            <AdminMetric
+              icon={<Database size={18} />}
+              label="盒子 / 试管"
+              value={adminBoxes.length > 0 ? `${adminBoxes.length} · ${adminBoxes.reduce((s, b) => s + (b.tube_count || 0), 0)}管` : '--'}
+              color="#0f766e"
+            />
             <AdminMetric icon={<Users size={18} />} label="用户" value={users.length || '--'} color="#7c3aed" />
-            <AdminMetric icon={<AlertTriangle size={18} />} label="异常" value={summary?.totals.abnormal ?? '--'} color="#dc2626" />
-            <AdminMetric icon={<Shield size={18} />} label="使用率" value={summary ? `${summary.totals.usageRate}%` : '--'} color="#ca8a04" />
+            <AdminMetric
+              icon={<AlertTriangle size={18} />}
+              label="异常警报"
+              value={summary?.totals.abnormal ?? '--'}
+              color={Number(summary?.totals.abnormal || 0) > 0 ? '#dc2626' : '#22c55e'}
+            />
+            <AdminMetric
+              icon={<Shield size={18} />}
+              label="总储存项"
+              value={summary ? summary.totals.totalItems : '--'}
+              color="#ca8a04"
+            />
           </div>
         </section>
 

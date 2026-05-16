@@ -889,15 +889,10 @@ function AppContent() {
       if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
     });
 
-    upperItems.forEach((item) => {
-      const t = item.item_type?.trim();
-      if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
-    });
-
     return Array.from(counts, ([type, count]) => ({ type, count })).sort(
       (a, b) => b.count - a.count || a.type.localeCompare(b.type, 'zh-CN'),
     );
-  }, [sampleRecords, upperItems]);
+  }, [sampleRecords]);
   const displayedTypeStats = typeStats.slice(0, 8);
 
   const boxTypeStats = React.useMemo(() => {
