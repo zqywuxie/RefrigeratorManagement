@@ -146,31 +146,23 @@ export function DrawerFridgeView({
       setTubes([]);
       return;
     }
-    // For upper item boxes, use box_cells (no tubes FK)
-    if (selectedBox.drawer_id === '') {
-      fetchBoxCells(selectedBox.id)
-        .then(setCells)
-        .catch(() => setCells([]));
-      setTubes([]);
-    } else {
-      // Load tubes (new system) — falls back to box_cells if no tubes
-      fetchBoxTubes(selectedBox.id)
-        .then((data) => {
-          setTubes(data);
-          if (data.length === 0) {
-            fetchBoxCells(selectedBox.id)
-              .then(setCells)
-              .catch(() => setCells([]));
-          } else {
-            setCells([]);
-          }
-        })
-        .catch(() => {
+    // Load tubes for all boxes (upper item boxes now have FK-safe box records)
+    fetchBoxTubes(selectedBox.id)
+      .then((data) => {
+        setTubes(data);
+        if (data.length === 0) {
           fetchBoxCells(selectedBox.id)
             .then(setCells)
             .catch(() => setCells([]));
-        });
-    }
+        } else {
+          setCells([]);
+        }
+      })
+      .catch(() => {
+        fetchBoxCells(selectedBox.id)
+          .then(setCells)
+          .catch(() => setCells([]));
+      });
     // Reset multi-select on box change
     setMultiSelectMode(false);
     setSelectedPositions(new Set());
