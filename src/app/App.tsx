@@ -373,7 +373,7 @@ function AppContent() {
       results.push({
         id: sr.id, name: sr.patient_name, type: sr.sample_type || '—', status: 'normal',
         temperature: -80, collectedAt: sr.collected_at || '',
-        kind: 'sample', position: 0,
+        kind: 'sample', compartment: 'upper', position: sr.tube_count || 0,
       });
     });
 
@@ -2449,8 +2449,10 @@ function UserMenu({
             <div className="max-h-80 overflow-y-auto pr-1 space-y-2">
               {uploadedItems.map((item) => {
                 const config = STATUS_CONFIG[item.status];
-                const location =
-                  item.kind === 'subsample'
+                const isNewRecord = item.id.startsWith('sr-');
+                const location = isNewRecord
+                  ? `样本记录 · ${item.position} 管`
+                  : item.kind === 'subsample'
                     ? `${item.parentId} · 子格 ${item.position + 1}`
                     : `${item.compartment === 'upper' ? '上层' : '下层'} · 格位 ${item.position + 1}`;
                 return (

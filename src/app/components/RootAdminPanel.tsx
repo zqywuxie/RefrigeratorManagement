@@ -538,7 +538,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
               type="button"
               onClick={loadAdminData}
               disabled={loading}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px]"
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
               style={{
                 background: 'var(--app-panel-bg)',
                 border: '1px solid var(--app-border)',
@@ -644,7 +644,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                           value={user.role}
                           disabled={busy || (user.role === 'root' && !canDemote)}
                           onChange={(e) => handleRoleChange(user, e.target.value as AuthUser['role'])}
-                          className="rounded-md px-2 py-1.5 text-[13px] outline-none"
+                          className="rounded-md px-2 py-1.5 text-[13px] outline-none min-h-[44px]"
                           style={inputStyle}
                         >
                           <option value="user">普通用户</option>
@@ -666,14 +666,14 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                               setResetPasswords((prev) => ({ ...prev, [user.username]: e.target.value }))
                             }
                             placeholder="新密码"
-                            className="w-28 rounded-md px-2 py-1.5 text-[13px] outline-none"
+                            className="w-full sm:w-28 rounded-md px-2 py-1.5 text-[16px] sm:text-[13px] outline-none min-h-[44px]"
                             style={inputStyle}
                           />
                           <button
                             type="button"
                             disabled={busy}
                             onClick={() => handleResetPassword(user)}
-                            className="rounded-md p-2"
+                            className="rounded-md p-2 min-h-[44px] min-w-[44px]"
                             style={{ background: 'var(--app-info-soft-bg)', color: 'var(--app-info-soft-text)' }}
                             title="重置密码"
                           >
@@ -689,7 +689,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                           type="button"
                           disabled={busy || isCurrent || (user.role === 'root' && rootCount <= 1)}
                           onClick={() => handleDeleteUser(user)}
-                          className="rounded-md p-2 disabled:opacity-35"
+                          className="rounded-md p-2 disabled:opacity-35 min-h-[44px] min-w-[44px]"
                           style={{ background: 'var(--app-danger-soft-bg)', color: 'var(--app-danger-soft-text)' }}
                           title="删除用户"
                         >
@@ -735,7 +735,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                 <option value="root">管理员 root</option>
               </select>
               <button type="submit" disabled={busyUser === '__new__'}
-                className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-[14px]"
+                className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-[14px] min-h-[44px]"
                 style={{ background: '#2563eb', color: '#ffffff' }}>
                 <Plus size={16} />{busyUser === '__new__' ? '创建中...' : '创建'}
               </button>
@@ -883,7 +883,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                       <td className="px-2 py-2 text-[13px] font-medium" style={{ ...rowBg, ...cellText }}>
                         {isEditing ? (
                           <input value={editBoxName} onChange={(e) => setEditBoxName(e.target.value)}
-                            className="w-full rounded px-2 py-1 text-[13px] outline-none"
+                            className="w-full rounded px-2 py-1 text-[16px] sm:text-[13px] outline-none min-h-[44px]"
                             style={{ background: 'var(--app-input-bg)', border: '1px solid var(--app-input-border)', color: 'var(--app-text)' }} />
                         ) : box.name}
                       </td>
@@ -904,7 +904,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                       <td className="px-2 py-2 text-[12px]" style={{ ...rowBg, ...cellMuted }}>
                         {isEditing ? (
                           <input value={editBoxOwner} onChange={(e) => setEditBoxOwner(e.target.value)}
-                            className="w-full rounded px-2 py-1 text-[12px] outline-none"
+                            className="w-full rounded px-2 py-1 text-[16px] sm:text-[12px] outline-none min-h-[44px]"
                             style={{ background: 'var(--app-input-bg)', border: '1px solid var(--app-input-border)', color: 'var(--app-text)' }} />
                         ) : (box.owner || '—')}
                       </td>
