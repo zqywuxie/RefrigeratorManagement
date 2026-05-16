@@ -56,7 +56,6 @@ import {
   fetchItemTypes,
   createItemType,
   fetchSampleRecord,
-  PendingImportSample,
   fetchSampleRecords,
   fetchDrawers,
   fetchUpperItems,

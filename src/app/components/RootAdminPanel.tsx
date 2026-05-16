@@ -896,31 +896,132 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
 
         {/* Sample Records */}
         <section className="rounded-xl p-4" style={{ background: "var(--app-card-bg)", border: "1px solid var(--app-border)", boxShadow: "0 14px 40px rgba(15,23,42,0.06)" }}>
-          <div className="mb-4"><h3 className="text-[17px] font-semibold" style={{ color: "var(--app-text)" }}>样本记录</h3><div className="text-[12px]" style={{ color: "var(--app-muted)" }}>{adminSampleRecords.length} 条</div></div>
-          <div className="flex gap-4 items-start"><div className="flex-1 min-w-0">
-            {adminSampleRecords.length === 0 ? <div className="py-8 text-center text-[13px]" style={{ color: "var(--app-muted)" }}>暂无</div> : (
-              <div className="overflow-x-auto max-h-[450px] overflow-y-auto"><table className="w-full min-w-[380px] border-separate border-spacing-y-1 text-left"><thead><tr className="text-[12px]" style={{ color: "var(--app-muted)" }}><th className="px-2 py-1">姓名</th><th className="px-2 py-1">编号</th><th className="px-2 py-1">类型</th><th className="px-2 py-1">试管</th></tr></thead><tbody>
-              {adminSampleRecords.map((sr) => { const sel = selectedAdminSR?.id === sr.id; return (
-                <tr key={sr.id} onClick={() => handleSelectSR(sr)} className="cursor-pointer" style={{ background: sel ? "#eff6ff" : "var(--app-panel-bg)" }}>
-                  <td className="rounded-l-lg px-2 py-2 text-[13px] font-medium" style={{ color: "var(--app-text)" }}><div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />{sr.patient_name}</div></td>
-                  <td className="px-2 py-2 text-[13px]" style={{ color: "var(--app-text)" }}>{sr.sample_code}</td>
-                  <td className="px-2 py-2 text-[12px]" style={{ color: "var(--app-muted)" }}>{sr.sample_type || "—"}</td>
-                  <td className="rounded-r-lg px-2 py-2 text-[13px] font-mono" style={{ color: "#2563eb" }}>{sr.tube_count || 0}</td>
-                </tr>)})}
-              </tbody></table></div>)}</div>
-            {selectedAdminSR && <div className="w-72 flex-shrink-0 rounded-xl p-4 space-y-3" style={{ background: "var(--app-panel-bg)", border: "1px solid var(--app-border)" }}>
-              <div className="flex items-center justify-between"><div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full" style={{ background: selectedAdminSR.group_color }} /><span className="text-[15px] font-medium" style={{ color: "var(--app-text)" }}>{selectedAdminSR.patient_name}</span></div><button onClick={() => { setSelectedAdminSR(null); setEditingSR(false); }} style={{ color: "var(--app-muted)" }}>✕</button></div>
-              {editingSR ? <div className="space-y-2">
-                <input value={editSRName} onChange={e => setEditSRName(e.target.value)} placeholder="姓名" className="w-full rounded px-2 py-1.5 text-[13px] outline-none" style={inputStyle} />
-                <input value={editSRCode} onChange={e => setEditSRCode(e.target.value)} placeholder="编号" className="w-full rounded px-2 py-1.5 text-[13px] outline-none" style={inputStyle} />
-                <input value={editSRType} onChange={e => setEditSRType(e.target.value)} placeholder="类型" className="w-full rounded px-2 py-1.5 text-[13px] outline-none" style={inputStyle} />
-                <input value={editSRSource} onChange={e => setEditSRSource(e.target.value)} placeholder="来源" className="w-full rounded px-2 py-1.5 text-[13px] outline-none" style={inputStyle} />
-                <input value={editSRStage} onChange={e => setEditSRStage(e.target.value)} placeholder="阶段" className="w-full rounded px-2 py-1.5 text-[13px] outline-none" style={inputStyle} />
-                <input type="date" value={editSRDate} onChange={e => setEditSRDate(e.target.value)} className="w-full rounded px-2 py-1.5 text-[13px] outline-none" style={inputStyle} />
-                <div className="flex gap-2"><button onClick={handleSaveSR} disabled={busySRId === selectedAdminSR.id} className="flex-1 rounded py-1.5 text-[12px]" style={{ background: "#2563eb", color: "#fff" }}>保存</button><button onClick={() => setEditingSR(false)} className="flex-1 rounded py-1.5 text-[12px]" style={{ background: "var(--app-input-bg)", color: "var(--app-muted)" }}>取消</button></div></div> :
-              <div className="space-y-1.5 text-[13px]">{[["编号",selectedAdminSR.sample_code],["类型",selectedAdminSR.sample_type||"—"],["来源",selectedAdminSR.source||"—"],["阶段",selectedAdminSR.collection_stage||"—"],["采集时间",selectedAdminSR.collected_at?selectedAdminSR.collected_at.slice(0,10):"—"],["上传者",selectedAdminSR.uploader||"—"],["试管数",String(selectedAdminSR.tube_count||0)],["标签",(selectedAdminSR.tags||[]).join(", ")||"—"],["备注",selectedAdminSR.note||"—"]].map(([l,v]) => <div key={l} className="flex justify-between gap-2"><span style={{color:"var(--app-muted)"}}>{l}</span><span className="truncate max-w-[150px] text-right" title={v} style={{color:"var(--app-text)"}}>{v}</span></div>)}</div>}
-              <div className="flex gap-2 pt-2 border-t" style={{borderColor:"var(--app-border)"}}><button onClick={handleStartEditSR} className="flex-1 rounded py-1.5 text-[12px]" style={{background:"#2563eb",color:"#fff"}}>编辑</button><button onClick={handleDeleteSR} disabled={busySRId===selectedAdminSR.id} className="flex-1 rounded py-1.5 text-[12px]" style={{background:"#ef4444",color:"#fff"}}>删除</button></div></div>}
-          </div></section>
+          <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h3 className="text-[17px] font-semibold" style={{ color: "var(--app-text)" }}>样本记录</h3>
+              <div className="text-[12px]" style={{ color: "var(--app-muted)" }}>
+                {adminSampleRecords.length} 条
+                {selectedSRIde.size > 0 && ` · 已选 ${selectedSRIde.size} 条`}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {selectedSRIde.size > 0 && (
+                <button onClick={handleBatchDeleteSR} className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: "#ef4444", color: "#fff" }}>
+                  批量删除 {selectedSRIde.size} 条
+                </button>
+              )}
+              <input
+                value={srSearchQuery}
+                onChange={(e) => setSrSearchQuery(e.target.value)}
+                placeholder="搜索姓名 / 编号 / 类型..."
+                className="rounded-lg px-3 py-1.5 text-[13px] outline-none w-56"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+          <div className="flex gap-4 items-start">
+            <div className="flex-1 min-w-0">
+              {filteredAdminSR.length === 0 ? (
+                <div className="py-8 text-center text-[13px]" style={{ color: "var(--app-muted)" }}>
+                  {srSearchQuery ? '无匹配结果' : '暂无样本记录'}
+                </div>
+              ) : (
+                <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
+                  <table className="w-full min-w-[500px] border-separate border-spacing-y-1 text-left">
+                    <thead><tr className="text-[12px]" style={{ color: "var(--app-muted)" }}>
+                      <th className="px-2 py-1 w-8"></th>
+                      <th className="px-2 py-1 font-medium">姓名</th>
+                      <th className="px-2 py-1 font-medium">编号</th>
+                      <th className="px-2 py-1 font-medium">类型</th>
+                      <th className="px-2 py-1 font-medium">上传者</th>
+                      <th className="px-2 py-1 font-medium">试管</th>
+                    </tr></thead>
+                    <tbody>
+                    {filteredAdminSR.map((sr) => {
+                      const sel = selectedAdminSR?.id === sr.id;
+                      const checked = selectedSRIde.has(sr.id);
+                      return (
+                      <tr key={sr.id} className="cursor-pointer" style={{ background: sel ? "rgba(37,99,235,0.06)" : "var(--app-panel-bg)" }}>
+                        <td className="rounded-l-lg px-2 py-2" onClick={(e) => { e.stopPropagation(); setSelectedSRIde((prev) => { const next = new Set(prev); if (next.has(sr.id)) next.delete(sr.id); else next.add(sr.id); return next; }); }}>
+                          <input type="checkbox" checked={checked} onChange={() => {}} className="cursor-pointer" />
+                        </td>
+                        <td className="px-2 py-2 text-[13px] font-medium" onClick={() => { handleSelectSR(sr); setSelectedSRIde(new Set()); }} style={{ color: "var(--app-text)" }}>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />
+                            {sr.patient_name}
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 text-[13px]" onClick={() => handleSelectSR(sr)} style={{ color: "var(--app-text)" }}>{sr.sample_code}</td>
+                        <td className="px-2 py-2 text-[12px]" onClick={() => handleSelectSR(sr)} style={{ color: "var(--app-muted)" }}>{sr.sample_type || "—"}</td>
+                        <td className="px-2 py-2 text-[12px]" onClick={() => handleSelectSR(sr)} style={{ color: "var(--app-muted)" }}>{sr.uploader || "—"}</td>
+                        <td className="rounded-r-lg px-2 py-2 text-[13px] font-mono" onClick={() => handleSelectSR(sr)} style={{ color: "#2563eb" }}>{sr.tube_count || 0}</td>
+                      </tr>)})}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            {selectedAdminSR && (
+              <div className="w-80 flex-shrink-0 rounded-xl p-4 space-y-3" style={{ background: "var(--app-panel-bg)", border: "1px solid var(--app-border)" }}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: selectedAdminSR.group_color }} />
+                    <span className="text-[15px] font-medium" style={{ color: "var(--app-text)" }}>{selectedAdminSR.patient_name}</span>
+                  </div>
+                  <button onClick={() => { setSelectedAdminSR(null); setEditingSR(false); }} className="text-[13px]" style={{ color: "var(--app-muted)" }}>✕</button>
+                </div>
+                {editingSR ? (
+                  <div className="space-y-2">
+                    {([
+                      ["姓名", editSRName, setEditSRName],
+                      ["编号", editSRCode, setEditSRCode],
+                      ["类型", editSRType, setEditSRType],
+                      ["来源", editSRSource, setEditSRSource],
+                      ["阶段", editSRStage, setEditSRStage],
+                    ] as const).map(([label, val, setter]) => (
+                      <div key={label}>
+                        <label className="text-[11px]" style={{ color: "var(--app-muted)" }}>{label}</label>
+                        <input value={val} onChange={e => setter(e.target.value)} className="w-full rounded px-2 py-1.5 text-[13px] outline-none mt-0.5" style={inputStyle} />
+                      </div>
+                    ))}
+                    <div>
+                      <label className="text-[11px]" style={{ color: "var(--app-muted)" }}>采集日期</label>
+                      <input type="date" value={editSRDate} onChange={e => setEditSRDate(e.target.value)} className="w-full rounded px-2 py-1.5 text-[13px] outline-none mt-0.5" style={inputStyle} />
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button onClick={handleSaveSR} disabled={busySRId === selectedAdminSR.id} className="flex-1 rounded py-1.5 text-[12px]" style={{ background: "#2563eb", color: "#fff" }}>保存</button>
+                      <button onClick={() => setEditingSR(false)} className="flex-1 rounded py-1.5 text-[12px]" style={{ background: "var(--app-input-bg)", color: "var(--app-muted)" }}>取消</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 text-[13px]">
+                    {[
+                      ["编号", selectedAdminSR.sample_code],
+                      ["类型", selectedAdminSR.sample_type || "—"],
+                      ["来源", selectedAdminSR.source || "—"],
+                      ["阶段", selectedAdminSR.collection_stage || "—"],
+                      ["采集时间", selectedAdminSR.collected_at ? selectedAdminSR.collected_at.slice(0, 10) : "—"],
+                      ["上传者", selectedAdminSR.uploader || "—"],
+                      ["试管数", String(selectedAdminSR.tube_count || 0)],
+                      ["标签", (selectedAdminSR.tags || []).join(", ") || "—"],
+                      ["备注", selectedAdminSR.note || "—"],
+                    ].map(([l, v]) => (
+                      <div key={l} className="flex justify-between gap-2">
+                        <span style={{ color: "var(--app-muted)" }}>{l}</span>
+                        <span className="truncate max-w-[160px] text-right" title={v} style={{ color: "var(--app-text)" }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2 pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
+                  <button onClick={handleStartEditSR} className="flex-1 rounded py-1.5 text-[12px]" style={{ background: "#2563eb", color: "#fff" }}>编辑</button>
+                  <button onClick={handleDeleteSR} disabled={busySRId === selectedAdminSR.id} className="flex-1 rounded py-1.5 text-[12px]" style={{ background: "#ef4444", color: "#fff" }}>删除</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
 
 
 
