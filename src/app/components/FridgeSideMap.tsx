@@ -82,7 +82,7 @@ function MiniDrawerBlock({
         />
         <span
           className="relative z-10 font-mono font-bold flex items-center justify-center h-full"
-          style={{ color: isSelected ? '#0891b2' : 'var(--app-text)', fontSize: '11px' }}
+          style={{ color: isSelected ? '#0891b2' : 'var(--app-text)', fontSize: "12px" }}
         >
           {drawer.label}
         </span>

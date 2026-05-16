@@ -912,22 +912,22 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                         {isEditing ? (
                           <div className="flex items-center gap-1 justify-end">
                             <button onClick={() => handleSaveBox(box.id)} disabled={busy}
-                              className="text-[11px] px-2 py-1 rounded" style={{ background: '#2563eb', color: '#fff' }}>
+                              className="text-[11px] px-2 py-1 rounded min-h-[44px]" style={{ background: '#2563eb', color: '#fff' }}>
                               {busy ? '...' : '保存'}
                             </button>
                             <button onClick={handleCancelEditBox}
-                              className="text-[11px] px-2 py-1 rounded" style={{ background: 'var(--app-input-bg)', color: 'var(--app-muted)' }}>
+                              className="text-[11px] px-2 py-1 rounded min-h-[44px]" style={{ background: 'var(--app-input-bg)', color: 'var(--app-muted)' }}>
                               取消
                             </button>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1 justify-end">
                             <button onClick={() => handleStartEditBox(box)}
-                              className="text-[11px] px-2 py-1 rounded hover:opacity-80" style={{ color: '#2563eb' }}>
+                              className="text-[11px] px-2 py-1 rounded hover:opacity-80 min-h-[44px]" style={{ color: '#2563eb' }}>
                               编辑
                             </button>
                             <button onClick={() => handleDeleteBox(box)} disabled={busy}
-                              className="text-[11px] px-2 py-1 rounded hover:opacity-80" style={{ color: '#ef4444' }}>
+                              className="text-[11px] px-2 py-1 rounded hover:opacity-80 min-h-[44px]" style={{ color: '#ef4444' }}>
                               删除
                             </button>
                           </div>
@@ -955,7 +955,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
               <select
                 value={srBoxId}
                 onChange={(e) => setSrBoxId(e.target.value)}
-                className="rounded-lg px-3 py-1.5 text-[13px] outline-none"
+                className="rounded-lg px-3 py-1.5 text-[13px] outline-none min-h-[44px]"
                 style={inputStyle}
               >
                 <option value="__all__">全部盒子 ({adminBoxes.reduce((s, b) => s + (b.tube_count || 0), 0)}管)</option>
@@ -966,7 +966,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                 ))}
               </select>
               {selectedSRIde.size > 0 && (
-                <button onClick={handleBatchDeleteSR} className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: "#ef4444", color: "#fff" }}>
+                <button onClick={handleBatchDeleteSR} className="rounded-lg px-3 py-1.5 text-[12px] min-h-[44px]" style={{ background: "#ef4444", color: "#fff" }}>
                   批量删除 {selectedSRIde.size} 条
                 </button>
               )}
@@ -974,7 +974,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                 value={srSearchQuery}
                 onChange={(e) => setSrSearchQuery(e.target.value)}
                 placeholder="搜索姓名 / 编号..."
-                className="rounded-lg px-3 py-1.5 text-[13px] outline-none w-44"
+                className="rounded-lg px-3 py-1.5 text-[16px] sm:text-[13px] outline-none w-full sm:w-44 min-h-[44px]"
                 style={inputStyle}
               />
             </div>
@@ -1041,16 +1041,16 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                     ] as const).map(([label, val, setter]) => (
                       <div key={label}>
                         <label className="text-[11px]" style={{ color: "var(--app-muted)" }}>{label}</label>
-                        <input value={val} onChange={e => setter(e.target.value)} className="w-full rounded px-2 py-1.5 text-[13px] outline-none mt-0.5" style={inputStyle} />
+                        <input value={val} onChange={e => setter(e.target.value)} className="w-full rounded px-2 py-1.5 text-[16px] sm:text-[13px] outline-none mt-0.5 min-h-[44px]" style={inputStyle} />
                       </div>
                     ))}
                     <div>
                       <label className="text-[11px]" style={{ color: "var(--app-muted)" }}>采集日期</label>
-                      <input type="date" value={editSRDate} onChange={e => setEditSRDate(e.target.value)} className="w-full rounded px-2 py-1.5 text-[13px] outline-none mt-0.5" style={inputStyle} />
+                      <input type="date" value={editSRDate} onChange={e => setEditSRDate(e.target.value)} className="w-full rounded px-2 py-1.5 text-[16px] sm:text-[13px] outline-none mt-0.5 min-h-[44px]" style={inputStyle} />
                     </div>
                     <div className="flex gap-2 pt-1">
-                      <button onClick={handleSaveSR} disabled={busySRId === selectedAdminSR.id} className="flex-1 rounded py-1.5 text-[12px]" style={{ background: "#2563eb", color: "#fff" }}>保存</button>
-                      <button onClick={() => setEditingSR(false)} className="flex-1 rounded py-1.5 text-[12px]" style={{ background: "var(--app-input-bg)", color: "var(--app-muted)" }}>取消</button>
+                      <button onClick={handleSaveSR} disabled={busySRId === selectedAdminSR.id} className="flex-1 rounded py-1.5 text-[12px] min-h-[44px]" style={{ background: "#2563eb", color: "#fff" }}>保存</button>
+                      <button onClick={() => setEditingSR(false)} className="flex-1 rounded py-1.5 text-[12px] min-h-[44px]" style={{ background: "var(--app-input-bg)", color: "var(--app-muted)" }}>取消</button>
                     </div>
                   </div>
                 ) : (
@@ -1074,8 +1074,8 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                   </div>
                 )}
                 <div className="flex gap-2 pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
-                  <button onClick={handleStartEditSR} className="flex-1 rounded py-1.5 text-[12px]" style={{ background: "#2563eb", color: "#fff" }}>编辑</button>
-                  <button onClick={handleDeleteSR} disabled={busySRId === selectedAdminSR.id} className="flex-1 rounded py-1.5 text-[12px]" style={{ background: "#ef4444", color: "#fff" }}>删除</button>
+                  <button onClick={handleStartEditSR} className="flex-1 rounded py-1.5 text-[12px] min-h-[44px]" style={{ background: "#2563eb", color: "#fff" }}>编辑</button>
+                  <button onClick={handleDeleteSR} disabled={busySRId === selectedAdminSR.id} className="flex-1 rounded py-1.5 text-[12px] min-h-[44px]" style={{ background: "#ef4444", color: "#fff" }}>删除</button>
                 </div>
               </div>
             )}

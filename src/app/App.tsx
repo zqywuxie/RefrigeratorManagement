@@ -166,7 +166,7 @@ function AppContent() {
   const [upperItems, setUpperItems] = useState<UpperItem[]>([]);
 
   // Side map state
-  const [showSideMap, setShowSideMap] = useState(true);
+  const [showSideMap, setShowSideMap] = useState(window.innerWidth >= 1024);
   const [sideMapNavTarget, setSideMapNavTarget] = useState<{ drawerId: string; drawerLabel: string } | null>(null);
   const [sideMapRefreshKey, setSideMapRefreshKey] = useState(0);
   const [boxViewTubes, setBoxViewTubes] = useState<Tube[]>([]);
@@ -1149,7 +1149,7 @@ function AppContent() {
               onOpenSample={handleOpenUploadedItem}
               onLogout={logout}
             />
-            <div className="flex items-center gap-5">
+            <div className="hidden lg:flex items-center gap-5">
               <StatChip
                 icon={<Activity size={16} />}
                 label="在线"
