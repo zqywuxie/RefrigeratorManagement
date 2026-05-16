@@ -133,6 +133,7 @@ function AppContent() {
   const [editItem, setEditItem] = useState<DetailItem | null>(null);
   const [sampleTypes, setSampleTypes] = useState<string[]>(['血清', '血浆', '尿液', 'DNA', '组织', '全血']);
   const [itemTypes, setItemTypes] = useState<string[]>(DEFAULT_ITEM_TYPES);
+  const [sampleRecords, setSampleRecords] = useState<SampleRecord[]>([]);
 
   // Side map state
   const [showSideMap, setShowSideMap] = useState(true);
@@ -203,16 +204,18 @@ function AppContent() {
   useEffect(() => {
     if (!selectedFridgeId) return;
     setLoading(true);
-    fetchSamples(selectedFridgeId)
-      .then((data) => {
-        setSamples(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setLoading(false);
-        showNotif('加载样本数据失败', 'error');
-        console.error(err);
-      });
+    Promise.all([
+      fetchSamples(selectedFridgeId).catch(() => []),
+      fetchSampleRecords({}).catch(() => []),
+    ]).then(([sampleData, srData]) => {
+      setSamples(sampleData);
+      setSampleRecords(srData);
+      setLoading(false);
+    }).catch((err) => {
+      setLoading(false);
+      showNotif('加载样本数据失败', 'error');
+      console.error(err);
+    });
   }, [selectedFridgeId]);
 
   const selectedFridge = refrigerators.find((r) => r.id === selectedFridgeId) ?? null;
@@ -860,10 +863,15 @@ function AppContent() {
       });
     });
 
+    sampleRecords.forEach((sr) => {
+      const t = sr.sample_type?.trim();
+      if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
+    });
+
     return Array.from(counts, ([type, count]) => ({ type, count })).sort(
       (a, b) => b.count - a.count || a.type.localeCompare(b.type, 'zh-CN'),
     );
-  }, [samples]);
+  }, [samples, sampleRecords]);
   const displayedTypeStats = typeStats.slice(0, 8);
   const remainingTypeCount = Math.max(typeStats.length - displayedTypeStats.length, 0);
 
