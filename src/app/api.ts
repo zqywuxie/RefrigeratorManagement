@@ -363,6 +363,13 @@ export async function createBox(drawerId: string, data: Partial<Box>): Promise<B
   });
 }
 
+export async function createStandaloneBox(data: Partial<Box>): Promise<Box> {
+  return fetchJSON(`${BASE}/boxes`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function updateBox(boxId: string, data: Partial<Box>): Promise<Box> {
   return fetchJSON(`${BASE}/boxes/${encodeURIComponent(boxId)}`, {
     method: 'PUT',

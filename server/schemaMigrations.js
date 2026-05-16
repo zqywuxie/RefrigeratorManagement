@@ -221,6 +221,30 @@ export async function runSchemaMigrations() {
   await ensureColumn('upper_items', 'box_mode', "`box_mode` ENUM('simple','precise') DEFAULT 'simple' AFTER `item_type`");
   await ensureColumn('upper_items', 'grid_rows', '`grid_rows` INT NULL AFTER `box_mode`');
   await ensureColumn('upper_items', 'grid_cols', '`grid_cols` INT NULL AFTER `grid_rows`');
+  // Allow boxes without drawer (for upper item boxes)
+  try {
+    await pool.query("ALTER TABLE boxes MODIFY COLUMN drawer_id VARCHAR(36) NULL");
+  } catch (err) {
+    console.warn('Skip boxes.drawer_id nullable migration:', err.message);
+  }
+  // Auto-create boxes for upper items with box_mode='precise'
+  try {
+    const [items] = await pool.query(
+      "SELECT id, refrigerator_id, name, grid_rows, grid_cols, item_type FROM upper_items WHERE box_mode = 'precise' AND deleted_at IS NULL"
+    );
+    for (const item of items) {
+      const [[existing]] = await pool.query('SELECT id FROM boxes WHERE id = ?', [item.id]);
+      if (!existing) {
+        await pool.query(
+          `INSERT INTO boxes (id, drawer_id, name, mode, grid_rows, grid_cols, sample_type, quantity)
+           VALUES (?, NULL, ?, 'precise', ?, ?, ?, 0)`,
+          [item.id, item.name, item.grid_rows, item.grid_cols, item.item_type]
+        );
+      }
+    }
+  } catch (err) {
+    console.warn('Skip upper items to boxes migration:', err.message);
+  }
 
   // Migrate existing box_cells → sample_records + tubes
   const [cellRows] = await pool.query(

@@ -39,14 +39,16 @@ export function ItemCard({ item, isHighlighted, onClick, onDelete, canDelete = f
       }}
     >
       {canDelete && onDelete && (
-        <button
+        <span
           onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-          className="absolute top-2 right-2 w-6 h-6 rounded flex items-center justify-center hover:bg-red-50 transition-colors z-10"
+          className="absolute top-2 right-2 w-6 h-6 rounded flex items-center justify-center hover:bg-red-50 transition-colors z-10 cursor-pointer"
           style={{ color: '#f87171' }}
           title="删除物品"
+          role="button"
+          tabIndex={0}
         >
           <Trash2 size={12} />
-        </button>
+        </span>
       )}
       <div className="flex items-center gap-2 mb-2">
         <Package size={16} color={typeConfig.color} />

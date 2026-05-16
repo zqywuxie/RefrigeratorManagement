@@ -4,7 +4,7 @@ import { Refrigerator, UpperItem, Drawer, Box, BoxCell, Tube, SampleRecord, DRAW
 import {
   fetchUpperItems, createUpperItem, updateUpperItem, deleteUpperItem,
   fetchDrawers, updateDrawer,
-  fetchBoxes, createBox, updateBox, deleteBox,
+  fetchBoxes, createBox, createStandaloneBox, updateBox, deleteBox,
   fetchBoxCells, createBoxCell, updateBoxCell, deleteBoxCell,
   fetchBoxTubes, createSampleRecord, updateSampleRecord, deleteSampleRecord,
   addTubesToSample, deleteTube, batchUpdateSampleRecords,
@@ -276,6 +276,19 @@ export function DrawerFridgeView({
   const handleItemClick = useCallback((itemId: string) => {
     const item = upperItems.find((i) => i.id === itemId) || null;
     if (item && item.box_mode === 'precise' && item.grid_rows && item.grid_cols) {
+      // Ensure a box record exists for this upper item (so tubes FK works)
+      try {
+        await createStandaloneBox({
+          id: item.id,
+          name: item.name,
+          mode: 'precise',
+          grid_rows: item.grid_rows,
+          grid_cols: item.grid_cols,
+          sample_type: item.item_type,
+          owner: item.owner,
+        } as any);
+      } catch { /* box may already exist, ignore */ }
+
       // Navigate to box grid view for upper box items
       const syntheticBox: Box = {
         id: item.id,

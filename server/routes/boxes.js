@@ -4,6 +4,29 @@ import { authenticate, requireResourceOwner } from '../middleware/auth.js';
 
 const router = Router();
 
+// POST /api/boxes — create box without drawer (for upper item boxes)
+router.post('/', authenticate, async (req, res) => {
+  try {
+    const { id, name, mode = 'precise', gridRows, grid_rows, gridCols, grid_cols, sampleType, sample_type, owner } = req.body;
+    if (!id || !name) return res.status(400).json({ error: 'id and name are required' });
+    const finalGridRows = gridRows ?? grid_rows ?? null;
+    const finalGridCols = gridCols ?? grid_cols ?? null;
+    await pool.query(
+      `INSERT INTO boxes (id, drawer_id, name, mode, grid_rows, grid_cols, sample_type, quantity, owner)
+       VALUES (?, NULL, ?, ?, ?, ?, ?, 0, ?)`,
+      [id, name, mode, finalGridRows, finalGridCols, sampleType ?? sample_type ?? null, owner || null]
+    );
+    const [[box]] = await pool.query('SELECT * FROM boxes WHERE id = ?', [id]);
+    res.status(201).json(box);
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      const [[box]] = await pool.query('SELECT * FROM boxes WHERE id = ?', [req.body.id]);
+      return res.json(box);
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/boxes/:boxId
 router.put('/:boxId', authenticate, requireResourceOwner('boxes', 'boxId', 'owner'), async (req, res) => {
   try {
