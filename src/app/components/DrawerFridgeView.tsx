@@ -41,6 +41,7 @@ interface DrawerFridgeViewProps {
   onPendingSamplesChange?: (samples: PendingImportSample[]) => void;
   onImportComplete?: (samples: PendingImportSample[]) => void;
   onDataChanged?: () => void;
+  onBoxViewChange?: (tubes: Tube[]) => void;
 }
 
 export function DrawerFridgeView({
@@ -56,6 +57,7 @@ export function DrawerFridgeView({
   onPendingSamplesChange,
   onImportComplete,
   onDataChanged,
+  onBoxViewChange,
 }: DrawerFridgeViewProps) {
   const [viewLevel, setViewLevel] = useState<ViewLevel>('fridge');
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('upper');
@@ -168,6 +170,15 @@ export function DrawerFridgeView({
     setSelectedPositions(new Set());
     setHoveredSampleId(null);
   }, [selectedBox]);
+
+  // Notify parent when box view state changes
+  useEffect(() => {
+    if (viewLevel === 'box') {
+      onBoxViewChange?.(tubes);
+    } else {
+      onBoxViewChange?.([]);
+    }
+  }, [viewLevel, tubes, onBoxViewChange]);
 
   const matchedCellIds = React.useMemo(() => {
     if (!searchCellQuery.trim()) return new Set<string>();

@@ -37,6 +37,7 @@ import {
   DEFAULT_ITEM_TYPES,
   SampleRecord,
   PendingImportSample,
+  Tube,
   getSampleTypeColor,
   UpperItem,
 } from './types';
@@ -152,6 +153,7 @@ function AppContent() {
   const [showSideMap, setShowSideMap] = useState(true);
   const [sideMapNavTarget, setSideMapNavTarget] = useState<{ drawerId: string; drawerLabel: string } | null>(null);
   const [sideMapRefreshKey, setSideMapRefreshKey] = useState(0);
+  const [boxViewTubes, setBoxViewTubes] = useState<Tube[]>([]);
 
   // Pending imported samples (shared with DrawerFridgeView)
   const [pendingSamples, setPendingSamples] = useState<PendingImportSample[]>([]);
@@ -895,6 +897,15 @@ function AppContent() {
     );
   }, [sampleRecords, upperItems]);
   const displayedTypeStats = typeStats.slice(0, 8);
+
+  const boxTypeStats = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    boxViewTubes.forEach((t) => {
+      const st = t.sample_type?.trim();
+      if (st) counts.set(st, (counts.get(st) ?? 0) + 1);
+    });
+    return Array.from(counts, ([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count);
+  }, [boxViewTubes]);
   const remainingTypeCount = Math.max(typeStats.length - displayedTypeStats.length, 0);
 
   const notifColors = {
@@ -1107,7 +1118,7 @@ function AppContent() {
                 className="rounded-xl p-3 space-y-1 max-h-56 overflow-y-auto"
                 style={{
                   background: 'var(--app-card-bg)',
-                  border: '1px solid var(--app-border)',
+                  border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
                   boxShadow: '0 12px 34px rgba(15,23,42,0.06)',
                 }}
               >
@@ -1162,7 +1173,7 @@ function AppContent() {
                 className="flex h-[200px] w-full items-center justify-center rounded-2xl"
                 style={{
                   background: 'var(--app-card-bg)',
-                  border: '1px solid var(--app-border)',
+                  border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
                 }}
               >
                 <span style={{ color: 'var(--app-muted)' }}>加载中...</span>
@@ -1185,6 +1196,7 @@ function AppContent() {
                   onPendingSamplesChange={setPendingSamples}
                   onImportComplete={handleImportComplete}
                   onDataChanged={() => {
+                    onBoxViewChange={setBoxViewTubes}
                     setSideMapRefreshKey((k) => k + 1);
                     fetchSampleRecords({}).then(setSampleRecords).catch(() => {});
                   }}
@@ -1228,7 +1240,7 @@ function AppContent() {
                 className="flex h-[200px] w-full flex-col items-center justify-center gap-4 rounded-2xl"
                 style={{
                   background: 'var(--app-card-bg)',
-                  border: '1px solid var(--app-border)',
+                  border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
                 }}
               >
                 <span style={{ color: 'var(--app-muted)' }}>
@@ -1306,7 +1318,7 @@ function AppContent() {
               className="rounded-xl p-4"
               style={{
                 background: 'var(--app-card-bg)',
-                border: '1px solid var(--app-border)',
+                border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
                 boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
               }}
             >
@@ -1349,7 +1361,7 @@ function AppContent() {
                   );})}
                   {remainingTypeCount > 0 && (
                     <div className="pt-1 text-right text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                      另有 {remainingTypeCount} 类样本类型
+                      另有 {remainingTypeCount} 类{boxViewTubes.length > 0 ? '当前盒子样本类型' : '样本类型'}
                     </div>
                   )}
                 </div>
@@ -1557,7 +1569,7 @@ function UserMenu({
         className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
         style={{
           background: 'var(--app-panel-bg)',
-          border: '1px solid var(--app-border)',
+          border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
           color: 'var(--app-muted)',
         }}
         title={isDark ? '切换浅色模式' : '切换深色模式'}
@@ -1573,7 +1585,7 @@ function UserMenu({
         className="flex items-center gap-2 px-3 py-2 rounded-lg"
         style={{
           background: 'var(--app-panel-bg)',
-          border: '1px solid var(--app-border)',
+          border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
           color: 'var(--app-text)',
         }}
       >
@@ -1600,7 +1612,7 @@ function UserMenu({
           className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
           style={{
             background: 'var(--app-panel-bg)',
-            border: '1px solid var(--app-border)',
+            border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
             color: '#2563eb',
           }}
           title="创建用户"
@@ -1613,7 +1625,7 @@ function UserMenu({
         className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
         style={{
           background: 'var(--app-panel-bg)',
-          border: '1px solid var(--app-border)',
+          border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
           color: '#ef4444',
         }}
         title="退出登录"
@@ -1625,7 +1637,7 @@ function UserMenu({
           className="absolute right-0 top-11 z-50 w-80 rounded-xl p-3"
           style={{
             background: 'var(--app-header-bg)',
-            border: '1px solid var(--app-border)',
+            border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
             boxShadow: '0 18px 52px rgba(15,23,42,0.2)',
             backdropFilter: 'blur(12px)',
           }}
@@ -1643,7 +1655,7 @@ function UserMenu({
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{
                 background: 'var(--app-card-bg)',
-                border: '1px solid var(--app-border)',
+                border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
                 color: '#2563eb',
               }}
             >
@@ -1656,7 +1668,7 @@ function UserMenu({
               className="rounded-lg px-3 py-5 text-center text-[13px]"
               style={{
                 background: 'var(--app-card-bg)',
-                border: '1px solid var(--app-border)',
+                border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
                 color: 'var(--app-muted)',
               }}
             >
@@ -1681,7 +1693,7 @@ function UserMenu({
                     className="w-full rounded-lg px-3 py-2.5 text-left transition-all hover:brightness-95"
                     style={{
                       background: 'var(--app-card-bg)',
-                      border: '1px solid var(--app-border)',
+                      border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
                       color: 'var(--app-text)',
                     }}
                   >
@@ -1722,7 +1734,7 @@ function UserMenu({
           className="absolute right-0 top-11 z-50 w-64 space-y-2 rounded-xl p-3"
           style={{
             background: 'var(--app-header-bg)',
-            border: '1px solid var(--app-border)',
+            border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
             boxShadow: '0 16px 48px rgba(15,23,42,0.18)',
           }}
         >

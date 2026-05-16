@@ -30,6 +30,7 @@ import {
   fetchAdminUsers,
   fetchAdminBoxes,
   fetchAdminSampleRecords,
+  fetchSampleRecords,
   fetchSampleTypes,
   updateAdminUser,
   updateSample,
@@ -150,6 +151,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
 
   const [srSearchQuery, setSrSearchQuery] = useState('');
   const [selectedSRIde, setSelectedSRIde] = useState<Set<string>>(new Set());
+  const [srBoxId, setSrBoxId] = useState<string>('__all__');
 
   const filteredAdminSR = React.useMemo(() => {
     if (!srSearchQuery.trim()) return adminSampleRecords;
@@ -165,19 +167,17 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   const loadAdminData = useCallback(async () => {
     setLoading(true);
     try {
-      const [summaryData, userData, sampleData, sampleTypeData, boxData, srData] = await Promise.all([
+      const [summaryData, userData, sampleData, sampleTypeData, boxData] = await Promise.all([
         fetchAdminSummary(),
         fetchAdminUsers(),
         fetchAdminSamples(),
         fetchSampleTypes().catch(() => []),
         fetchAdminBoxes().catch(() => []),
-        fetchAdminSampleRecords().catch(() => []),
       ]);
       setSummary(summaryData);
       setUsers(userData);
       setSamples(sampleData);
       setAdminBoxes(boxData);
-      setAdminSampleRecords(srData);
       setSampleTypes(() => {
         const merged = new Set<string>([
           ...sampleTypeData,
@@ -199,6 +199,15 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   useEffect(() => {
     loadAdminData();
   }, [loadAdminData]);
+
+  useEffect(() => {
+    if (srBoxId === '__all__') {
+      fetchSampleRecords({}).then(setAdminSampleRecords).catch(() => {});
+    } else if (srBoxId) {
+      fetchSampleRecords({ box_id: srBoxId }).then(setAdminSampleRecords).catch(() => {});
+    }
+    setSelectedSRIde(new Set());
+  }, [srBoxId]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -921,7 +930,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
           )}
         </section>
 
-        {/* Sample Records */}
+        {/* Sample Records by Box */}
         <section className="rounded-xl p-4" style={{ background: "var(--app-card-bg)", border: "1px solid var(--app-border)", boxShadow: "0 14px 40px rgba(15,23,42,0.06)" }}>
           <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
             <div>
@@ -932,6 +941,19 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <select
+                value={srBoxId}
+                onChange={(e) => setSrBoxId(e.target.value)}
+                className="rounded-lg px-3 py-1.5 text-[13px] outline-none"
+                style={inputStyle}
+              >
+                <option value="__all__">全部盒子 ({adminBoxes.reduce((s, b) => s + (b.tube_count || 0), 0)}管)</option>
+                {adminBoxes.map((box) => (
+                  <option key={box.id} value={box.id}>
+                    {box.fridge_name} · {box.drawer_label} · {box.name} ({box.tube_count || 0}管)
+                  </option>
+                ))}
+              </select>
               {selectedSRIde.size > 0 && (
                 <button onClick={handleBatchDeleteSR} className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: "#ef4444", color: "#fff" }}>
                   批量删除 {selectedSRIde.size} 条
@@ -940,8 +962,8 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
               <input
                 value={srSearchQuery}
                 onChange={(e) => setSrSearchQuery(e.target.value)}
-                placeholder="搜索姓名 / 编号 / 类型..."
-                className="rounded-lg px-3 py-1.5 text-[13px] outline-none w-56"
+                placeholder="搜索姓名 / 编号..."
+                className="rounded-lg px-3 py-1.5 text-[13px] outline-none w-44"
                 style={inputStyle}
               />
             </div>
@@ -950,7 +972,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
             <div className="flex-1 min-w-0">
               {filteredAdminSR.length === 0 ? (
                 <div className="py-8 text-center text-[13px]" style={{ color: "var(--app-muted)" }}>
-                  {srSearchQuery ? '无匹配结果' : '暂无样本记录'}
+                  {srSearchQuery ? '无匹配结果' : srBoxId === '__all__' ? '暂无样本记录' : '该盒子暂无样本'}
                 </div>
               ) : (
                 <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
