@@ -22,7 +22,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Menu,
-  Map,
+  Map as MapIcon,
   BarChart3,
 } from 'lucide-react';
 
@@ -1400,7 +1400,7 @@ function AppContent() {
                   color: 'var(--app-text)',
                 }}
               >
-                <Map size={20} />
+                <MapIcon size={20} />
               </button>
             )}
             <button
