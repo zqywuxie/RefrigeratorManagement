@@ -274,6 +274,11 @@ export function AddSampleRecordModal({
               style={fieldStyle}
             />
 
+            <div className="text-[12px] flex items-center gap-1" style={{ color: 'var(--app-muted)' }}>
+              <span>上传者：</span>
+              <span style={{ color: 'var(--app-text)' }}>{currentUser}</span>
+            </div>
+
             {/* Existing tubes display (edit mode) */}
             {isEdit && editRecord && editRecord.tubes && editRecord.tubes.length > 0 && (
               <div>

@@ -18,6 +18,7 @@ import {
   UserPlus,
   ChevronDown,
   FlaskConical,
+  Package,
   Shield,
   PanelLeftClose,
   PanelLeft,
@@ -154,6 +155,7 @@ function AppContent() {
   const [sideMapNavTarget, setSideMapNavTarget] = useState<{ drawerId: string; drawerLabel: string } | null>(null);
   const [sideMapRefreshKey, setSideMapRefreshKey] = useState(0);
   const [boxViewTubes, setBoxViewTubes] = useState<Tube[]>([]);
+  const [fridgeItems, setFridgeItems] = useState<UpperItem[]>([]);
 
   // Pending imported samples (shared with DrawerFridgeView)
   const [pendingSamples, setPendingSamples] = useState<PendingImportSample[]>([]);
@@ -899,6 +901,15 @@ function AppContent() {
   const displayedTypeStats = typeStats.slice(0, 8);
 
   const boxTypeStats = React.useMemo(() => {
+
+  const itemTypeStats = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    fridgeItems.forEach((item) => {
+      const t = item.item_type?.trim();
+      if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
+    });
+    return Array.from(counts, ([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count);
+  }, [fridgeItems]);
     const counts = new Map<string, number>();
     boxViewTubes.forEach((t) => {
       const st = t.sample_type?.trim();
@@ -1197,6 +1208,7 @@ function AppContent() {
                   onImportComplete={handleImportComplete}
                   onDataChanged={() => {
                     onBoxViewChange={setBoxViewTubes}
+                    onFridgeDataChange={setFridgeItems}
                     setSideMapRefreshKey((k) => k + 1);
                     fetchSampleRecords({}).then(setSampleRecords).catch(() => {});
                   }}
@@ -1312,6 +1324,29 @@ function AppContent() {
                 pulse={criticalCount + criticalSubCount > 0}
               />
             </div>
+
+            {/* Item type distribution - only when not in box view */}
+            {boxViewTubes.length === 0 && (
+              <div className="rounded-xl p-4" style={{ background: "var(--app-card-bg)", border: "1px solid var(--app-border)", boxShadow: "0 14px 40px rgba(15,23,42,0.06)" }}>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Package size={15} color="#f59e0b" />
+                    <span className="text-[14px]" style={{ color: "var(--app-text)" }}>物品类型</span>
+                  </div>
+                  <span className="text-[12px] font-mono" style={{ color: "var(--app-muted)" }}>{itemTypeStats.length} 类</span>
+                </div>
+                {itemTypeStats.length > 0 ? (
+                  <div className="space-y-2">
+                    {itemTypeStats.slice(0, 6).map(({ type, count }) => {
+                      const cfg = getItemTypeConfig(type);
+                      return (<div key={type} className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} /><span className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]" title={type} style={{ background: cfg.bgColor, border: `1px solid ${cfg.color}30`, color: cfg.color }}>{cfg.label}</span><span className="min-w-8 text-right text-[14px] font-mono" style={{ color: "#2563eb" }}>{count}</span></div>)
+                    })}</div>
+                ) : (
+                  <div className="rounded-lg px-3 py-4 text-center text-[13px]" style={{ background: "var(--app-subtle-bg)", border: "1px dashed var(--app-subtle-border)", color: "var(--app-muted)" }}>暂无物品</div>
+                )}
+              </div>
+            )}
+            
 
             {/* Sample type stats */}
             <div

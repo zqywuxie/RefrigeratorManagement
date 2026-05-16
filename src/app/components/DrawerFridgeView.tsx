@@ -42,6 +42,7 @@ interface DrawerFridgeViewProps {
   onImportComplete?: (samples: PendingImportSample[]) => void;
   onDataChanged?: () => void;
   onBoxViewChange?: (tubes: Tube[]) => void;
+  onFridgeDataChange?: (items: UpperItem[]) => void;
 }
 
 export function DrawerFridgeView({
@@ -58,6 +59,7 @@ export function DrawerFridgeView({
   onImportComplete,
   onDataChanged,
   onBoxViewChange,
+  onFridgeDataChange,
 }: DrawerFridgeViewProps) {
   const [viewLevel, setViewLevel] = useState<ViewLevel>('fridge');
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('upper');
@@ -178,7 +180,9 @@ export function DrawerFridgeView({
     } else {
       onBoxViewChange?.([]);
     }
-  }, [viewLevel, tubes, onBoxViewChange]);
+    // Send upper items to parent for item type stats
+    onFridgeDataChange?.(upperItems);
+  }, [viewLevel, tubes, upperItems, onBoxViewChange, onFridgeDataChange]);
 
   const matchedCellIds = React.useMemo(() => {
     if (!searchCellQuery.trim()) return new Set<string>();
