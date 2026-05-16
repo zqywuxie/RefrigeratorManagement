@@ -20,6 +20,7 @@ interface BoxGridProps {
   onMultiSelectConfirm?: (positions: number[]) => void;
   onTubeHover?: (sampleId: string | null) => void;
   onPendingSampleDrop?: (importData: any, position: number) => void;
+  onTubeMove?: (tubeId: string, fromPosition: number, toPosition: number) => void;
 }
 
 function DropCellWrapper({
@@ -27,18 +28,29 @@ function DropCellWrapper({
   isOccupied,
   children,
   onDrop,
+  onTubeDrop,
 }: {
   position: number;
   isOccupied: boolean;
   children: React.ReactNode;
   onDrop: (importData: any, position: number) => void;
+  onTubeDrop?: (tubeId: string, fromPosition: number, toPosition: number) => void;
 }) {
   const [{ isOver, canDrop }, drop] = useDrop({
-    accept: 'PENDING_SAMPLE',
+    accept: ['PENDING_SAMPLE', 'TUBE'],
     drop: (item: any) => {
-      onDrop(item, position);
+      if (item.tube_id) {
+        onTubeDrop?.(item.tube_id, item.position, position);
+      } else {
+        onDrop(item, position);
+      }
     },
-    canDrop: () => !isOccupied,
+    canDrop: (item: any) => {
+      if (item.tube_id) {
+        return item.position !== position; // Can drop on any position except own
+      }
+      return !isOccupied;
+    },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
@@ -77,6 +89,7 @@ export function BoxGrid({
   onMultiSelectConfirm,
   onTubeHover,
   onPendingSampleDrop,
+  onTubeMove,
 }: BoxGridProps) {
   const rows = box.grid_rows || 10;
   const cols = box.grid_cols || 10;
@@ -228,7 +241,8 @@ export function BoxGrid({
                   key={`cell-${position}`}
                   position={position}
                   isOccupied={isOccupied}
-                  onDrop={onPendingSampleDrop}
+                  onDrop={onPendingSampleDrop || (() => {})}
+                  onTubeDrop={onTubeMove}
                 >
                   {cellElement}
                 </DropCellWrapper>

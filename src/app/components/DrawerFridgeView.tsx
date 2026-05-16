@@ -642,6 +642,23 @@ export function DrawerFridgeView({
     }
   }, [selectedBox, pendingSamples, onPendingSamplesChange, currentUser, onDataChanged]);
 
+  const handleTubeMove = useCallback(async (tubeId, fromPos, toPos) => {
+    if (!selectedBox) return;
+    const prev = [...tubes];
+    const moving = tubes.find(t => t.id === tubeId);
+    const occ = tubes.find(t => t.position === toPos);
+    if (!moving) return;
+    setTubes(pts => pts.map(t => {
+      if (t.id === tubeId) return { ...t, position: toPos };
+      if (occ && t.id === occ.id) return { ...t, position: fromPos };
+      return t;
+    }));
+    try {
+      await updateTube(tubeId, { position: toPos });
+      if (occ) await updateTube(occ.id, { position: fromPos });
+    } catch (err) { setTubes(prev); console.error(err); }
+  }, [selectedBox, tubes]);
+
   const handleBatchEdit = useCallback((sampleIds: string[]) => {
     setBatchSampleIds(sampleIds);
     setShowBatchModal(true);
@@ -1140,6 +1157,7 @@ export function DrawerFridgeView({
                   onMultiSelectConfirm={handleMultiSelectConfirm}
                   onTubeHover={handleTubeHover}
                   onPendingSampleDrop={pendingSamples.length > 0 ? handlePendingSampleDrop : undefined}
+                  onTubeMove={handleTubeMove}
                 />
               </div>
             ) : (

@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { useDrag } from 'react-dnd';
 import { BoxCell, Tube, STATUS_CONFIG, cellPositionToLabel, getGroupColorStyle, getSampleTypeColor } from '../types';
 
 interface CellSlotProps {
@@ -30,6 +31,13 @@ export function CellSlot({
   const status = tube ? tube.status : cell?.sample_status;
   const config = entity && status ? STATUS_CONFIG[status] : null;
   const groupStyle = groupColor ? getGroupColorStyle(groupColor) : null;
+
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: 'TUBE',
+    item: () => tube ? { tube_id: tube.id, position, sample_id: tube.sample_id } : null,
+    canDrag: !!tube,
+    collect: (monitor) => ({ isDragging: !!tube && monitor.isDragging() }),
+  }), [tube, position]);
 
   const isOccupied = !!entity;
 
@@ -63,11 +71,13 @@ export function CellSlot({
 
   return (
     <motion.button
+      ref={drag}
       whileHover={{ scale: isOccupied ? 1.1 : 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
       className="relative w-full flex flex-col items-center justify-center gap-0.5 cursor-pointer overflow-hidden"
       style={{
+        opacity: isDragging ? 0.4 : 1,
         aspectRatio: '1 / 1',
         minHeight: '44px',
         borderRadius: '6px',
