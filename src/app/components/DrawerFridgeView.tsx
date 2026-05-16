@@ -438,6 +438,7 @@ export function DrawerFridgeView({
   }, [selectedDrawerId, editBox, fridge.id, onDataChanged]);
 
   const handleDeleteBox = useCallback(async (boxId: string) => {
+    if (!window.confirm('确定删除此盒子？关联试管不会被删除。')) return;
     try {
       await deleteBox(boxId);
       setBoxes((prev) => prev.filter((b) => b.id !== boxId));
@@ -501,6 +502,7 @@ export function DrawerFridgeView({
 
   const handleDeleteCell = useCallback(async (cellId: string) => {
     if (!selectedBox) return;
+    if (!window.confirm('确定清空此格位信息？')) return;
     try {
       await deleteBoxCell(cellId);
       const updated = await fetchBoxCells(selectedBox.id);
@@ -575,6 +577,7 @@ export function DrawerFridgeView({
 
   const handleDeleteSampleRecord = useCallback(async (id: string) => {
     if (!selectedBox) return;
+    if (!window.confirm('确定删除此样本记录？关联试管也会被删除。')) return;
     try {
       await deleteSampleRecord(id);
       setShowSampleModal(false);
@@ -601,6 +604,7 @@ export function DrawerFridgeView({
 
   const handleDeleteTube = useCallback(async (tubeId: string) => {
     if (!selectedBox) return;
+    if (!window.confirm('确定移除此试管？')) return;
     try {
       await deleteTube(tubeId);
       const updated = await fetchBoxTubes(selectedBox.id);
@@ -846,6 +850,7 @@ export function DrawerFridgeView({
                     onItemClick={handleItemClick}
                     onAddItem={(row) => { setEditItem(null); setDefaultItemRow(row); setShowItemModal(true); }}
                     onDeleteItem={async (id) => {
+                      if (!window.confirm('确定删除此物品？')) return;
                       try {
                         await deleteUpperItem(id);
                         setUpperItems((prev) => prev.filter((i) => i.id !== id));

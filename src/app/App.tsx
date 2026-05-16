@@ -515,6 +515,7 @@ function AppContent() {
 
   const handleDeleteFridge = useCallback(
     async (id: string) => {
+      if (!window.confirm(`确定删除此冰箱？此操作不可撤销。`)) return;
       try {
         await apiDeleteRefrigerator(id);
         setRefrigerators((prev) => prev.filter((r) => r.id !== id));
@@ -577,6 +578,7 @@ function AppContent() {
   const handleDeleteSample = useCallback(
     async (id: string) => {
       if (!selectedFridgeId) return;
+      if (!window.confirm(`确定删除样本 ${id}？此操作不可撤销。`)) return;
       const prev = [...samples];
       setSamples((s) => s.filter((s) => s.id !== id));
       setSelectedSampleId((sel) => (sel === id ? null : sel));
@@ -823,6 +825,7 @@ function AppContent() {
 
   const handleDeleteSubSample = useCallback(
     async (containerId: string, subSampleId: string) => {
+      if (!window.confirm(`确定删除副样本 ${subSampleId}？此操作不可撤销。`)) return;
       const prev = [...samples];
       setSamples((ps) =>
         ps.map((s) =>
@@ -1497,15 +1500,6 @@ function AppContent() {
               <div className="px-4 pb-8 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <StatsCard
-                    label="总容量"
-                    value={isDrawerFridge
-                      ? `${drawerBoxCount}/${drawerMaxBoxes}`
-                      : `${usedSlots}/${totalCapacity}`}
-                    sub={isDrawerFridge
-                      ? `使用率 ${drawerMaxBoxes > 0 ? Math.round((drawerBoxCount / drawerMaxBoxes) * 100) : 0}%`
-                      : `使用率 ${totalCapacity > 0 ? Math.round((usedSlots / totalCapacity) * 100) : 0}%`}
-                    color="#60a5fa"
-                  />
                   <StatsCard
                     label="上层"
                     value={selectedFridge?.fridge_type === 'drawer'
@@ -1525,18 +1519,6 @@ function AppContent() {
                     color="#34d399"
                   />
                   <StatsCard
-                    label="异常警报"
-                    value={`${criticalCount + warningCount + criticalSubCount + warningSubCount}`}
-                    sub={`${criticalCount + criticalSubCount}严重 ${warningCount + warningSubCount}警告`}
-                    color={
-                      criticalCount + criticalSubCount > 0
-                        ? '#f87171'
-                        : warningCount + warningSubCount > 0
-                          ? '#fbbf24'
-                          : '#22c55e'
-                    }
-                    pulse={criticalCount + criticalSubCount > 0}
-                  />
                 </div>
 
                 {boxViewTubes.length === 0 ? (
@@ -1950,15 +1932,6 @@ function AppContent() {
             {/* Stats cards */}
             <div className="grid grid-cols-2 gap-3">
               <StatsCard
-                label="总容量"
-                value={isDrawerFridge
-                  ? `${drawerBoxCount}/${drawerMaxBoxes}`
-                  : `${usedSlots}/${totalCapacity}`}
-                sub={isDrawerFridge
-                  ? `使用率 ${drawerMaxBoxes > 0 ? Math.round((drawerBoxCount / drawerMaxBoxes) * 100) : 0}%`
-                  : `使用率 ${totalCapacity > 0 ? Math.round((usedSlots / totalCapacity) * 100) : 0}%`}
-                color="#60a5fa"
-              />
               <StatsCard
                 label="上层"
                 value={selectedFridge?.fridge_type === 'drawer'
@@ -1978,18 +1951,6 @@ function AppContent() {
                 color="#34d399"
               />
               <StatsCard
-                label="异常警报"
-                value={`${criticalCount + warningCount + criticalSubCount + warningSubCount}`}
-                sub={`${criticalCount + criticalSubCount}严重 ${warningCount + warningSubCount}警告`}
-                color={
-                  criticalCount + criticalSubCount > 0
-                    ? '#f87171'
-                    : warningCount + warningSubCount > 0
-                      ? '#fbbf24'
-                      : '#22c55e'
-                }
-                pulse={criticalCount + criticalSubCount > 0}
-              />
             </div>
 
             {boxViewTubes.length === 0 ? (
