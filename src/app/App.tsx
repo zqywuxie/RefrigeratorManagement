@@ -901,6 +901,13 @@ function AppContent() {
   const displayedTypeStats = typeStats.slice(0, 8);
 
   const boxTypeStats = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    boxViewTubes.forEach((t) => {
+      const st = t.sample_type?.trim();
+      if (st) counts.set(st, (counts.get(st) ?? 0) + 1);
+    });
+    return Array.from(counts, ([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count);
+  }, [boxViewTubes]);
 
   const itemTypeStats = React.useMemo(() => {
     const counts = new Map<string, number>();
