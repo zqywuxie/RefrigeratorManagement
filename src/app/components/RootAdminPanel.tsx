@@ -148,6 +148,20 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
     [editingSample],
   );
 
+  const [srSearchQuery, setSrSearchQuery] = useState('');
+  const [selectedSRIde, setSelectedSRIde] = useState<Set<string>>(new Set());
+
+  const filteredAdminSR = React.useMemo(() => {
+    if (!srSearchQuery.trim()) return adminSampleRecords;
+    const q = srSearchQuery.toLowerCase();
+    return adminSampleRecords.filter((sr) =>
+      sr.patient_name.toLowerCase().includes(q) ||
+      sr.sample_code.toLowerCase().includes(q) ||
+      (sr.sample_type || '').toLowerCase().includes(q) ||
+      (sr.uploader || '').toLowerCase().includes(q)
+    );
+  }, [adminSampleRecords, srSearchQuery]);
+
   const loadAdminData = useCallback(async () => {
     setLoading(true);
     try {

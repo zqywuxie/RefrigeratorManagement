@@ -247,7 +247,7 @@ export function FridgeSideMap({
         >
           <div className="flex items-center justify-between px-1">
             <span className="text-[12px] font-medium" style={{ color: colors.freezerTitle }}>
-              上层 · {upperTemperature}°C
+              上层
             </span>
             <span className="text-[11px] font-mono" style={{ color: colors.freezerCount }}>
               {upperItems.length} 件
@@ -292,7 +292,7 @@ export function FridgeSideMap({
         >
           <div className="flex items-center justify-between px-1">
             <span className="text-[12px] font-medium" style={{ color: colors.fridgeTitle }}>
-              第一层 · {lowerTemperature}°C
+              第一层
             </span>
             <span className="text-[11px] font-mono" style={{ color: colors.fridgeCount }}>
               {layer1Drawers.length} 抽屉
@@ -327,7 +327,7 @@ export function FridgeSideMap({
         >
           <div className="flex items-center justify-between px-1">
             <span className="text-[12px] font-medium" style={{ color: colors.fridgeTitle }}>
-              第二层 · {lowerTemperature}°C
+              第二层
             </span>
             <span className="text-[11px] font-mono" style={{ color: colors.fridgeCount }}>
               {layer2Drawers.length} 抽屉
