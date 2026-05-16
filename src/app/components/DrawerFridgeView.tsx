@@ -914,9 +914,9 @@ export function DrawerFridgeView({
           >
             {selectedBox.mode === 'precise' ? (
               <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <div
-                    className="flex w-full min-w-0 items-center gap-2 rounded-lg px-3 py-2 min-h-[44px] lg:flex-1"
+                    className="flex w-full min-w-0 items-center gap-2 rounded-lg px-3 py-2 min-h-[44px] sm:flex-1"
                     style={{
                       background: 'var(--app-input-bg)',
                       border: '1px solid var(--app-input-border)',
@@ -937,7 +937,7 @@ export function DrawerFridgeView({
                       </span>
                     )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
                     <button
                       type="button"
                       onClick={() => {
@@ -948,7 +948,7 @@ export function DrawerFridgeView({
                           setSelectedPositions(new Set());
                         }
                       }}
-                      className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[13px] transition-all min-h-[44px]"
+                      className="flex items-center justify-center gap-1.5 rounded-lg px-2 sm:px-3 py-2 text-[13px] transition-all min-h-[44px]"
                       style={{
                         background: multiSelectMode ? '#2563eb' : 'var(--app-panel-bg)',
                         border: multiSelectMode ? '1px solid #3b82f6' : '1px solid var(--app-border)',
@@ -966,7 +966,7 @@ export function DrawerFridgeView({
                         setEditSampleRecord(null);
                         setShowSampleModal(true);
                       }}
-                      className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
+                      className="flex items-center justify-center gap-1.5 rounded-lg px-2 sm:px-3 py-2 text-[13px] min-h-[44px]"
                       style={{
                         background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
                         border: '1px solid #3b82f6',
@@ -978,7 +978,7 @@ export function DrawerFridgeView({
                     <button
                       type="button"
                       onClick={() => setShowImportModal(true)}
-                      className="hidden sm:flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
+                      className="hidden sm:flex items-center justify-center gap-1.5 rounded-lg px-2 sm:px-3 py-2 text-[13px] min-h-[44px]"
                       style={{
                         background: 'linear-gradient(135deg, #059669, #10b981)',
                         border: '1px solid #34d399',
@@ -1285,7 +1285,10 @@ export function DrawerFridgeView({
           currentUser={currentUser}
           boxId={selectedBox.id}
           boxName={selectedBox.name}
+          gridRows={selectedBox.grid_rows || 10}
           gridCols={selectedBox.grid_cols || 10}
+          occupiedPositions={tubes.map((tube) => tube.position)}
+          canEdit={!editSampleRecord || editSampleRecord.uploader === currentUser}
           preSelectedPositions={preselectedWells}
           onClose={() => {
             setShowSampleModal(false);
