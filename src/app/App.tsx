@@ -39,8 +39,8 @@ import {
   UpperItem,
   PendingImportSample,
   Tube,
+  getItemTypeConfig,
   getSampleTypeColor,
-  UpperItem,
 } from './types';
 import {
   fetchRefrigerators,
@@ -73,6 +73,7 @@ import { DrawerFridgeView } from './components/DrawerFridgeView';
 import { ShelfFridgeView } from './components/ShelfFridgeView';
 import { FridgeSideMap } from './components/FridgeSideMap';
 import { PendingSamplesPanel } from './components/PendingSamplesPanel';
+import { SampleListPanel } from './components/SampleListPanel';
 import { LoginPage } from './components/LoginPage';
 
 type UploadedSampleItem = {
@@ -87,6 +88,13 @@ type UploadedSampleItem = {
   position: number;
   parentId?: string;
   parentName?: string;
+};
+
+type BoxSamplePanelState = {
+  tubes: Tube[];
+  onTubeHover: (sampleId: string | null) => void;
+  onBatchEdit: (sampleIds: string[]) => void;
+  onSelectSample: (sampleId: string) => void;
 };
 
 export default function App() {
@@ -156,6 +164,7 @@ function AppContent() {
   const [sideMapRefreshKey, setSideMapRefreshKey] = useState(0);
   const [boxViewTubes, setBoxViewTubes] = useState<Tube[]>([]);
   const [fridgeItems, setFridgeItems] = useState<UpperItem[]>([]);
+  const [boxSamplePanel, setBoxSamplePanel] = useState<BoxSamplePanelState | null>(null);
 
   // Pending imported samples (shared with DrawerFridgeView)
   const [pendingSamples, setPendingSamples] = useState<PendingImportSample[]>([]);
@@ -881,13 +890,8 @@ function AppContent() {
     (sum, s) => sum + s.subSamples.filter((ss) => ss.status === 'warning').length,
     0,
   );
-  const typeStats = React.useMemo(() => {
+  const upperItemTypeStats = React.useMemo(() => {
     const counts = new Map<string, number>();
-
-    sampleRecords.forEach((sr) => {
-      const t = sr.sample_type?.trim();
-      if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
-    });
 
     upperItems.forEach((item) => {
       const t = item.item_type?.trim();
@@ -897,8 +901,23 @@ function AppContent() {
     return Array.from(counts, ([type, count]) => ({ type, count })).sort(
       (a, b) => b.count - a.count || a.type.localeCompare(b.type, 'zh-CN'),
     );
-  }, [sampleRecords, upperItems]);
-  const displayedTypeStats = typeStats.slice(0, 8);
+  }, [upperItems]);
+
+  const sampleTypeStats = React.useMemo(() => {
+    const counts = new Map<string, number>();
+
+    sampleRecords.forEach((sr) => {
+      const t = sr.sample_type?.trim();
+      if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
+    });
+
+    return Array.from(counts, ([type, count]) => ({ type, count })).sort(
+      (a, b) => b.count - a.count || a.type.localeCompare(b.type, 'zh-CN'),
+    );
+  }, [sampleRecords]);
+
+  const displayedUpperItemTypeStats = upperItemTypeStats.slice(0, 8);
+  const displayedSampleTypeStats = sampleTypeStats.slice(0, 8);
 
   const itemTypeStats = React.useMemo(() => {
     const counts = new Map<string, number>();
@@ -917,7 +936,8 @@ function AppContent() {
     });
     return Array.from(counts, ([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count);
   }, [boxViewTubes]);
-  const remainingTypeCount = Math.max(typeStats.length - displayedTypeStats.length, 0);
+  const remainingUpperItemTypeCount = Math.max(upperItemTypeStats.length - displayedUpperItemTypeStats.length, 0);
+  const remainingSampleTypeCount = Math.max(sampleTypeStats.length - displayedSampleTypeStats.length, 0);
 
   const notifColors = {
     info: { bg: 'rgba(29,78,216,0.85)', border: '#3b82f6', text: '#93c5fd' },
@@ -1008,6 +1028,7 @@ function AppContent() {
               username={user!.username}
               role={user!.role}
               uploadedItems={myUploadedItems}
+              hasBoxViewTubes={boxViewTubes.length > 0}
               onOpenSample={handleOpenUploadedItem}
               onLogout={logout}
             />
@@ -1206,11 +1227,30 @@ function AppContent() {
                   pendingSamples={pendingSamples}
                   onPendingSamplesChange={setPendingSamples}
                   onImportComplete={handleImportComplete}
+                  onBoxViewChange={setBoxViewTubes}
+                  onBoxSamplePanelChange={setBoxSamplePanel}
+                  onFridgeDataChange={setFridgeItems}
                   onDataChanged={() => {
-                    onBoxViewChange={setBoxViewTubes}
-                    onFridgeDataChange={setFridgeItems}
                     setSideMapRefreshKey((k) => k + 1);
-                    fetchSampleRecords({}).then(setSampleRecords).catch(() => {});
+                    Promise.all([
+                      fetchSampleRecords({}).catch(() => []),
+                      fetchDrawers(selectedFridge.id).catch(() => []),
+                      fetchUpperItems(selectedFridge.id).catch(() => []),
+                    ]).then(([srData, drawerData, upperItemsData]) => {
+                      setSampleRecords(srData);
+                      setDrawerCount(drawerData.length);
+                      setDrawerBoxCount(drawerData.reduce((s: number, d: any) => s + (d.box_count ?? 0), 0));
+                      setDrawerMaxBoxes(drawerData.reduce((s: number, d: any) => s + (d.max_boxes ?? 5), 0));
+                      setDrawerLayers([...new Set(drawerData.map((d: any) => d.layer))].sort());
+                      const layerCounts: Record<number, number> = {};
+                      for (const d of drawerData) {
+                        layerCounts[d.layer] = (layerCounts[d.layer] || 0) + 1;
+                      }
+                      setDrawerLayerCounts(layerCounts);
+                      setUpperItemsCount(upperItemsData.length);
+                      setUpperItems(upperItemsData);
+                      setFridgeItems(upperItemsData);
+                    });
                   }}
                 />
               ) : selectedFridge.fridge_type === 'shelf' && !viewingContainer ? (
@@ -1325,100 +1365,208 @@ function AppContent() {
               />
             </div>
 
-            {/* Item type distribution - only when not in box view */}
-            {boxViewTubes.length === 0 && (
-              <div
-                className="rounded-xl p-4"
-                style={{ background: "var(--app-card-bg)", border: "1px solid var(--app-border)", boxShadow: "0 14px 40px rgba(15,23,42,0.06)" }}
-              >
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <span className="text-[14px]" style={{ color: "var(--app-text)" }}>物品类型</span>
-                  <span className="text-[12px] font-mono" style={{ color: "var(--app-muted)" }}>{itemTypeStats.length} 类</span>
-                </div>
-                {itemTypeStats.length > 0 ? (
-                  <div className="space-y-2">
-                    {itemTypeStats.slice(0, 6).map(({ type, count }) => {
-                      const cfg = getItemTypeConfig(type);
-                      return (
-                        <div key={type} className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
-                          <span className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]" title={type} style={{ background: cfg.bgColor, border: '1px solid ' + cfg.color + '30', color: cfg.color }}>{cfg.label}</span>
-                          <span className="min-w-8 text-right text-[14px] font-mono" style={{ color: "#2563eb" }}>{count}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="rounded-lg px-3 py-4 text-center text-[13px]" style={{ background: "var(--app-subtle-bg)", border: "1px dashed var(--app-subtle-border)", color: "var(--app-muted)" }}>暂无物品</div>
-                )}
-              </div>
-            )}
-
-            {/* Sample type stats */}
-            <div
-              className="rounded-xl p-4"
-              style={{
-                background: 'var(--app-card-bg)',
-                border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
-                boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
-              }}
-            >
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2">
-                  <Tags size={15} color="#38bdf8" />
-                  <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>
-                    类型分布
-                  </span>
-                </div>
-                <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>
-                  {typeStats.length} 类
-                </span>
-              </div>
-              {displayedTypeStats.length > 0 ? (
-                <div className="space-y-2">
-                  {displayedTypeStats.map(({ type, count }, index) => {
-                    const typeColor = getSampleTypeColor(type);
-                    return (
-                    <div key={type} className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: typeColor }} />
-                      <span
-                        className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
-                        title={type}
-                        style={{
-                          background: typeColor + '18',
-                          border: `1px solid ${typeColor}30`,
-                          color: 'var(--app-text)',
-                        }}
-                      >
-                        {type}
-                      </span>
-                      <span
-                        className="min-w-8 text-right text-[14px] font-mono"
-                        style={{ color: '#2563eb' }}
-                      >
-                        {count}
+            {boxViewTubes.length === 0 ? (
+              <>
+                <div
+                  className="rounded-xl p-4"
+                  style={{
+                    background: 'var(--app-card-bg)',
+                    border: '1px solid var(--app-border)',
+                    boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Tags size={15} color="#38bdf8" />
+                      <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>
+                        上层物品类型
                       </span>
                     </div>
-                  );})}
-                  {remainingTypeCount > 0 && (
-                    <div className="pt-1 text-right text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                      另有 {remainingTypeCount} 类{boxViewTubes.length > 0 ? '当前盒子样本类型' : '样本类型'}
+                    <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>
+                      {upperItemTypeStats.length} 类
+                    </span>
+                  </div>
+                  {displayedUpperItemTypeStats.length > 0 ? (
+                    <div className="space-y-2">
+                      {displayedUpperItemTypeStats.map(({ type, count }) => {
+                        const cfg = getItemTypeConfig(type);
+                        return (
+                          <div key={type} className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
+                            <span
+                              className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
+                              title={type}
+                              style={{
+                                background: cfg.bgColor,
+                                border: '1px solid ' + cfg.color + '30',
+                                color: cfg.color,
+                              }}
+                            >
+                              {cfg.label}
+                            </span>
+                            <span className="min-w-8 text-right text-[14px] font-mono" style={{ color: '#2563eb' }}>
+                              {count}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {remainingUpperItemTypeCount > 0 && (
+                        <div className="pt-1 text-right text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                          另有 {remainingUpperItemTypeCount} 类上层物品类型
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      className="rounded-lg px-3 py-4 text-center text-[13px]"
+                      style={{
+                        background: 'var(--app-subtle-bg)',
+                        border: '1px dashed var(--app-subtle-border)',
+                        color: 'var(--app-muted)',
+                      }}
+                    >
+                      暂无物品
                     </div>
                   )}
                 </div>
-              ) : (
+
                 <div
-                  className="rounded-lg px-3 py-4 text-center text-[13px]"
+                  className="rounded-xl p-4"
                   style={{
-                    background: 'var(--app-subtle-bg)',
-                    border: '1px dashed var(--app-subtle-border)',
-                    color: 'var(--app-muted)',
+                    background: 'var(--app-card-bg)',
+                    border: '1px solid var(--app-border)',
+                    boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
                   }}
                 >
-                  暂无标签数据
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Tags size={15} color="#38bdf8" />
+                      <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>
+                        样本类型
+                      </span>
+                    </div>
+                    <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>
+                      {sampleTypeStats.length} 类
+                    </span>
+                  </div>
+                  {displayedSampleTypeStats.length > 0 ? (
+                    <div className="space-y-2">
+                      {displayedSampleTypeStats.map(({ type, count }) => {
+                        const typeColor = getSampleTypeColor(type);
+                        return (
+                          <div key={type} className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: typeColor }} />
+                            <span
+                              className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
+                              title={type}
+                              style={{
+                                background: typeColor + '18',
+                                border: `1px solid ${typeColor}30`,
+                                color: 'var(--app-text)',
+                              }}
+                            >
+                              {type}
+                            </span>
+                            <span className="min-w-8 text-right text-[14px] font-mono" style={{ color: '#2563eb' }}>
+                              {count}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {remainingSampleTypeCount > 0 && (
+                        <div className="pt-1 text-right text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                          另有 {remainingSampleTypeCount} 类样本类型
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      className="rounded-lg px-3 py-4 text-center text-[13px]"
+                      style={{
+                        background: 'var(--app-subtle-bg)',
+                        border: '1px dashed var(--app-subtle-border)',
+                        color: 'var(--app-muted)',
+                      }}
+                    >
+                      暂无标签数据
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </>
+            ) : (
+              <>
+                <div
+                  className="rounded-xl p-4"
+                  style={{
+                    background: 'var(--app-card-bg)',
+                    border: '1px solid var(--app-border)',
+                    boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Tags size={15} color="#38bdf8" />
+                      <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>
+                        当前盒子的样本类型
+                      </span>
+                    </div>
+                    <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>
+                      {boxTypeStats.length} 类
+                    </span>
+                  </div>
+                  {boxTypeStats.length > 0 ? (
+                    <div className="space-y-2">
+                      {boxTypeStats.slice(0, 8).map(({ type, count }) => {
+                        const typeColor = getSampleTypeColor(type);
+                        return (
+                          <div key={type} className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: typeColor }} />
+                            <span
+                              className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
+                              title={type}
+                              style={{
+                                background: typeColor + '18',
+                                border: `1px solid ${typeColor}30`,
+                                color: 'var(--app-text)',
+                              }}
+                            >
+                              {type}
+                            </span>
+                            <span className="min-w-8 text-right text-[14px] font-mono" style={{ color: '#2563eb' }}>
+                              {count}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {boxTypeStats.length > 8 && (
+                        <div className="pt-1 text-right text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                          另有 {boxTypeStats.length - 8} 类当前盒子样本类型
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      className="rounded-lg px-3 py-4 text-center text-[13px]"
+                      style={{
+                        background: 'var(--app-subtle-bg)',
+                        border: '1px dashed var(--app-subtle-border)',
+                        color: 'var(--app-muted)',
+                      }}
+                    >
+                      暂无标签数据
+                    </div>
+                  )}
+                </div>
+                {boxSamplePanel && boxSamplePanel.tubes.length > 0 && (
+                  <SampleListPanel
+                    tubes={boxSamplePanel.tubes}
+                    onTubeHover={boxSamplePanel.onTubeHover}
+                    onBatchEdit={boxSamplePanel.onBatchEdit}
+                    onSelectSample={boxSamplePanel.onSelectSample}
+                  />
+                )}
+              </>
+            )}
 
           </div>
           </div>
@@ -1525,12 +1673,14 @@ function UserMenu({
   username,
   role,
   uploadedItems,
+  hasBoxViewTubes,
   onOpenSample,
   onLogout,
 }: {
   username: string;
   role: string;
   uploadedItems: UploadedSampleItem[];
+  hasBoxViewTubes: boolean;
   onOpenSample: (item: UploadedSampleItem) => void;
   onLogout: () => void;
 }) {
@@ -1610,7 +1760,7 @@ function UserMenu({
         className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
         style={{
           background: 'var(--app-panel-bg)',
-          border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+          border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
           color: 'var(--app-muted)',
         }}
         title={isDark ? '切换浅色模式' : '切换深色模式'}
@@ -1626,7 +1776,7 @@ function UserMenu({
         className="flex items-center gap-2 px-3 py-2 rounded-lg"
         style={{
           background: 'var(--app-panel-bg)',
-          border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+          border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
           color: 'var(--app-text)',
         }}
       >
@@ -1653,7 +1803,7 @@ function UserMenu({
           className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
           style={{
             background: 'var(--app-panel-bg)',
-            border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+            border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
             color: '#2563eb',
           }}
           title="创建用户"
@@ -1666,7 +1816,7 @@ function UserMenu({
         className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
         style={{
           background: 'var(--app-panel-bg)',
-          border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+          border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
           color: '#ef4444',
         }}
         title="退出登录"
@@ -1678,7 +1828,7 @@ function UserMenu({
           className="absolute right-0 top-11 z-50 w-80 rounded-xl p-3"
           style={{
             background: 'var(--app-header-bg)',
-            border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+            border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
             boxShadow: '0 18px 52px rgba(15,23,42,0.2)',
             backdropFilter: 'blur(12px)',
           }}
@@ -1696,7 +1846,7 @@ function UserMenu({
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{
                 background: 'var(--app-card-bg)',
-                border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+                border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
                 color: '#2563eb',
               }}
             >
@@ -1709,7 +1859,7 @@ function UserMenu({
               className="rounded-lg px-3 py-5 text-center text-[13px]"
               style={{
                 background: 'var(--app-card-bg)',
-                border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+                border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
                 color: 'var(--app-muted)',
               }}
             >
@@ -1734,7 +1884,7 @@ function UserMenu({
                     className="w-full rounded-lg px-3 py-2.5 text-left transition-all hover:brightness-95"
                     style={{
                       background: 'var(--app-card-bg)',
-                      border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+                      border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
                       color: 'var(--app-text)',
                     }}
                   >
@@ -1775,7 +1925,7 @@ function UserMenu({
           className="absolute right-0 top-11 z-50 w-64 space-y-2 rounded-xl p-3"
           style={{
             background: 'var(--app-header-bg)',
-            border: boxViewTubes.length > 0 ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
+            border: hasBoxViewTubes ? '1px solid #22d3ee40' : '1px solid var(--app-border)',
             boxShadow: '0 16px 48px rgba(15,23,42,0.18)',
           }}
         >

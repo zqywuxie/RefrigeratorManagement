@@ -10,7 +10,7 @@ import {
   addTubesToSample, deleteTube, batchUpdateSampleRecords,
   fetchSampleRecord,
 } from '../api';
-import { FolderOpen, FileSpreadsheet } from 'lucide-react';
+import { CircleHelp, FolderOpen, FileSpreadsheet } from 'lucide-react';
 import { BreadcrumbNav, BreadcrumbNode } from './BreadcrumbNav';
 import { UpperOpenStorage } from './UpperOpenStorage';
 import { DrawerLayer } from './DrawerLayer';
@@ -21,9 +21,10 @@ import { AddBoxModal } from './AddBoxModal';
 import { AddBoxCellModal } from './AddBoxCellModal';
 import { AddSampleRecordModal } from './AddSampleRecordModal';
 import { ExcelImportModal } from './ExcelImportModal';
-import { SampleListPanel } from './SampleListPanel';
 import { PendingSamplesPanel } from './PendingSamplesPanel';
 import { BatchEditModal } from './BatchEditModal';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 type ViewLevel = 'fridge' | 'drawer' | 'box';
 type MainTab = 'upper' | 'lowerTop' | 'lowerBottom';
@@ -42,6 +43,12 @@ interface DrawerFridgeViewProps {
   onImportComplete?: (samples: PendingImportSample[]) => void;
   onDataChanged?: () => void;
   onBoxViewChange?: (tubes: Tube[]) => void;
+  onBoxSamplePanelChange?: (panel: {
+    tubes: Tube[];
+    onTubeHover: (sampleId: string | null) => void;
+    onBatchEdit: (sampleIds: string[]) => void;
+    onSelectSample: (sampleId: string) => void;
+  } | null) => void;
   onFridgeDataChange?: (items: UpperItem[]) => void;
 }
 
@@ -59,6 +66,7 @@ export function DrawerFridgeView({
   onImportComplete,
   onDataChanged,
   onBoxViewChange,
+  onBoxSamplePanelChange,
   onFridgeDataChange,
 }: DrawerFridgeViewProps) {
   const [viewLevel, setViewLevel] = useState<ViewLevel>('fridge');
@@ -479,10 +487,11 @@ export function DrawerFridgeView({
       // Reload tubes
       const updated = await fetchBoxTubes(selectedBox.id);
       setTubes(updated);
+      onDataChanged?.();
     } catch (err) {
       console.error('Failed to save sample record:', err);
     }
-  }, [selectedBox, editSampleRecord]);
+  }, [selectedBox, editSampleRecord, onDataChanged]);
 
   const handleDeleteSampleRecord = useCallback(async (id: string) => {
     if (!selectedBox) return;
@@ -492,10 +501,11 @@ export function DrawerFridgeView({
       setEditSampleRecord(null);
       const updated = await fetchBoxTubes(selectedBox.id);
       setTubes(updated);
+      onDataChanged?.();
     } catch (err) {
       console.error('Failed to delete sample record:', err);
     }
-  }, [selectedBox]);
+  }, [selectedBox, onDataChanged]);
 
   const handleAddTubesToSample = useCallback(async (sampleId: string, tubeInputs: Array<{ box_id: string; position: number; volume?: string }>) => {
     if (!selectedBox) return;
@@ -503,10 +513,11 @@ export function DrawerFridgeView({
       await addTubesToSample(sampleId, tubeInputs);
       const updated = await fetchBoxTubes(selectedBox.id);
       setTubes(updated);
+      onDataChanged?.();
     } catch (err) {
       console.error('Failed to add tubes:', err);
     }
-  }, [selectedBox]);
+  }, [selectedBox, onDataChanged]);
 
   const handleDeleteTube = useCallback(async (tubeId: string) => {
     if (!selectedBox) return;
@@ -514,10 +525,11 @@ export function DrawerFridgeView({
       await deleteTube(tubeId);
       const updated = await fetchBoxTubes(selectedBox.id);
       setTubes(updated);
+      onDataChanged?.();
     } catch (err) {
       console.error('Failed to delete tube:', err);
     }
-  }, [selectedBox]);
+  }, [selectedBox, onDataChanged]);
 
   const handleTubeHover = useCallback((sampleId: string | null) => {
     setHoveredSampleId(sampleId);
@@ -565,10 +577,11 @@ export function DrawerFridgeView({
         setTubes(updated);
       }
       setShowBatchModal(false);
+      onDataChanged?.();
     } catch (err) {
       console.error('Batch edit failed:', err);
     }
-  }, [batchSampleIds, selectedBox]);
+  }, [batchSampleIds, selectedBox, onDataChanged]);
 
   const handleSelectSampleFromList = useCallback((sampleId: string) => {
     const tube = tubes.find((t) => t.sample_id === sampleId);
@@ -581,6 +594,27 @@ export function DrawerFridgeView({
       }).catch(console.error);
     }
   }, [tubes]);
+
+  useEffect(() => {
+    if (viewLevel === 'box' && selectedBox?.mode === 'precise') {
+      onBoxSamplePanelChange?.({
+        tubes,
+        onTubeHover: handleTubeHover,
+        onBatchEdit: handleBatchEdit,
+        onSelectSample: handleSelectSampleFromList,
+      });
+      return;
+    }
+    onBoxSamplePanelChange?.(null);
+  }, [
+    viewLevel,
+    selectedBox,
+    tubes,
+    handleTubeHover,
+    handleBatchEdit,
+    handleSelectSampleFromList,
+    onBoxSamplePanelChange,
+  ]);
 
   const handleAddBoxAtPosition = useCallback((position: number) => {
     setEditBox(null);
@@ -872,6 +906,69 @@ export function DrawerFridgeView({
                     <FileSpreadsheet size={15} />
                     Excel 导入
                   </button>
+                  <Popover>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
+                            style={{
+                              background: 'var(--app-panel-bg)',
+                              border: '1px solid var(--app-border)',
+                              color: 'var(--app-muted)',
+                            }}
+                            aria-label="查看多选绑定和 Excel 导入帮助"
+                          >
+                            <CircleHelp size={16} />
+                          </button>
+                        </PopoverTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" sideOffset={6}>
+                        查看操作说明
+                      </TooltipContent>
+                    </Tooltip>
+                    <PopoverContent align="end" sideOffset={8} className="w-80 space-y-3">
+                      <div>
+                        <div className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>
+                          操作说明
+                        </div>
+                        <div className="mt-1 text-[11px]" style={{ color: 'var(--app-muted)' }}>
+                          这里的操作都只针对当前盒子。
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div
+                          className="rounded-lg px-3 py-2"
+                          style={{
+                            background: 'var(--app-input-bg)',
+                            border: '1px solid var(--app-input-border)',
+                          }}
+                        >
+                          <div className="text-[12px] font-medium" style={{ color: 'var(--app-text)' }}>
+                            多选绑定
+                          </div>
+                          <div className="mt-1 text-[11px] leading-5" style={{ color: 'var(--app-muted)' }}>
+                            点击后进入多选模式，先点选多个孔位，再点一次按钮确认。系统会按同一样本创建多个试管位置。
+                          </div>
+                        </div>
+                        <div
+                          className="rounded-lg px-3 py-2"
+                          style={{
+                            background: 'var(--app-input-bg)',
+                            border: '1px solid var(--app-input-border)',
+                          }}
+                        >
+                          <div className="text-[12px] font-medium" style={{ color: 'var(--app-text)' }}>
+                            Excel 导入
+                          </div>
+                          <div className="mt-1 text-[11px] leading-5" style={{ color: 'var(--app-muted)' }}>
+                            先导入表格生成待分配样本，再把样本拖到盒子孔位里。只有拖放到孔位后，样本才会真正录入当前盒子。
+                          </div>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 {multiSelectMode && (
                   <div
@@ -900,14 +997,6 @@ export function DrawerFridgeView({
                   onTubeHover={handleTubeHover}
                   onPendingSampleDrop={pendingSamples.length > 0 ? handlePendingSampleDrop : undefined}
                 />
-                {tubes.length > 0 && (
-                  <SampleListPanel
-                    tubes={tubes}
-                    onTubeHover={handleTubeHover}
-                    onBatchEdit={handleBatchEdit}
-                    onSelectSample={handleSelectSampleFromList}
-                  />
-                )}
               </div>
             ) : (
               <div className="flex flex-col gap-4">
