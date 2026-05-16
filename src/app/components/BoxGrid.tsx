@@ -175,10 +175,10 @@ export function BoxGrid({
         }}
       >
         <div
-          className="grid gap-1 min-w-max"
+          className="grid gap-1"
           style={{
-            gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-            gridTemplateRows: `repeat(${rows}, auto)`,
+            gridTemplateColumns: `repeat(${cols}, minmax(28px, 1fr))`,
+            gridTemplateRows: `repeat(${rows}, minmax(28px, auto))`,
           }}
         >
           {Array.from({ length: capacity }, (_, position) => {

@@ -1706,7 +1706,7 @@ function AppContent() {
               <Search size={20} color={searchQuery ? '#2563eb' : 'var(--app-muted)'} />
               <input
                 type="text"
-                placeholder="搜索样本 ID / 类型 / 患者编号 / 上传者 / 姓名 / 标签..."
+                placeholder="搜索样本、类型、患者、标签..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 bg-transparent outline-none text-[16px] placeholder:text-slate-600"

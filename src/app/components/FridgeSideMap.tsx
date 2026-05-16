@@ -25,11 +25,13 @@ function MiniDrawerBlock({
   isSelected,
   onClick,
   aspectRatio = '1 / 1',
+  minHeight,
 }: {
   drawer: Drawer;
   isSelected: boolean;
   onClick: () => void;
   aspectRatio?: string;
+  minHeight?: number;
 }) {
   const boxCount = drawer.box_count ?? 0;
   const rate = getOccupancyRate(boxCount, drawer.max_boxes);
@@ -65,6 +67,7 @@ function MiniDrawerBlock({
         className="relative rounded cursor-pointer overflow-hidden w-full"
         style={{
           aspectRatio,
+          ...(minHeight ? { minHeight: `${minHeight}px` } : {}),
           background: oc.bg,
           border: isSelected ? '2px solid #22d3ee' : `1px solid ${oc.border}`,
           boxShadow: isSelected ? `0 0 8px ${oc.border}60` : 'none',
@@ -348,6 +351,7 @@ export function FridgeSideMap({
                 isSelected={selectedDrawerId === d.id}
                 onClick={() => onDrawerClick(d.id, d.label)}
                 aspectRatio="1.6 / 1"
+                minHeight={36}
               />
             ))}
           </div>

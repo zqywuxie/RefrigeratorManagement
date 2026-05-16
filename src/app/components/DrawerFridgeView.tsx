@@ -896,7 +896,7 @@ export function DrawerFridgeView({
                   <button
                     type="button"
                     onClick={() => setShowImportModal(true)}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
+                    className="hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
                     style={{
                       background: 'linear-gradient(135deg, #059669, #10b981)',
                       border: '1px solid #34d399',
