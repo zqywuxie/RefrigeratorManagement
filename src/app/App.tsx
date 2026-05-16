@@ -344,45 +344,41 @@ function AppContent() {
 
   const myUploadedItems = React.useMemo<UploadedSampleItem[]>(() => {
     const username = user!.username;
+    const results: UploadedSampleItem[] = [];
+
+    // Old samples
     const isMine = (item: { createdBy?: string; uploader?: string }) =>
       item.createdBy ? item.createdBy === username : (item.uploader || '').trim() === username;
-
-    return samples
-      .flatMap<UploadedSampleItem>((sample) => {
-        const items: UploadedSampleItem[] = [];
-        if (isMine(sample)) {
-          items.push({
-            id: sample.id,
-            name: sample.name,
-            type: sample.type,
-            status: sample.status,
-            temperature: sample.temperature,
-            collectedAt: sample.collectedAt,
-            kind: 'sample',
-            compartment: sample.compartment,
-            position: sample.position,
+    samples.forEach((sample) => {
+      if (isMine(sample)) {
+        results.push({
+          id: sample.id, name: sample.name, type: sample.type, status: sample.status,
+          temperature: sample.temperature, collectedAt: sample.collectedAt,
+          kind: 'sample', compartment: sample.compartment, position: sample.position,
+        });
+      }
+      sample.subSamples.forEach((ss) => {
+        if (isMine(ss)) {
+          results.push({
+            id: ss.id, name: ss.name, type: ss.type, status: ss.status,
+            temperature: ss.temperature, collectedAt: ss.collectedAt,
+            kind: 'subsample', position: ss.position, parentId: sample.id, parentName: sample.name,
           });
         }
-        sample.subSamples.forEach((subSample) => {
-          if (isMine(subSample)) {
-            items.push({
-              id: subSample.id,
-              name: subSample.name,
-              type: subSample.type,
-              status: subSample.status,
-              temperature: subSample.temperature,
-              collectedAt: subSample.collectedAt,
-              kind: 'subsample',
-              position: subSample.position,
-              parentId: sample.id,
-              parentName: sample.name,
-            });
-          }
-        });
-        return items;
-      })
-      .sort((a, b) => b.collectedAt.localeCompare(a.collectedAt));
-  }, [samples, user]);
+      });
+    });
+
+    // New sample records
+    sampleRecords.filter((sr) => sr.uploader === username).forEach((sr) => {
+      results.push({
+        id: sr.id, name: sr.patient_name, type: sr.sample_type || '—', status: 'normal',
+        temperature: -80, collectedAt: sr.collected_at || '',
+        kind: 'sample', position: 0,
+      });
+    });
+
+    return results.sort((a, b) => b.collectedAt.localeCompare(a.collectedAt));
+  }, [samples, sampleRecords, user]);
 
   const handleOpenUploadedItem = useCallback((item: UploadedSampleItem) => {
     setSelectedSampleId(item.id);

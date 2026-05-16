@@ -49,7 +49,7 @@ function ResponsiveDialogContent({
   if (isMobile) {
     return (
       <DrawerContent
-        className={cn("max-h-[90vh] px-4 pb-6", className)}
+        className={cn("max-h-[90vh] px-4 pb-6 overflow-y-auto", className)}
         {...(props as any)}
       >
         {children}
