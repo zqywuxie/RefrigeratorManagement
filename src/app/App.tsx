@@ -36,6 +36,7 @@ import {
   FridgeType,
   DEFAULT_ITEM_TYPES,
   SampleRecord,
+  getSampleTypeColor,
 } from './types';
 import {
   fetchRefrigerators,
@@ -1366,21 +1367,18 @@ function AppContent() {
               </div>
               {displayedTypeStats.length > 0 ? (
                 <div className="space-y-2">
-                  {displayedTypeStats.map(({ type, count }, index) => (
+                  {displayedTypeStats.map(({ type, count }, index) => {
+                    const typeColor = getSampleTypeColor(type);
+                    return (
                     <div key={type} className="flex items-center gap-2">
-                      <span
-                        className="w-6 text-[12px] font-mono text-right flex-shrink-0"
-                        style={{ color: index < 3 ? '#2563eb' : 'var(--app-muted)' }}
-                      >
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: typeColor }} />
                       <span
                         className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
                         title={type}
                         style={{
-                          background: 'var(--app-info-bg)',
-                          border: '1px solid var(--app-info-border)',
-                          color: 'var(--app-info-text)',
+                          background: typeColor + '18',
+                          border: `1px solid ${typeColor}30`,
+                          color: 'var(--app-text)',
                         }}
                       >
                         {type}

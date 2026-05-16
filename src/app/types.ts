@@ -219,6 +219,35 @@ export function getItemTypeConfig(type: string): { label: string; color: string;
   return ITEM_TYPE_CONFIG[type] || { label: type, color: '#475569', bgColor: '#e2e8f0' };
 }
 
+export const SAMPLE_TYPE_COLORS: Record<string, string> = {
+  '血清': '#ef4444',
+  '血浆': '#f97316',
+  '尿液': '#eab308',
+  'DNA': '#8b5cf6',
+  '组织': '#ec4899',
+  '全血': '#dc2626',
+  '外周血': '#f59e0b',
+  '脐血': '#06b6d4',
+  '足底血': '#84cc16',
+};
+
+export const SAMPLE_TYPE_COLORS_NEXT = [
+  '#14b8a6', '#6366f1', '#a855f7', '#0ea5e9', '#10b981',
+  '#f43f5e', '#d946ef', '#0284c7', '#7c3aed', '#db2777',
+];
+
+export function getSampleTypeColor(type: string): string {
+  if (SAMPLE_TYPE_COLORS[type]) return SAMPLE_TYPE_COLORS[type];
+  // Hash the type string to pick a consistent color from the next list
+  let hash = 0;
+  for (let i = 0; i < type.length; i++) hash = ((hash << 5) - hash + type.charCodeAt(i)) | 0;
+  return SAMPLE_TYPE_COLORS_NEXT[Math.abs(hash) % SAMPLE_TYPE_COLORS_NEXT.length];
+}
+
+export function getSampleTypeBgColor(type: string): string {
+  return getSampleTypeColor(type) + '20';
+}
+
 export function getOccupancyRate(used: number, total: number): number {
   if (total === 0) return 0;
   return Math.round((used / total) * 100);
@@ -274,6 +303,7 @@ export interface Tube {
   // Joined fields
   patient_name?: string;
   sample_code?: string;
+  sample_type?: string;
   group_color?: string;
   box_name?: string;
   grid_cols?: number;

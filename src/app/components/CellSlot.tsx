@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { BoxCell, Tube, STATUS_CONFIG, cellPositionToLabel, getGroupColorStyle } from '../types';
+import { BoxCell, Tube, STATUS_CONFIG, cellPositionToLabel, getGroupColorStyle, getSampleTypeColor } from '../types';
 
 interface CellSlotProps {
   cell?: BoxCell;
@@ -89,7 +89,7 @@ export function CellSlot({
         <>
           <div
             className="w-1.5 h-1.5 rounded-full"
-            style={{ background: groupColor || config?.borderColor || '#94a3b8' }}
+            style={{ background: tube?.sample_type ? getSampleTypeColor(tube.sample_type) : (groupColor || config?.borderColor || '#94a3b8') }}
           />
           <span className="text-[9px] font-mono leading-none" style={{ color: groupColor || config?.color || 'var(--app-text)' }}>
             {label}
