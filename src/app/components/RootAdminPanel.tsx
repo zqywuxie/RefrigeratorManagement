@@ -482,6 +482,19 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
     } finally { setBusySRId(null); }
   }, [selectedAdminSR, onNotify]);
 
+  const handleBatchDeleteSR = useCallback(async () => {
+    if (selectedSRIde.size === 0) return;
+    if (!window.confirm(`确定删除 ${selectedSRIde.size} 条样本记录？关联试管也会被删除。`)) return;
+    let deleted = 0;
+    for (const id of selectedSRIde) {
+      try { await deleteSampleRecord(id); deleted++; } catch {}
+    }
+    setAdminSampleRecords((prev) => prev.filter((r) => !selectedSRIde.has(r.id)));
+    setSelectedSRIde(new Set());
+    setSelectedAdminSR(null);
+    onNotify(`已删除 ${deleted} 条`, 'warn');
+  }, [selectedSRIde, onNotify]);
+
   const totalSamplesText = summary
     ? `${summary.totals.samples} / ${summary.totals.totalCapacity}`
     : '--';
