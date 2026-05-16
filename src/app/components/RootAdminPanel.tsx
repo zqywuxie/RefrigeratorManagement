@@ -36,6 +36,8 @@ import {
   updateSubSample,
   updateBox,
   deleteBox,
+  updateSampleRecord,
+  deleteSampleRecord,
 } from '../api';
 import { AddSampleModal } from './AddSampleModal';
 import { Compartment, Sample, SampleStatus, SubSample, SampleRecord, formatChineseShortDate } from '../types';
@@ -85,6 +87,15 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   const [editBoxOwner, setEditBoxOwner] = useState('');
   const [editBoxNote, setEditBoxNote] = useState('');
   const [busyBoxId, setBusyBoxId] = useState<string | null>(null);
+  const [selectedAdminSR, setSelectedAdminSR] = useState<SampleRecord | null>(null);
+  const [editingSR, setEditingSR] = useState(false);
+  const [editSRName, setEditSRName] = useState('');
+  const [editSRCode, setEditSRCode] = useState('');
+  const [editSRType, setEditSRType] = useState('');
+  const [editSRSource, setEditSRSource] = useState('');
+  const [editSRStage, setEditSRStage] = useState('');
+  const [editSRDate, setEditSRDate] = useState('');
+  const [busySRId, setBusySRId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyUser, setBusyUser] = useState<string | null>(null);
   const [busySampleId, setBusySampleId] = useState<string | null>(null);
@@ -402,6 +413,60 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
       setBusyBoxId(null);
     }
   }, [onNotify]);
+
+  // ── Sample Record handlers ──
+  const handleSelectSR = useCallback((sr: SampleRecord) => {
+    setSelectedAdminSR(sr);
+    setEditingSR(false);
+  }, []);
+
+  const handleStartEditSR = useCallback(() => {
+    if (!selectedAdminSR) return;
+    setEditSRName(selectedAdminSR.patient_name);
+    setEditSRCode(selectedAdminSR.sample_code);
+    setEditSRType(selectedAdminSR.sample_type || '');
+    setEditSRSource(selectedAdminSR.source || '');
+    setEditSRStage(selectedAdminSR.collection_stage || '');
+    setEditSRDate(selectedAdminSR.collected_at ? selectedAdminSR.collected_at.slice(0, 10) : '');
+    setEditingSR(true);
+  }, [selectedAdminSR]);
+
+  const handleSaveSR = useCallback(async () => {
+    if (!selectedAdminSR || !editSRName.trim() || !editSRCode.trim()) return;
+    setBusySRId(selectedAdminSR.id);
+    try {
+      await updateSampleRecord(selectedAdminSR.id, {
+        patient_name: editSRName.trim(),
+        sample_code: editSRCode.trim(),
+        sample_type: editSRType || null,
+        source: editSRSource || null,
+        collection_stage: editSRStage || null,
+        collected_at: editSRDate || null,
+      } as any);
+      setAdminSampleRecords((prev) => prev.map((r) =>
+        r.id === selectedAdminSR.id ? { ...r, patient_name: editSRName.trim(), sample_code: editSRCode.trim(), sample_type: editSRType || null, source: editSRSource || null, collection_stage: editSRStage || null, collected_at: editSRDate || null } : r
+      ));
+      setSelectedAdminSR((prev) => prev ? { ...prev, patient_name: editSRName.trim(), sample_code: editSRCode.trim(), sample_type: editSRType || null, source: editSRSource || null, collection_stage: editSRStage || null, collected_at: editSRDate || null } : null);
+      setEditingSR(false);
+      onNotify('样本记录已更新', 'success');
+    } catch (err: any) {
+      onNotify(err.message || '更新失败', 'error');
+    } finally { setBusySRId(null); }
+  }, [selectedAdminSR, editSRName, editSRCode, editSRType, editSRSource, editSRStage, editSRDate, onNotify]);
+
+  const handleDeleteSR = useCallback(async () => {
+    if (!selectedAdminSR) return;
+    if (!window.confirm(`确定删除样本记录 "${selectedAdminSR.patient_name}" (${selectedAdminSR.sample_code})？关联试管也会被删除。`)) return;
+    setBusySRId(selectedAdminSR.id);
+    try {
+      await deleteSampleRecord(selectedAdminSR.id);
+      setAdminSampleRecords((prev) => prev.filter((r) => r.id !== selectedAdminSR.id));
+      setSelectedAdminSR(null);
+      onNotify('样本记录已删除', 'warn');
+    } catch (err: any) {
+      onNotify(err.message || '删除失败', 'error');
+    } finally { setBusySRId(null); }
+  }, [selectedAdminSR, onNotify]);
 
   const totalSamplesText = summary
     ? `${summary.totals.samples} / ${summary.totals.totalCapacity}`
@@ -829,82 +894,35 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
           )}
         </section>
 
+        {/* Sample Records */}
+        <section className="rounded-xl p-4" style={{ background: "var(--app-card-bg)", border: "1px solid var(--app-border)", boxShadow: "0 14px 40px rgba(15,23,42,0.06)" }}>
+          <div className="mb-4"><h3 className="text-[17px] font-semibold" style={{ color: "var(--app-text)" }}>样本记录</h3><div className="text-[12px]" style={{ color: "var(--app-muted)" }}>{adminSampleRecords.length} 条</div></div>
+          <div className="flex gap-4 items-start"><div className="flex-1 min-w-0">
+            {adminSampleRecords.length === 0 ? <div className="py-8 text-center text-[13px]" style={{ color: "var(--app-muted)" }}>暂无</div> : (
+              <div className="overflow-x-auto max-h-[450px] overflow-y-auto"><table className="w-full min-w-[380px] border-separate border-spacing-y-1 text-left"><thead><tr className="text-[12px]" style={{ color: "var(--app-muted)" }}><th className="px-2 py-1">姓名</th><th className="px-2 py-1">编号</th><th className="px-2 py-1">类型</th><th className="px-2 py-1">试管</th></tr></thead><tbody>
+              {adminSampleRecords.map((sr) => { const sel = selectedAdminSR?.id === sr.id; return (
+                <tr key={sr.id} onClick={() => handleSelectSR(sr)} className="cursor-pointer" style={{ background: sel ? "#eff6ff" : "var(--app-panel-bg)" }}>
+                  <td className="rounded-l-lg px-2 py-2 text-[13px] font-medium" style={{ color: "var(--app-text)" }}><div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />{sr.patient_name}</div></td>
+                  <td className="px-2 py-2 text-[13px]" style={{ color: "var(--app-text)" }}>{sr.sample_code}</td>
+                  <td className="px-2 py-2 text-[12px]" style={{ color: "var(--app-muted)" }}>{sr.sample_type || "—"}</td>
+                  <td className="rounded-r-lg px-2 py-2 text-[13px] font-mono" style={{ color: "#2563eb" }}>{sr.tube_count || 0}</td>
+                </tr>)})}
+              </tbody></table></div>)}</div>
+            {selectedAdminSR && <div className="w-72 flex-shrink-0 rounded-xl p-4 space-y-3" style={{ background: "var(--app-panel-bg)", border: "1px solid var(--app-border)" }}>
+              <div className="flex items-center justify-between"><div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full" style={{ background: selectedAdminSR.group_color }} /><span className="text-[15px] font-medium" style={{ color: "var(--app-text)" }}>{selectedAdminSR.patient_name}</span></div><button onClick={() => { setSelectedAdminSR(null); setEditingSR(false); }} style={{ color: "var(--app-muted)" }}>✕</button></div>
+              {editingSR ? <div className="space-y-2">
+                <input value={editSRName} onChange={e => setEditSRName(e.target.value)} placeholder="姓名" className="w-full rounded px-2 py-1.5 text-[13px] outline-none" style={inputStyle} />
+                <input value={editSRCode} onChange={e => setEditSRCode(e.target.value)} placeholder="编号" className="w-full rounded px-2 py-1.5 text-[13px] outline-none" style={inputStyle} />
+                <input value={editSRType} onChange={e => setEditSRType(e.target.value)} placeholder="类型" className="w-full rounded px-2 py-1.5 text-[13px] outline-none" style={inputStyle} />
+                <input value={editSRSource} onChange={e => setEditSRSource(e.target.value)} placeholder="来源" className="w-full rounded px-2 py-1.5 text-[13px] outline-none" style={inputStyle} />
+                <input value={editSRStage} onChange={e => setEditSRStage(e.target.value)} placeholder="阶段" className="w-full rounded px-2 py-1.5 text-[13px] outline-none" style={inputStyle} />
+                <input type="date" value={editSRDate} onChange={e => setEditSRDate(e.target.value)} className="w-full rounded px-2 py-1.5 text-[13px] outline-none" style={inputStyle} />
+                <div className="flex gap-2"><button onClick={handleSaveSR} disabled={busySRId === selectedAdminSR.id} className="flex-1 rounded py-1.5 text-[12px]" style={{ background: "#2563eb", color: "#fff" }}>保存</button><button onClick={() => setEditingSR(false)} className="flex-1 rounded py-1.5 text-[12px]" style={{ background: "var(--app-input-bg)", color: "var(--app-muted)" }}>取消</button></div></div> :
+              <div className="space-y-1.5 text-[13px]">{[["编号",selectedAdminSR.sample_code],["类型",selectedAdminSR.sample_type||"—"],["来源",selectedAdminSR.source||"—"],["阶段",selectedAdminSR.collection_stage||"—"],["采集时间",selectedAdminSR.collected_at?selectedAdminSR.collected_at.slice(0,10):"—"],["上传者",selectedAdminSR.uploader||"—"],["试管数",String(selectedAdminSR.tube_count||0)],["标签",(selectedAdminSR.tags||[]).join(", ")||"—"],["备注",selectedAdminSR.note||"—"]].map(([l,v]) => <div key={l} className="flex justify-between gap-2"><span style={{color:"var(--app-muted)"}}>{l}</span><span className="truncate max-w-[150px] text-right" title={v} style={{color:"var(--app-text)"}}>{v}</span></div>)}</div>}
+              <div className="flex gap-2 pt-2 border-t" style={{borderColor:"var(--app-border)"}}><button onClick={handleStartEditSR} className="flex-1 rounded py-1.5 text-[12px]" style={{background:"#2563eb",color:"#fff"}}>编辑</button><button onClick={handleDeleteSR} disabled={busySRId===selectedAdminSR.id} className="flex-1 rounded py-1.5 text-[12px]" style={{background:"#ef4444",color:"#fff"}}>删除</button></div></div>}
+          </div></section>
 
-        {/* Sample Records List */}
-        <section
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--app-card-bg)",
-            border: "1px solid var(--app-border)",
-            boxShadow: "0 14px 40px rgba(15,23,42,0.06)",
-          }}
-        >
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-[17px] font-semibold" style={{ color: "var(--app-text)" }}>
-                样本记录
-              </h3>
-              <div className="text-[12px]" style={{ color: "var(--app-muted)" }}>
-                {adminSampleRecords.length} 条样本记录
-              </div>
-            </div>
-          </div>
-          {adminSampleRecords.length === 0 ? (
-            <div className="py-8 text-center text-[13px]" style={{ color: "var(--app-muted)" }}>
-              暂无样本记录
-            </div>
-          ) : (
-            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-              <table className="w-full min-w-[700px] border-separate border-spacing-y-1.5 text-left">
-                <thead>
-                  <tr className="text-[12px]" style={{ color: "var(--app-muted)" }}>
-                    <th className="px-2 py-1 font-medium">姓名</th>
-                    <th className="px-2 py-1 font-medium">编号</th>
-                    <th className="px-2 py-1 font-medium">类型</th>
-                    <th className="px-2 py-1 font-medium">来源</th>
-                    <th className="px-2 py-1 font-medium">阶段</th>
-                    <th className="px-2 py-1 font-medium">试管数</th>
-                    <th className="px-2 py-1 font-medium">上传者</th>
-                    <th className="px-2 py-1 font-medium">时间</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {adminSampleRecords.map((sr) => (
-                    <tr key={sr.id}>
-                      <td className="rounded-l-lg px-2 py-2 text-[13px] font-medium" style={{ background: "var(--app-panel-bg)", color: "var(--app-text)" }}>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />
-                          {sr.patient_name}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 text-[13px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-text)" }}>
-                        {sr.sample_code}
-                      </td>
-                      <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>
-                        {sr.sample_type || "—"}
-                      </td>
-                      <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>
-                        {sr.source || "—"}
-                      </td>
-                      <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>
-                        {sr.collection_stage || "—"}
-                      </td>
-                      <td className="px-2 py-2 text-[13px] font-mono" style={{ background: "var(--app-panel-bg)", color: "#2563eb" }}>
-                        {sr.tube_count || 0}
-                      </td>
-                      <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>
-                        {sr.uploader || "—"}
-                      </td>
-                      <td className="rounded-r-lg px-2 py-2 text-[11px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>
-                        {formatChineseShortDate(sr.created_at)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+
 
       </div>
 

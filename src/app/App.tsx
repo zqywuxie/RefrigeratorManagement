@@ -56,6 +56,8 @@ import {
   createItemType,
   fetchSampleRecord,
   fetchSampleRecords,
+  fetchDrawers,
+  fetchUpperItems,
 } from './api';
 import { FridgeUnit } from './components/FridgeUnit';
 import { FridgeSelector } from './components/FridgeSelector';
@@ -136,6 +138,9 @@ function AppContent() {
   const [sampleTypes, setSampleTypes] = useState<string[]>(['血清', '血浆', '尿液', 'DNA', '组织', '全血']);
   const [itemTypes, setItemTypes] = useState<string[]>(DEFAULT_ITEM_TYPES);
   const [sampleRecords, setSampleRecords] = useState<SampleRecord[]>([]);
+  const [drawerCount, setDrawerCount] = useState(0);
+  const [drawerBoxCount, setDrawerBoxCount] = useState(0);
+  const [upperItemsCount, setUpperItemsCount] = useState(0);
 
   // Side map state
   const [showSideMap, setShowSideMap] = useState(true);
@@ -219,9 +224,14 @@ function AppContent() {
     Promise.all([
       fetchSamples(selectedFridgeId).catch(() => []),
       fetchSampleRecords({}).catch(() => []),
-    ]).then(([sampleData, srData]) => {
+      fetchDrawers(selectedFridgeId).catch(() => []),
+      fetchUpperItems(selectedFridgeId).catch(() => []),
+    ]).then(([sampleData, srData, drawerData, upperItemsData]) => {
       setSamples(sampleData);
       setSampleRecords(srData);
+      setDrawerCount(drawerData.length);
+      setDrawerBoxCount(drawerData.reduce((s: number, d: any) => s + (d.box_count ?? 0), 0));
+      setUpperItemsCount(upperItemsData.length);
       setLoading(false);
     }).catch((err) => {
       setLoading(false);
@@ -246,9 +256,10 @@ function AppContent() {
     setTimeout(() => setNotification(null), 3000);
   }, []);
 
+  const isDrawerFridge = selectedFridge?.fridge_type === 'drawer';
   const upperCapacity = compartmentGrids.upper.rows * compartmentGrids.upper.cols;
   const lowerCapacity = compartmentGrids.lower.rows * compartmentGrids.lower.cols;
-  const totalCapacity = upperCapacity + lowerCapacity;
+  const totalCapacity = isDrawerFridge ? drawerCount + upperItemsCount : upperCapacity + lowerCapacity;
 
   const viewingContainer = viewingContainerId
     ? samples.find((s) => s.id === viewingContainerId) ?? null
@@ -850,7 +861,7 @@ function AppContent() {
 
   // ── Stats ──
 
-  const usedSlots = samples.length;
+  const usedSlots = isDrawerFridge ? drawerBoxCount : samples.length;
   const criticalCount = samples.filter((s) => s.status === 'critical').length;
   const warningCount = samples.filter((s) => s.status === 'warning').length;
 
@@ -1241,20 +1252,28 @@ function AppContent() {
             <div className="grid grid-cols-2 gap-3">
               <StatsCard
                 label="总容量"
-                value={`${usedSlots}/${totalCapacity}`}
-                sub={`使用率 ${Math.round((usedSlots / totalCapacity) * 100)}%`}
+                value={isDrawerFridge
+                  ? `${drawerBoxCount} 盒`
+                  : `${usedSlots}/${totalCapacity}`}
+                sub={isDrawerFridge
+                  ? `${drawerCount} 抽屉 · ${upperItemsCount} 件`
+                  : `使用率 ${totalCapacity > 0 ? Math.round((usedSlots / totalCapacity) * 100) : 0}%`}
                 color="#60a5fa"
               />
               <StatsCard
                 label="上层"
-                value={`${samples.filter((s) => s.compartment === 'upper').length}/${upperCapacity}`}
-                sub={`${selectedFridge?.upperTemperature ?? -80}°C 参考`}
+                value={selectedFridge?.fridge_type === 'drawer'
+                  ? `${upperItemsCount} 件`
+                  : `${samples.filter((s) => s.compartment === 'upper').length}/${upperCapacity}`}
+                sub="上层存储"
                 color="#818cf8"
               />
               <StatsCard
                 label="下层"
-                value={`${samples.filter((s) => s.compartment === 'lower').length}/${lowerCapacity}`}
-                sub={`${selectedFridge?.lowerTemperature ?? -80}°C 参考`}
+                value={selectedFridge?.fridge_type === 'drawer'
+                  ? `${drawerCount} 抽屉`
+                  : `${samples.filter((s) => s.compartment === 'lower').length}/${lowerCapacity}`}
+                sub={selectedFridge?.fridge_type === 'drawer' ? `${drawerBoxCount} 盒` : '下层存储'}
                 color="#34d399"
               />
               <StatsCard
@@ -1272,49 +1291,7 @@ function AppContent() {
               />
             </div>
 
-            {/* Sub-sample stats */}
-            <div
-              className="rounded-xl p-4"
-              style={{
-                background: 'var(--app-card-bg)',
-                border: '1px solid var(--app-border)',
-                boxShadow: '0 14px 40px rgba(15,23,42,0.06)',
-              }}
-            >
-              <div className="text-[14px] mb-2" style={{ color: 'var(--app-muted)' }}>
-                副样本统计
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Layers size={16} color="#a78bfa" />
-                  <span className="text-[14px] flex-1" style={{ color: 'var(--app-text)' }}>
-                    副样本总数
-                  </span>
-                  <span className="text-[14px] font-mono" style={{ color: '#a78bfa' }}>
-                    {totalSubSamples}
-                  </span>
-                </div>
-                {criticalSubCount > 0 && (
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{
-                        background: '#ef4444',
-                        boxShadow: '0 0 2px #ef4444',
-                      }}
-                    />
-                    <span className="text-[14px] flex-1" style={{ color: '#f87171' }}>
-                      严重异常副样本
-                    </span>
-                    <span className="text-[14px] font-mono" style={{ color: '#f87171' }}>
-                      {criticalSubCount}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Tag stats */}
+            {/* Sample type stats */}
             <div
               className="rounded-xl p-4"
               style={{
