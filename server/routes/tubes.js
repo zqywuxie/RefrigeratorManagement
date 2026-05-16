@@ -8,9 +8,12 @@ const router = Router();
 router.get('/boxes/:boxId/tubes', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT t.*, sr.patient_name, sr.sample_code, sr.group_color
+      `SELECT t.*, sr.patient_name, sr.sample_code, sr.group_color,
+              b.drawer_id, d.refrigerator_id as fridge_id
        FROM tubes t
        JOIN sample_records sr ON sr.id = t.sample_id AND sr.deleted_at IS NULL
+       LEFT JOIN boxes b ON b.id = t.box_id
+       LEFT JOIN drawers d ON d.id = b.drawer_id
        WHERE t.box_id = ?
        ORDER BY t.position`,
       [req.params.boxId]

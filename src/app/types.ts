@@ -277,6 +277,8 @@ export interface Tube {
   group_color?: string;
   box_name?: string;
   grid_cols?: number;
+  drawer_id?: string;
+  fridge_id?: string;
   created_at: string;
   updated_at: string;
 }

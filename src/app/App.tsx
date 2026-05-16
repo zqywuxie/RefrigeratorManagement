@@ -211,6 +211,8 @@ function AppContent() {
     fetchItemTypes()
       .then((data) => setItemTypes(data.length > 0 ? data : DEFAULT_ITEM_TYPES))
       .catch(() => {});
+    // Load all sample records globally for search
+    fetchSampleRecords({}).then(setSampleRecords).catch(() => {});
   }, []);
 
   // Load samples when fridge changes
@@ -867,15 +869,6 @@ function AppContent() {
   const typeStats = React.useMemo(() => {
     const counts = new Map<string, number>();
 
-    samples.forEach((sample) => {
-      const t = sample.type?.trim();
-      if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
-      sample.subSamples.forEach((ss) => {
-        const st = ss.type?.trim();
-        if (st) counts.set(st, (counts.get(st) ?? 0) + 1);
-      });
-    });
-
     sampleRecords.forEach((sr) => {
       const t = sr.sample_type?.trim();
       if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
@@ -884,7 +877,7 @@ function AppContent() {
     return Array.from(counts, ([type, count]) => ({ type, count })).sort(
       (a, b) => b.count - a.count || a.type.localeCompare(b.type, 'zh-CN'),
     );
-  }, [samples, sampleRecords]);
+  }, [sampleRecords]);
   const displayedTypeStats = typeStats.slice(0, 8);
   const remainingTypeCount = Math.max(typeStats.length - displayedTypeStats.length, 0);
 
@@ -1120,7 +1113,10 @@ function AppContent() {
                   pendingSamples={pendingSamples}
                   onPendingSamplesChange={setPendingSamples}
                   onImportComplete={handleImportComplete}
-                  onDataChanged={() => setSideMapRefreshKey((k) => k + 1)}
+                  onDataChanged={() => {
+                    setSideMapRefreshKey((k) => k + 1);
+                    fetchSampleRecords({}).then(setSampleRecords).catch(() => {});
+                  }}
                 />
               ) : selectedFridge.fridge_type === 'shelf' && !viewingContainer ? (
                 <ShelfFridgeView
@@ -1237,6 +1233,16 @@ function AppContent() {
                       }}
                       onClick={() => {
                         setGlobalSampleQuery('');
+                        // Navigate to the sample's storage location
+                        if (sr.tubes && sr.tubes.length > 0) {
+                          const locTube = sr.tubes.find(t => t.fridge_id && t.drawer_id);
+                          if (locTube?.fridge_id) {
+                            setSelectedFridgeId(locTube.fridge_id);
+                            if (locTube.drawer_id) {
+                              setSideMapNavTarget({ drawerId: locTube.drawer_id, drawerLabel: '' });
+                            }
+                          }
+                        }
                       }}
                     >
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />
