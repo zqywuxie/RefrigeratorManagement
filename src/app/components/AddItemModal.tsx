@@ -44,6 +44,7 @@ export function AddItemModal({
   const [gridPreset, setGridPreset] = useState(0);
   const [customRows, setCustomRows] = useState(10);
   const [customCols, setCustomCols] = useState(10);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -63,7 +64,11 @@ export function AddItemModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setError('请输入物品名称');
+      return;
+    }
+    setError('');
     const isBox = boxMode === 'precise';
     const preset = BOX_GRID_PRESETS[gridPreset];
     const finalRows = isBox ? (preset.rows || customRows) : null;
@@ -91,7 +96,7 @@ export function AddItemModal({
   };
 
   return (
-    <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) { setError(''); onClose(); } }}>
       <ResponsiveDialogContent className="max-w-md">
         <form onSubmit={handleSubmit} className="space-y-4">
           <ResponsiveDialogHeader>
@@ -102,7 +107,7 @@ export function AddItemModal({
 
           <input
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); setError(''); }}
             placeholder="物品名称"
             autoFocus
             className="w-full px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
@@ -250,6 +255,11 @@ export function AddItemModal({
             )}
           </div>
 
+          {error && (
+            <div className="text-[13px] px-3 py-2 rounded-lg" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
+              {error}
+            </div>
+          )}
           <ResponsiveDialogFooter>
             <button
               type="button"

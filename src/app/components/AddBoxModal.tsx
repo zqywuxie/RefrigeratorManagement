@@ -45,6 +45,7 @@ export function AddBoxModal({
   const [dataPath, setDataPath] = useState('');
   const [showNewType, setShowNewType] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -67,7 +68,11 @@ export function AddBoxModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setError('请输入盒子名称');
+      return;
+    }
+    setError('');
     const isPrecise = mode === 'precise';
     const preset = BOX_GRID_PRESETS[gridPreset];
     const finalRows = isPrecise ? (preset.rows || customRows) : null;
@@ -100,7 +105,7 @@ export function AddBoxModal({
   const subtitle = `抽屉外部：${drawerLabel || '—'} · 抽屉内部：${targetPosition != null ? boxPositionToLabel(targetPosition) : '—'}`;
 
   return (
-    <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) { setError(''); onClose(); } }}>
       <ResponsiveDialogContent className="max-w-md">
         <form onSubmit={handleSubmit} className="space-y-4">
           <ResponsiveDialogHeader>
@@ -110,7 +115,7 @@ export function AddBoxModal({
 
           <input
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); setError(''); }}
             placeholder="盒子名称"
             autoFocus
             className="w-full px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
@@ -264,6 +269,11 @@ export function AddBoxModal({
             style={fieldStyle}
           />
 
+          {error && (
+            <div className="text-[13px] px-3 py-2 rounded-lg" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
+              {error}
+            </div>
+          )}
           <ResponsiveDialogFooter>
             <button
               type="button"

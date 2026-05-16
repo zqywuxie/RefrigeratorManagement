@@ -7,7 +7,7 @@ import {
   fetchBoxes, createBox, createStandaloneBox, updateBox, deleteBox,
   fetchBoxCells, createBoxCell, updateBoxCell, deleteBoxCell,
   fetchBoxTubes, createSampleRecord, updateSampleRecord, deleteSampleRecord,
-  addTubesToSample, deleteTube, batchUpdateSampleRecords,
+  addTubesToSample, deleteTube, updateTube, batchUpdateSampleRecords,
   fetchSampleRecord,
 } from '../api';
 import { CircleHelp, FolderOpen, FileSpreadsheet, ChevronLeft, ChevronRight, Search } from 'lucide-react';

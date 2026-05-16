@@ -63,6 +63,7 @@ export function AddSampleRecordModal({
   const [note, setNote] = useState('');
   const [showNewType, setShowNewType] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
+  const [error, setError] = useState('');
 
   // For new positions to add to existing sample
   const [newPositions, setNewPositions] = useState<number[]>([]);
@@ -106,7 +107,15 @@ export function AddSampleRecordModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!patientName.trim() || !sampleCode.trim()) return;
+    if (!patientName.trim()) {
+      setError('请输入患者姓名');
+      return;
+    }
+    if (!sampleCode.trim()) {
+      setError('请输入样本编号');
+      return;
+    }
+    setError('');
 
     const tags = tagsStr
       .split(/[,，]/)
@@ -171,7 +180,7 @@ export function AddSampleRecordModal({
   const positionLabel = (pos: number) => cellPositionToLabel(pos, gridCols || 10);
 
   return (
-    <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) { setError(''); onClose(); } }}>
       <ResponsiveDialogContent className="max-w-2xl">
         <form onSubmit={handleSubmit} className="flex flex-col max-h-[85vh]">
           <ResponsiveDialogHeader className="space-y-1 pb-2">
@@ -186,6 +195,11 @@ export function AddSampleRecordModal({
           </ResponsiveDialogHeader>
 
           <div className="flex-1 space-y-4 overflow-y-auto px-1 pb-2 sm:px-0">
+            {error && (
+              <div className="text-[13px] px-3 py-2 rounded-lg" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
+                {error}
+              </div>
+            )}
             <section
               className="space-y-4 rounded-xl p-4 sm:p-5"
               style={{
@@ -210,7 +224,7 @@ export function AddSampleRecordModal({
                   </label>
                   <input
                     value={patientName}
-                    onChange={(e) => setPatientName(e.target.value)}
+                    onChange={(e) => { setPatientName(e.target.value); setError(''); }}
                     placeholder="患者姓名"
                     className="w-full rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"
                     style={fieldStyle}
@@ -224,7 +238,7 @@ export function AddSampleRecordModal({
                   </label>
                   <input
                     value={sampleCode}
-                    onChange={(e) => setSampleCode(e.target.value)}
+                    onChange={(e) => { setSampleCode(e.target.value); setError(''); }}
                     placeholder="样本编号"
                     className="w-full rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"
                     style={fieldStyle}
