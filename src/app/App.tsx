@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { TouchBackend } from 'react-dnd-touch-backend';
 import { motion, AnimatePresence } from 'motion/react';
 import { ThemeProvider, useTheme } from 'next-themes';
 import {
@@ -1002,7 +1003,7 @@ function AppContent() {
   };
 
   return (
-    <DndProvider backend={HTML5Backend}>
+    <DndProvider backend={isMobile ? TouchBackend : HTML5Backend}>
       <div
         className="min-h-screen flex flex-col"
         style={{
