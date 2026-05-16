@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'motion/react';
+import { useTheme } from 'next-themes';
 import { Thermometer, Package, Loader2 } from 'lucide-react';
 import {
   UpperItem, Drawer, getOccupancyRate, getOccupancyColor,
@@ -132,6 +133,27 @@ export function FridgeSideMap({
   onDrawerClick,
   onUpperItemClick,
 }: FridgeSideMapProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+
+  const colors = useMemo(() => ({
+    fridgeBg: isDark ? 'var(--app-card-bg)' : '#f8fafc',
+    fridgeBorder: isDark ? 'var(--app-border)' : '#cbd5e1',
+    headerBg: isDark ? '#0f172a' : '#1e293b',
+    headerText: isDark ? '#e2e8f0' : '#f1f5f9',
+    freezerBg: isDark ? 'rgba(14,165,233,0.06)' : '#e0f2fe',
+    freezerBorder: isDark ? 'rgba(14,165,233,0.18)' : '#bae6fd',
+    freezerTitle: isDark ? '#7dd3fc' : '#0369a1',
+    freezerCount: isDark ? '#38bdf8' : '#0284c7',
+    fridgeZoneBg: isDark ? 'rgba(34,197,94,0.04)' : '#f0fdf4',
+    fridgeZoneBorder: isDark ? 'rgba(34,197,94,0.16)' : '#bbf7d0',
+    fridgeTitle: isDark ? '#86efac' : '#15803d',
+    fridgeCount: isDark ? '#4ade80' : '#16a34a',
+    dividerBg: isDark ? 'rgba(100,116,139,0.3)' : '#cbd5e1',
+    rowLabel: isDark ? '#64748b' : '#94a3b8',
+    emptyText: isDark ? '#475569' : '#cbd5e1',
+  }), [isDark]);
+
   const [upperItems, setUpperItems] = useState<UpperItem[]>([]);
   const [layer1Drawers, setLayer1Drawers] = useState<Drawer[]>([]);
   const [layer2Drawers, setLayer2Drawers] = useState<Drawer[]>([]);
@@ -197,9 +219,9 @@ export function FridgeSideMap({
       <div
         className="rounded-2xl flex flex-col"
         style={{
-          background: '#f8fafc',
-          border: '2px solid #cbd5e1',
-          boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
+          background: colors.fridgeBg,
+          border: `2px solid ${colors.fridgeBorder}`,
+          boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(15,23,42,0.08)',
           minHeight: '600px',
         }}
       >
@@ -207,8 +229,8 @@ export function FridgeSideMap({
         <div
           className="px-3 py-2 flex items-center justify-between"
           style={{
-            background: '#1e293b',
-            color: '#f1f5f9',
+            background: colors.headerBg,
+            color: colors.headerText,
           }}
         >
           <span className="text-[13px] font-medium truncate flex-1">{fridgeName}</span>
@@ -219,22 +241,22 @@ export function FridgeSideMap({
         <div
           className="px-2 py-2 flex flex-col gap-1.5"
           style={{
-            background: '#e0f2fe',
-            borderBottom: '2px solid #bae6fd',
+            background: colors.freezerBg,
+            borderBottom: `2px solid ${colors.freezerBorder}`,
           }}
         >
           <div className="flex items-center justify-between px-1">
-            <span className="text-[12px] font-medium" style={{ color: '#0369a1' }}>
+            <span className="text-[12px] font-medium" style={{ color: colors.freezerTitle }}>
               上层 · {upperTemperature}°C
             </span>
-            <span className="text-[11px] font-mono" style={{ color: '#0284c7' }}>
+            <span className="text-[11px] font-mono" style={{ color: colors.freezerCount }}>
               {upperItems.length} 件
             </span>
           </div>
           {/* Row items as colored dots */}
           {[row1Items, row2Items].map((rowItems, ri) => (
             <div key={ri} className="flex items-center gap-1 flex-wrap px-1">
-              <span className="text-[10px]" style={{ color: '#94a3b8' }}>R{ri + 1}</span>
+              <span className="text-[10px]" style={{ color: colors.rowLabel }}>R{ri + 1}</span>
               {rowItems.slice(0, 6).map((item) => {
                 const cfg = getItemTypeConfig(item.item_type);
                 return (
@@ -248,31 +270,31 @@ export function FridgeSideMap({
                 );
               })}
               {rowItems.length > 6 && (
-                <span className="text-[9px]" style={{ color: '#94a3b8' }}>+{rowItems.length - 6}</span>
+                <span className="text-[9px]" style={{ color: colors.rowLabel }}>+{rowItems.length - 6}</span>
               )}
               {rowItems.length === 0 && (
-                <span className="text-[9px]" style={{ color: '#cbd5e1' }}>空</span>
+                <span className="text-[9px]" style={{ color: colors.emptyText }}>空</span>
               )}
             </div>
           ))}
         </div>
 
         {/* Shelf divider */}
-        <div className="h-1.5" style={{ background: '#cbd5e1', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)' }} />
+        <div className="h-1.5" style={{ background: colors.dividerBg, boxShadow: isDark ? 'inset 0 1px 3px rgba(0,0,0,0.3)' : 'inset 0 1px 3px rgba(0,0,0,0.1)' }} />
 
         {/* Drawer Layer 1 */}
         <div
           className="px-2 py-2 flex flex-col gap-1"
           style={{
-            background: '#f0fdf4',
-            borderBottom: '2px solid #bbf7d0',
+            background: colors.fridgeZoneBg,
+            borderBottom: `2px solid ${colors.fridgeZoneBorder}`,
           }}
         >
           <div className="flex items-center justify-between px-1">
-            <span className="text-[12px] font-medium" style={{ color: '#15803d' }}>
+            <span className="text-[12px] font-medium" style={{ color: colors.fridgeTitle }}>
               第一层 · {lowerTemperature}°C
             </span>
-            <span className="text-[11px] font-mono" style={{ color: '#16a34a' }}>
+            <span className="text-[11px] font-mono" style={{ color: colors.fridgeCount }}>
               {layer1Drawers.length} 抽屉
             </span>
           </div>
@@ -294,20 +316,20 @@ export function FridgeSideMap({
         </div>
 
         {/* Shelf divider */}
-        <div className="h-1.5" style={{ background: '#cbd5e1', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)' }} />
+        <div className="h-1.5" style={{ background: colors.dividerBg, boxShadow: isDark ? 'inset 0 1px 3px rgba(0,0,0,0.3)' : 'inset 0 1px 3px rgba(0,0,0,0.1)' }} />
 
         {/* Drawer Layer 2 */}
         <div
           className="px-2 py-2 flex flex-col gap-1 flex-1"
           style={{
-            background: '#f0fdf4',
+            background: colors.fridgeZoneBg,
           }}
         >
           <div className="flex items-center justify-between px-1">
-            <span className="text-[12px] font-medium" style={{ color: '#15803d' }}>
+            <span className="text-[12px] font-medium" style={{ color: colors.fridgeTitle }}>
               第二层 · {lowerTemperature}°C
             </span>
-            <span className="text-[11px] font-mono" style={{ color: '#16a34a' }}>
+            <span className="text-[11px] font-mono" style={{ color: colors.fridgeCount }}>
               {layer2Drawers.length} 抽屉
             </span>
           </div>

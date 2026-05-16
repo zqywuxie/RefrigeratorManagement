@@ -59,6 +59,9 @@ router.get('/summary', async (_req, res) => {
       [[refrigeratorTotals]],
       [[sampleTotals]],
       [[subSampleTotals]],
+      [[srTotals]],
+      [srStatusRows],
+      [srTypeRows],
       [statusRows],
       [typeRows],
       [fridgeRows],
@@ -86,6 +89,24 @@ router.get('/summary', async (_req, res) => {
           SUM(CASE WHEN status = 'warning' THEN 1 ELSE 0 END) AS warning_count
          FROM sub_samples
          WHERE deleted_at IS NULL`,
+      ),
+      // Sample records totals
+      pool.query(
+        `SELECT COUNT(*) AS sr_count FROM sample_records WHERE deleted_at IS NULL`
+      ),
+      // Sample records status counts
+      pool.query(
+        `SELECT 'normal' as status, COUNT(*) as count FROM tubes WHERE status = 'normal'
+         UNION ALL SELECT 'warning', COUNT(*) FROM tubes WHERE status = 'warning'
+         UNION ALL SELECT 'critical', COUNT(*) FROM tubes WHERE status = 'critical'
+         UNION ALL SELECT 'used', COUNT(*) FROM tubes WHERE status = 'used'
+         UNION ALL SELECT 'pending', COUNT(*) FROM tubes WHERE status = 'pending'`
+      ),
+      // Sample records type counts
+      pool.query(
+        `SELECT sample_type as type, COUNT(*) as count FROM sample_records
+         WHERE deleted_at IS NULL AND sample_type IS NOT NULL
+         GROUP BY sample_type ORDER BY count DESC`
       ),
       pool.query(
         `SELECT status, SUM(cnt) AS count
@@ -165,18 +186,30 @@ router.get('/summary', async (_req, res) => {
 
     const sampleCount = Number(sampleTotals.sample_count || 0);
     const subSampleCount = Number(subSampleTotals.sub_sample_count || 0);
+    const srCount = Number(srTotals.sr_count || 0);
     const totalCapacity = Number(refrigeratorTotals.total_capacity || 0);
     const criticalCount =
       Number(sampleTotals.critical_count || 0) + Number(subSampleTotals.critical_count || 0);
     const warningCount =
       Number(sampleTotals.warning_count || 0) + Number(subSampleTotals.warning_count || 0);
 
+    // Merge status counts (old + new)
+    const mergedStatus = new Map<string, number>();
+    for (const row of statusRows) mergedStatus.set(row.status, (mergedStatus.get(row.status) || 0) + Number(row.count || 0));
+    for (const row of srStatusRows) mergedStatus.set(row.status, (mergedStatus.get(row.status) || 0) + Number(row.count || 0));
+
+    // Merge type counts (old + new)
+    const mergedTypes = new Map<string, number>();
+    for (const row of typeRows) mergedTypes.set(row.type || '未分类', (mergedTypes.get(row.type || '未分类') || 0) + Number(row.count || 0));
+    for (const row of srTypeRows) mergedTypes.set(row.type || '未分类', (mergedTypes.get(row.type || '未分类') || 0) + Number(row.count || 0));
+
     res.json({
       totals: {
         refrigerators: Number(refrigeratorTotals.refrigerator_count || 0),
         samples: sampleCount,
         subSamples: subSampleCount,
-        totalItems: sampleCount + subSampleCount,
+        sampleRecords: srCount,
+        totalItems: sampleCount + subSampleCount + srCount,
         totalCapacity,
         usedSlots: sampleCount,
         usageRate: totalCapacity > 0 ? Math.round((sampleCount / totalCapacity) * 100) : 0,
@@ -184,14 +217,8 @@ router.get('/summary', async (_req, res) => {
         warning: warningCount,
         abnormal: criticalCount + warningCount,
       },
-      statusCounts: statusRows.map((row) => ({
-        status: row.status,
-        count: Number(row.count || 0),
-      })),
-      typeCounts: typeRows.map((row) => ({
-        type: row.type || '未分类',
-        count: Number(row.count || 0),
-      })),
+      statusCounts: Array.from(mergedStatus, ([status, count]) => ({ status, count })),
+      typeCounts: Array.from(mergedTypes, ([type, count]) => ({ type, count })),
       refrigerators: fridgeRows.map((row) => ({
         id: row.id,
         name: row.name,

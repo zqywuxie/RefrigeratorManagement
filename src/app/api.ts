@@ -22,6 +22,7 @@ export interface AdminSummary {
     refrigerators: number;
     samples: number;
     subSamples: number;
+    sampleRecords: number;
     totalItems: number;
     totalCapacity: number;
     usedSlots: number;

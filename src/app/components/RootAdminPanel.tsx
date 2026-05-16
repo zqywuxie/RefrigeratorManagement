@@ -447,9 +447,10 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
             </button>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
             <AdminMetric icon={<Snowflake size={18} />} label="冰箱" value={summary?.totals.refrigerators ?? '--'} color="#2563eb" />
             <AdminMetric icon={<Database size={18} />} label="样本容量" value={totalSamplesText} color="#0f766e" />
+            <AdminMetric icon={<FlaskConical size={18} />} label="样本记录" value={summary?.totals.sampleRecords ?? '--'} color="#06b6d4" />
             <AdminMetric icon={<Users size={18} />} label="用户" value={users.length || '--'} color="#7c3aed" />
             <AdminMetric icon={<AlertTriangle size={18} />} label="异常" value={summary?.totals.abnormal ?? '--'} color="#dc2626" />
             <AdminMetric icon={<Shield size={18} />} label="使用率" value={summary ? `${summary.totals.usageRate}%` : '--'} color="#ca8a04" />
