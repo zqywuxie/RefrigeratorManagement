@@ -986,7 +986,7 @@ export function DrawerFridgeView({
                       }}
                     >
                       <FileSpreadsheet size={15} />
-                      Excel 导入
+                      Excel 导入 <span className="hidden sm:inline text-[10px] opacity-70">(仅限PC端使用)</span>
                     </button>
                     <Popover>
                       <Tooltip>
