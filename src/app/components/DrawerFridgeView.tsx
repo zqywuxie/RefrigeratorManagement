@@ -1056,7 +1056,7 @@ export function DrawerFridgeView({
                             }}
                           >
                             <div className="text-[12px] font-medium" style={{ color: 'var(--app-text)' }}>
-                              Excel 导入
+                              Excel 导入（仅PC使用）
                             </div>
                             <div className="mt-1 text-[11px] leading-5" style={{ color: 'var(--app-muted)' }}>
                               先导入表格生成待分配样本，再把样本拖到盒子孔位里。只有拖放到孔位后，样本才会真正录入当前盒子。
