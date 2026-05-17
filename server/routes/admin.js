@@ -588,4 +588,35 @@ router.delete('/upper-items/:id', async (req, res) => {
   }
 });
 
+// PUT /api/admin/upper-items/:id
+router.put('/upper-items/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name, item_type, quantity, owner, note, tags,
+      row_number, box_mode, grid_rows, grid_cols, sort_order,
+    } = req.body;
+    const fields: string[] = [];
+    const values: any[] = [];
+    if (name !== undefined) { fields.push('name = ?'); values.push(name); }
+    if (item_type !== undefined) { fields.push('item_type = ?'); values.push(item_type); }
+    if (quantity !== undefined) { fields.push('quantity = ?'); values.push(quantity); }
+    if (owner !== undefined) { fields.push('owner = ?'); values.push(owner ?? null); }
+    if (note !== undefined) { fields.push('note = ?'); values.push(note ?? null); }
+    if (tags !== undefined) { fields.push('tags = ?'); values.push(JSON.stringify(tags)); }
+    if (row_number !== undefined) { fields.push('row_number = ?'); values.push(row_number); }
+    if (box_mode !== undefined) { fields.push('box_mode = ?'); values.push(box_mode); }
+    if (grid_rows !== undefined) { fields.push('grid_rows = ?'); values.push(grid_rows); }
+    if (grid_cols !== undefined) { fields.push('grid_cols = ?'); values.push(grid_cols); }
+    if (sort_order !== undefined) { fields.push('sort_order = ?'); values.push(sort_order); }
+    if (fields.length === 0) return res.json({ ok: true });
+    fields.push('updated_at = NOW()');
+    values.push(id);
+    await pool.query(`UPDATE upper_items SET ${fields.join(', ')} WHERE id = ?`, values);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

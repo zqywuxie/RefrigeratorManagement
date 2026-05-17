@@ -43,10 +43,16 @@ import {
   updateSampleRecord,
   deleteSampleRecord,
   downloadAdminExport,
+  updateAdminUpperItem,
+  fetchItemTypes,
+  createItemType,
 } from '../api';
 import { AddSampleModal } from './AddSampleModal';
 import { Compartment, Sample, SampleStatus, SubSample, SampleRecord, formatChineseShortDate } from '../types';
+import type { UpperItem } from '../types';
 import { useIsMobile } from './ui/use-mobile';
+import { AddItemModal } from './AddItemModal';
+import { DEFAULT_ITEM_TYPES } from '../types';
 
 type NotifyType = 'info' | 'warn' | 'success' | 'error';
 
@@ -88,7 +94,9 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   const [editingSample, setEditingSample] = useState<AdminSampleItem | null>(null);
   const [adminBoxes, setAdminBoxes] = useState<AdminBox[]>([]);
   const [adminSampleRecords, setAdminSampleRecords] = useState<SampleRecord[]>([]);
-  const [adminUpperItems, setAdminUpperItems] = useState<any[]>([]);
+  const [adminUpperItems, setAdminUpperItems] = useState<UpperItem[]>([]);
+  const [editingUpperItem, setEditingUpperItem] = useState<UpperItem | null>(null);
+  const [itemTypes, setItemTypes] = useState<string[]>([]);
   const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
   const [editBoxName, setEditBoxName] = useState('');
   const [editBoxOwner, setEditBoxOwner] = useState('');
@@ -957,20 +965,89 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
 
         {/* Upper Items */}
         <section className="rounded-xl p-4" style={{ background: "var(--app-card-bg)", border: "1px solid var(--app-border)", boxShadow: "0 14px 40px rgba(15,23,42,0.06)" }}>
-          <div className="mb-4"><h3 className="text-[17px] font-semibold" style={{ color: "var(--app-text)" }}>上层物品</h3><div className="text-[12px]" style={{ color: "var(--app-muted)" }}>{adminUpperItems.length} 件</div></div>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-[17px] font-semibold" style={{ color: "var(--app-text)" }}>上层物品</h3>
+              <div className="text-[12px]" style={{ color: "var(--app-muted)" }}>{adminUpperItems.length} 件</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleExport('upper-items')}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] min-h-[44px]"
+              style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)', color: 'var(--app-text)' }}
+            >
+              <Download size={14} />导出Excel
+            </button>
+          </div>
           {adminUpperItems.length === 0 ? <div className="py-8 text-center text-[13px]" style={{ color: "var(--app-muted)" }}>暂无物品</div> : (
             <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-              <table className="w-full min-w-[500px] border-separate border-spacing-y-1 text-left">
-                <thead><tr className="text-[12px]" style={{ color: "var(--app-muted)" }}><th className="px-2 py-1">冰箱</th><th className="px-2 py-1">名称</th><th className="px-2 py-1">类型</th><th className="px-2 py-1">行</th><th className="px-2 py-1">数量</th><th className="px-2 py-1">负责人</th></tr></thead>
-                <tbody>{adminUpperItems.map((item) => (
-                  <tr key={item.id}><td className="rounded-l-lg px-2 py-2 text-[13px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-text)" }}>{item.fridge_name}</td>
-                  <td className="px-2 py-2 text-[13px] font-medium" style={{ background: "var(--app-panel-bg)", color: "var(--app-text)" }}>{item.name}</td>
-                  <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>{item.item_type}</td>
-                  <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>{item.row_number}</td>
-                  <td className="px-2 py-2 text-[13px] font-mono" style={{ background: "var(--app-panel-bg)", color: "#2563eb" }}>{item.quantity}</td>
-                  <td className="rounded-r-lg px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>{item.owner || "—"}</td></tr>
-                ))}</tbody></table></div>)}
+              <table className="w-full min-w-[600px] border-separate border-spacing-y-1 text-left">
+                <thead><tr className="text-[12px]" style={{ color: "var(--app-muted)" }}>
+                  <th className="px-2 py-1">冰箱</th><th className="px-2 py-1">名称</th><th className="px-2 py-1">类型</th><th className="px-2 py-1">行</th><th className="px-2 py-1">数量</th><th className="px-2 py-1">负责人</th><th className="px-2 py-1 text-right">操作</th>
+                </tr></thead>
+                <tbody>{adminUpperItems.map((item: any) => (
+                  <tr key={item.id}>
+                    <td className="rounded-l-lg px-2 py-2 text-[13px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-text)" }}>{item.fridge_name}</td>
+                    <td className="px-2 py-2 text-[13px] font-medium" style={{ background: "var(--app-panel-bg)", color: "var(--app-text)" }}>{item.name}</td>
+                    <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>{item.item_type}</td>
+                    <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>{item.row_number}</td>
+                    <td className="px-2 py-2 text-[13px] font-mono" style={{ background: "var(--app-panel-bg)", color: "#2563eb" }}>{item.quantity}</td>
+                    <td className="px-2 py-2 text-[12px]" style={{ background: "var(--app-panel-bg)", color: "var(--app-muted)" }}>{item.owner || "—"}</td>
+                    <td className="rounded-r-lg px-2 py-2 text-right" style={{ background: "var(--app-panel-bg)" }}>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingUpperItem(item)}
+                          className="rounded-md p-2 min-h-[44px] min-w-[44px]"
+                          style={{ background: 'var(--app-info-soft-bg)', color: 'var(--app-info-soft-text)' }}
+                          title="编辑"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!window.confirm(`确定删除物品 "${item.name}"？`)) return;
+                            deleteAdminUpperItem(item.id).then(() => {
+                              setAdminUpperItems((prev) => prev.filter((i) => i.id !== item.id));
+                              onNotify('物品已删除', 'warn');
+                            }).catch((err) => onNotify(err.message || '删除失败', 'error'));
+                          }}
+                          className="rounded-md p-2 min-h-[44px] min-w-[44px]"
+                          style={{ background: 'var(--app-danger-soft-bg)', color: 'var(--app-danger-soft-text)' }}
+                          title="删除"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}</tbody></table></div>
+          )}
         </section>
+
+        <AddItemModal
+          isOpen={!!editingUpperItem}
+          editItem={editingUpperItem}
+          defaultRow={editingUpperItem?.row_number || 1}
+          currentUsername={currentUsername}
+          itemTypes={itemTypes.length > 0 ? itemTypes : DEFAULT_ITEM_TYPES}
+          onAddItemType={async (name) => {
+            try { await createItemType(name); } catch {}
+            setItemTypes((prev) => prev.includes(name) ? prev : [...prev, name]);
+          }}
+          onClose={() => setEditingUpperItem(null)}
+          onSave={async (data) => {
+            if (!editingUpperItem) return;
+            try {
+              await updateAdminUpperItem(editingUpperItem.id, data);
+              setAdminUpperItems((prev) => prev.map((i) => i.id === editingUpperItem.id ? { ...i, ...data } : i));
+              onNotify('物品已更新', 'success');
+            } catch (err: any) {
+              onNotify(err.message || '更新失败', 'error');
+            }
+          }}
+        />
 
         {/* Sample Records by Box */}
         <section className="rounded-xl p-4" style={{ background: "var(--app-card-bg)", border: "1px solid var(--app-border)", boxShadow: "0 14px 40px rgba(15,23,42,0.06)" }}>

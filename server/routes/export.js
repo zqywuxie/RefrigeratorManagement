@@ -91,4 +91,36 @@ router.get('/boxes', async (_req, res) => {
   }
 });
 
+router.get('/upper-items', async (_req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT ui.*, r.name as fridge_name
+       FROM upper_items ui
+       JOIN refrigerators r ON r.id = ui.refrigerator_id
+       WHERE ui.deleted_at IS NULL AND r.deleted_at IS NULL
+       ORDER BY r.name, ui.row_number, ui.sort_order`
+    );
+    const data = rows.map((r) => ({
+      '冰箱': r.fridge_name,
+      '行号': r.row_number,
+      '名称': r.name,
+      '类型': r.item_type || '',
+      '数量': r.quantity || 0,
+      '负责人': r.owner || '',
+      '备注': r.note || '',
+      '创建时间': r.created_at,
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '上层物品');
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.set('Content-Disposition', 'attachment; filename=upper-items.xlsx');
+    res.send(buf);
+  } catch (err) {
+    console.error('Export upper-items error:', err);
+    res.status(500).json({ error: '导出失败' });
+  }
+});
+
 export default router;

@@ -489,7 +489,7 @@ export interface ParsedExcel {
 
 // ── Admin Export ──
 
-export async function downloadAdminExport(type: 'sample-records' | 'boxes'): Promise<void> {
+export async function downloadAdminExport(type: 'sample-records' | 'boxes' | 'upper-items'): Promise<void> {
   const token = localStorage.getItem('biofridge_token');
   const res = await fetch(`${BASE}/export/${type}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -593,4 +593,11 @@ export async function fetchAdminUpperItems(): Promise<any[]> {
 
 export async function deleteAdminUpperItem(id: string): Promise<void> {
   await fetchJSON(`${BASE}/admin/upper-items/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function updateAdminUpperItem(id: string, data: Record<string, any>): Promise<void> {
+  await fetchJSON(`${BASE}/admin/upper-items/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
 }
