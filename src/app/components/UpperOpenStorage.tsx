@@ -16,6 +16,8 @@ interface UpperOpenStorageProps {
   itemTypes: string[];
   currentUser?: string;
   highlightedItemId?: string | null;
+  rowCount?: number;
+  title?: string;
 }
 
 export function UpperOpenStorage({
@@ -28,9 +30,14 @@ export function UpperOpenStorage({
   itemTypes,
   currentUser,
   highlightedItemId,
+  rowCount = 2,
+  title = '上层开放存储',
 }: UpperOpenStorageProps) {
   const [filterType, setFilterType] = useState<ItemType | 'all'>('all');
-  const [rowPages, setRowPages] = useState<Record<number, number>>({ 1: 0, 2: 0 });
+  const rows = Array.from({ length: rowCount }, (_, i) => i + 1);
+  const [rowPages, setRowPages] = useState<Record<number, number>>(
+    () => Object.fromEntries(rows.map((r) => [r, 0])),
+  );
   const visibleItemTypes = React.useMemo(
     () => Array.from(new Set(items.map((item) => item.item_type).filter(Boolean))),
     [items],
@@ -48,8 +55,10 @@ export function UpperOpenStorage({
     );
   });
 
-  const row1Items = filtered.filter((i) => i.row_number === 1);
-  const row2Items = filtered.filter((i) => i.row_number === 2);
+  const rowItemsMap: Record<number, UpperItem[]> = {};
+  for (const r of rows) {
+    rowItemsMap[r] = filtered.filter((i) => i.row_number === r);
+  }
 
   const getPagedItems = (rowItems: UpperItem[], page: number) => {
     const start = page * ITEMS_PER_ROW_PAGE;
@@ -57,17 +66,21 @@ export function UpperOpenStorage({
   };
 
   useEffect(() => {
-    setRowPages((prev) => ({
-      1: Math.min(prev[1] || 0, Math.max(0, Math.ceil(row1Items.length / ITEMS_PER_ROW_PAGE) - 1)),
-      2: Math.min(prev[2] || 0, Math.max(0, Math.ceil(row2Items.length / ITEMS_PER_ROW_PAGE) - 1)),
-    }));
-  }, [row1Items.length, row2Items.length]);
+    setRowPages((prev) => {
+      const next = { ...prev };
+      for (const r of rows) {
+        const count = (rowItemsMap[r] || []).length;
+        next[r] = Math.min(prev[r] || 0, Math.max(0, Math.ceil(count / ITEMS_PER_ROW_PAGE) - 1));
+      }
+      return next;
+    });
+  }, [filtered.length]);
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h3 className="text-[16px] font-medium" style={{ color: 'var(--app-text)' }}>
-          上层开放存储
+          {title}
         </h3>
         <div className="flex items-center gap-2">
           {(['all', ...visibleItemTypes] as (ItemType | 'all')[]).map((t) => {
@@ -115,10 +128,9 @@ export function UpperOpenStorage({
         />
       </div>
 
-      {[
-        { row: 1, items: row1Items },
-        { row: 2, items: row2Items },
-      ].map(({ row, items: rowItems }) => (
+      {rows.map((row) => {
+        const rowItems = rowItemsMap[row] || [];
+        return (
         <div key={row} className="flex flex-col gap-2">
           {(() => {
             const totalPages = Math.max(1, Math.ceil(rowItems.length / ITEMS_PER_ROW_PAGE));
@@ -207,7 +219,8 @@ export function UpperOpenStorage({
             );
           })()}
         </div>
-      ))}
+      );
+      })}
     </div>
   );
 }
