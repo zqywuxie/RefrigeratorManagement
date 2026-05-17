@@ -15,6 +15,7 @@ interface UpperOpenStorageProps {
   onDeleteItem?: (id: string) => void;
   itemTypes: string[];
   currentUser?: string;
+  highlightedItemId?: string | null;
 }
 
 export function UpperOpenStorage({
@@ -26,6 +27,7 @@ export function UpperOpenStorage({
   onDeleteItem,
   itemTypes,
   currentUser,
+  highlightedItemId,
 }: UpperOpenStorageProps) {
   const [filterType, setFilterType] = useState<ItemType | 'all'>('all');
   const [rowPages, setRowPages] = useState<Record<number, number>>({ 1: 0, 2: 0 });
@@ -179,7 +181,7 @@ export function UpperOpenStorage({
                     <ItemCard
                       key={item.id}
                       item={item}
-                      isHighlighted={searchQuery.length > 0}
+                      isHighlighted={item.id === highlightedItemId || searchQuery.length > 0}
                       onClick={() => onItemClick(item.id)}
                       onDelete={onDeleteItem}
                       canDelete={!item.owner || item.owner === currentUser}

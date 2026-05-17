@@ -12,24 +12,51 @@ interface ShelfFridgeViewProps {
   currentUsername: string;
   itemTypes: string[];
   onAddItemType: (name: string) => void;
+  navigateToItem?: { itemId: string } | null;
+  onItemNavigated?: () => void;
+  onItemsChange?: (items: UpperItem[]) => void;
 }
 
 const SHELF_ROWS = 4;
 
-export function ShelfFridgeView({ fridge, currentUsername, itemTypes, onAddItemType }: ShelfFridgeViewProps) {
+export function ShelfFridgeView({
+  fridge,
+  currentUsername,
+  itemTypes,
+  onAddItemType,
+  navigateToItem,
+  onItemNavigated,
+  onItemsChange,
+}: ShelfFridgeViewProps) {
   const [items, setItems] = useState<UpperItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
   const [editItem, setEditItem] = useState<UpperItem | null>(null);
   const [defaultRow, setDefaultRow] = useState(1);
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
     fetchUpperItems(fridge.id)
-      .then(setItems)
+      .then((nextItems) => {
+        setItems(nextItems);
+        onItemsChange?.(nextItems);
+      })
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
-  }, [fridge.id]);
+  }, [fridge.id, onItemsChange]);
+
+  useEffect(() => {
+    if (!navigateToItem) return;
+    setHighlightedItemId(navigateToItem.itemId);
+    onItemNavigated?.();
+  }, [navigateToItem, onItemNavigated]);
+
+  useEffect(() => {
+    if (!highlightedItemId) return;
+    const timer = window.setTimeout(() => setHighlightedItemId(null), 4500);
+    return () => window.clearTimeout(timer);
+  }, [highlightedItemId]);
 
   const rows = useMemo(
     () =>
@@ -61,11 +88,12 @@ export function ShelfFridgeView({ fridge, currentUsername, itemTypes, onAddItemT
         }
         const nextItems = await fetchUpperItems(fridge.id);
         setItems(nextItems);
+        onItemsChange?.(nextItems);
       } catch (err) {
         console.error('Failed to save shelf item:', err);
       }
     },
-    [fridge.id, editItem],
+    [fridge.id, editItem, onItemsChange],
   );
 
   const handleItemClick = useCallback((id: string) => {
@@ -79,11 +107,13 @@ export function ShelfFridgeView({ fridge, currentUsername, itemTypes, onAddItemT
     if (!window.confirm('确定删除此物品？')) return;
     try {
       await deleteUpperItem(id);
-      setItems((prev) => prev.filter((item) => item.id !== id));
+      const nextItems = items.filter((item) => item.id !== id);
+      setItems(nextItems);
+      onItemsChange?.(nextItems);
     } catch (err) {
       console.error('Failed to delete shelf item:', err);
     }
-  }, []);
+  }, [items, onItemsChange]);
 
   return (
     <div className="flex w-full max-w-full lg:max-w-[680px] flex-col gap-4">
@@ -133,7 +163,7 @@ export function ShelfFridgeView({ fridge, currentUsername, itemTypes, onAddItemT
                   <div key={item.id} className="relative group">
                     <ItemCard
                       item={item}
-                      isHighlighted={false}
+                      isHighlighted={item.id === highlightedItemId}
                       onClick={() => handleItemClick(item.id)}
                     />
                     <button

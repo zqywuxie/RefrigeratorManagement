@@ -23,6 +23,9 @@ export interface AdminSummary {
     samples: number;
     subSamples: number;
     sampleRecords: number;
+    upperItems: number;
+    boxes: number;
+    tubes: number;
     totalItems: number;
     totalCapacity: number;
     usedSlots: number;
@@ -39,8 +42,13 @@ export interface AdminSummary {
     capacity: number;
     sampleCount: number;
     subSampleCount: number;
+    sampleRecordCount?: number;
+    upperItemCount?: number;
+    boxCount?: number;
+    tubeCount?: number;
     criticalCount: number;
     warningCount: number;
+    usageRate?: number;
   }>;
   owners: Array<{ username: string; sampleCount: number; subSampleCount: number }>;
 }

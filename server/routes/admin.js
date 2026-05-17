@@ -60,6 +60,9 @@ router.get('/summary', async (_req, res) => {
       [[sampleTotals]],
       [[subSampleTotals]],
       [[srTotals]],
+      [[upperItemTotals]],
+      [[boxTotals]],
+      [[tubeTotals]],
       [srStatusRows],
       [srTypeRows],
       [statusRows],
@@ -93,6 +96,23 @@ router.get('/summary', async (_req, res) => {
       // Sample records totals
       pool.query(
         `SELECT COUNT(*) AS sr_count FROM sample_records WHERE deleted_at IS NULL`
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS upper_item_count
+         FROM upper_items ui
+         JOIN refrigerators r ON r.id = ui.refrigerator_id
+         WHERE ui.deleted_at IS NULL AND r.deleted_at IS NULL`
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS box_count,
+                COALESCE(SUM(COALESCE(grid_rows, 0) * COALESCE(grid_cols, 0)), 0) AS box_capacity
+         FROM boxes
+         WHERE deleted_at IS NULL`
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS tube_count
+         FROM tubes
+         WHERE deleted_at IS NULL`
       ),
       // Sample records status counts
       pool.query(
@@ -132,9 +152,13 @@ router.get('/summary', async (_req, res) => {
         `SELECT
           r.id,
           r.name,
-          (r.upper_rows * r.upper_cols + r.lower_rows * r.lower_cols) AS capacity,
+          (r.upper_rows * r.upper_cols + r.lower_rows * r.lower_cols + COALESCE(b.box_capacity, 0)) AS capacity,
           COALESCE(s.sample_count, 0) AS sample_count,
           COALESCE(ss.sub_sample_count, 0) AS sub_sample_count,
+          COALESCE(sr.sample_record_count, 0) AS sample_record_count,
+          COALESCE(ui.upper_item_count, 0) AS upper_item_count,
+          COALESCE(b.box_count, 0) AS box_count,
+          COALESCE(t.tube_count, 0) AS tube_count,
           COALESCE(s.critical_count, 0) + COALESCE(ss.critical_count, 0) AS critical_count,
           COALESCE(s.warning_count, 0) + COALESCE(ss.warning_count, 0) AS warning_count
          FROM refrigerators r
@@ -160,6 +184,40 @@ router.get('/summary', async (_req, res) => {
              AND samples.deleted_at IS NULL
            GROUP BY samples.refrigerator_id
          ) ss ON ss.refrigerator_id = r.id
+         LEFT JOIN (
+           SELECT
+             tubes.fridge_id AS refrigerator_id,
+             COUNT(DISTINCT tubes.sample_id) AS sample_record_count
+           FROM tubes
+           WHERE tubes.deleted_at IS NULL
+             AND tubes.fridge_id IS NOT NULL
+           GROUP BY tubes.fridge_id
+         ) sr ON sr.refrigerator_id = r.id
+         LEFT JOIN (
+           SELECT refrigerator_id, COUNT(*) AS upper_item_count
+           FROM upper_items
+           WHERE deleted_at IS NULL
+           GROUP BY refrigerator_id
+         ) ui ON ui.refrigerator_id = r.id
+         LEFT JOIN (
+           SELECT
+             COALESCE(drawers.refrigerator_id, upper_items.refrigerator_id) AS refrigerator_id,
+             COUNT(boxes.id) AS box_count,
+             COALESCE(SUM(COALESCE(boxes.grid_rows, 0) * COALESCE(boxes.grid_cols, 0)), 0) AS box_capacity
+           FROM boxes
+           LEFT JOIN drawers ON drawers.id = boxes.drawer_id
+           LEFT JOIN upper_items ON upper_items.id = boxes.id AND upper_items.deleted_at IS NULL
+           WHERE boxes.deleted_at IS NULL
+             AND COALESCE(drawers.refrigerator_id, upper_items.refrigerator_id) IS NOT NULL
+           GROUP BY COALESCE(drawers.refrigerator_id, upper_items.refrigerator_id)
+         ) b ON b.refrigerator_id = r.id
+         LEFT JOIN (
+           SELECT fridge_id AS refrigerator_id, COUNT(*) AS tube_count
+           FROM tubes
+           WHERE deleted_at IS NULL
+             AND fridge_id IS NOT NULL
+           GROUP BY fridge_id
+         ) t ON t.refrigerator_id = r.id
          WHERE r.deleted_at IS NULL
          ORDER BY r.created_at ASC`,
       ),
@@ -187,7 +245,11 @@ router.get('/summary', async (_req, res) => {
     const sampleCount = Number(sampleTotals.sample_count || 0);
     const subSampleCount = Number(subSampleTotals.sub_sample_count || 0);
     const srCount = Number(srTotals.sr_count || 0);
-    const totalCapacity = Number(refrigeratorTotals.total_capacity || 0);
+    const upperItemCount = Number(upperItemTotals.upper_item_count || 0);
+    const boxCount = Number(boxTotals.box_count || 0);
+    const tubeCount = Number(tubeTotals.tube_count || 0);
+    const totalCapacity = Number(refrigeratorTotals.total_capacity || 0) + Number(boxTotals.box_capacity || 0);
+    const usedSlots = sampleCount + tubeCount + upperItemCount;
     const criticalCount =
       Number(sampleTotals.critical_count || 0) + Number(subSampleTotals.critical_count || 0);
     const warningCount =
@@ -209,10 +271,13 @@ router.get('/summary', async (_req, res) => {
         samples: sampleCount,
         subSamples: subSampleCount,
         sampleRecords: srCount,
-        totalItems: sampleCount + subSampleCount + srCount,
+        upperItems: upperItemCount,
+        boxes: boxCount,
+        tubes: tubeCount,
+        totalItems: sampleCount + subSampleCount + srCount + upperItemCount,
         totalCapacity,
-        usedSlots: sampleCount,
-        usageRate: totalCapacity > 0 ? Math.round((sampleCount / totalCapacity) * 100) : 0,
+        usedSlots,
+        usageRate: totalCapacity > 0 ? Math.round((usedSlots / totalCapacity) * 100) : 0,
         critical: criticalCount,
         warning: warningCount,
         abnormal: criticalCount + warningCount,
@@ -225,8 +290,15 @@ router.get('/summary', async (_req, res) => {
         capacity: Number(row.capacity || 0),
         sampleCount: Number(row.sample_count || 0),
         subSampleCount: Number(row.sub_sample_count || 0),
+        sampleRecordCount: Number(row.sample_record_count || 0),
+        upperItemCount: Number(row.upper_item_count || 0),
+        boxCount: Number(row.box_count || 0),
+        tubeCount: Number(row.tube_count || 0),
         criticalCount: Number(row.critical_count || 0),
         warningCount: Number(row.warning_count || 0),
+        usageRate: Number(row.capacity || 0) > 0
+          ? Math.round(((Number(row.sample_count || 0) + Number(row.tube_count || 0) + Number(row.upper_item_count || 0)) / Number(row.capacity || 0)) * 100)
+          : 0,
       })),
       owners: ownerRows.map((row) => ({
         username: row.owner,
@@ -596,8 +668,8 @@ router.put('/upper-items/:id', async (req, res) => {
       name, item_type, quantity, owner, note, tags,
       row_number, box_mode, grid_rows, grid_cols, sort_order,
     } = req.body;
-    const fields: string[] = [];
-    const values: any[] = [];
+    const fields = [];
+    const values = [];
     if (name !== undefined) { fields.push('name = ?'); values.push(name); }
     if (item_type !== undefined) { fields.push('item_type = ?'); values.push(item_type); }
     if (quantity !== undefined) { fields.push('quantity = ?'); values.push(quantity); }

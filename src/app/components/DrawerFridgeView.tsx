@@ -45,6 +45,8 @@ interface DrawerFridgeViewProps {
     boxId: string;
   } | null;
   onSampleRecordNavigated?: () => void;
+  navigateToUpperItem?: { itemId: string } | null;
+  onUpperItemNavigated?: () => void;
   pendingSamples?: PendingImportSample[];
   onPendingSamplesChange?: (samples: PendingImportSample[]) => void;
   onImportComplete?: (samples: PendingImportSample[]) => void;
@@ -57,6 +59,7 @@ interface DrawerFridgeViewProps {
     onSelectSample: (sampleId: string) => void;
   } | null) => void;
   onFridgeDataChange?: (items: UpperItem[]) => void;
+  onActiveDrawerChange?: (drawerId: string | null) => void;
 }
 
 export function DrawerFridgeView({
@@ -70,6 +73,8 @@ export function DrawerFridgeView({
   onNavigated,
   navigateToSampleRecord,
   onSampleRecordNavigated,
+  navigateToUpperItem,
+  onUpperItemNavigated,
   pendingSamples = [],
   onPendingSamplesChange,
   onImportComplete,
@@ -77,6 +82,7 @@ export function DrawerFridgeView({
   onBoxViewChange,
   onBoxSamplePanelChange,
   onFridgeDataChange,
+  onActiveDrawerChange,
 }: DrawerFridgeViewProps) {
   const [viewLevel, setViewLevel] = useState<ViewLevel>('fridge');
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('upper');
@@ -127,6 +133,7 @@ export function DrawerFridgeView({
     drawerLabel: string;
     boxId: string;
   } | null>(null);
+  const [highlightedUpperItemId, setHighlightedUpperItemId] = useState<string | null>(null);
 
   // Handle external navigation from side map
   useEffect(() => {
@@ -152,6 +159,30 @@ export function DrawerFridgeView({
     setPendingSampleNavigation(navigateToSampleRecord);
     onSampleRecordNavigated?.();
   }, [navigateToSampleRecord, onSampleRecordNavigated]);
+
+  useEffect(() => {
+    if (!navigateToUpperItem) return;
+    setViewLevel('fridge');
+    setActiveMainTab('upper');
+    setSelectedDrawerId(null);
+    setSelectedDrawerLabel('');
+    setSelectedBoxId(null);
+    setSelectedBox(null);
+    setSearchQuery('');
+    setHighlightedUpperItemId(navigateToUpperItem.itemId);
+    onUpperItemNavigated?.();
+  }, [navigateToUpperItem, onUpperItemNavigated]);
+
+  useEffect(() => {
+    if (!highlightedUpperItemId) return;
+    const timer = window.setTimeout(() => setHighlightedUpperItemId(null), 4500);
+    return () => window.clearTimeout(timer);
+  }, [highlightedUpperItemId]);
+
+  // Report active drawer to parent (for FridgeSideMap highlighting)
+  useEffect(() => {
+    onActiveDrawerChange?.(selectedDrawerId);
+  }, [selectedDrawerId, onActiveDrawerChange]);
 
   useEffect(() => {
     if (!pendingSampleNavigation) return;
@@ -858,6 +889,7 @@ export function DrawerFridgeView({
                     }}
                     itemTypes={itemTypes}
                     currentUser={currentUser}
+                    highlightedItemId={highlightedUpperItemId}
                   />
                 </motion.div>
               )}

@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Activity,
   AlertTriangle,
   Database,
   Download,
   Eye,
   FlaskConical,
   KeyRound,
+  Package,
   Pencil,
   Plus,
   RefreshCw,
@@ -363,16 +365,16 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
       await loadAdminData();
       setSelectedSampleId(editingSample.id);
       setEditingSample(null);
-      onNotify(`副样本 ${editingSample.id} 已更新`, 'success');
+      onNotify(`旧副样本 ${editingSample.id} 已更新`, 'success');
     } catch (err: any) {
-      onNotify(err.message || '更新副样本失败', 'error');
+      onNotify(err.message || '更新旧副样本失败', 'error');
     } finally {
       setBusySampleId(null);
     }
   }, [editingSample, loadAdminData, onNotify]);
 
   const handleDeleteSelectedSample = useCallback(async (sample: AdminSampleItem) => {
-    const label = sample.kind === 'sample' ? '样本' : '副样本';
+    const label = sample.kind === 'sample' ? '样本' : '旧副样本';
     if (!window.confirm(`删除${label} ${sample.id}？`)) return;
     try {
       setBusySampleId(sample.id);
@@ -381,7 +383,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
       } else if (sample.parentId) {
         await deleteSubSample(sample.parentId, sample.id);
       } else {
-        throw new Error('缺少父容器信息，无法删除副样本');
+        throw new Error('缺少父容器信息，无法删除旧副样本');
       }
       await loadAdminData();
       setEditingSample((current) => (current?.id === sample.id ? null : current));
@@ -402,11 +404,11 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
       } else if (sample.parentId) {
         await updateSubSample(sample.parentId, sample.id, { status });
       } else {
-        throw new Error('缺少父容器信息，无法更新副样本状态');
+        throw new Error('缺少父容器信息，无法更新旧副样本状态');
       }
       await loadAdminData();
       setSelectedSampleId(sample.id);
-      onNotify(`${sample.kind === 'sample' ? '样本' : '副样本'} ${sample.id} 状态已更新`, 'success');
+      onNotify(`${sample.kind === 'sample' ? '样本' : '旧副样本'} ${sample.id} 状态已更新`, 'success');
     } catch (err: any) {
       onNotify(err.message || '更新状态失败', 'error');
     } finally {
@@ -524,13 +526,14 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   }, [selectedSRIde, onNotify]);
 
   const totalSamplesText = summary
-    ? `${summary.totals.samples} / ${summary.totals.totalCapacity}`
+    ? `${summary.totals.usedSlots} / ${summary.totals.totalCapacity}`
     : '--';
 
-  const handleExport = useCallback(async (type: 'sample-records' | 'boxes') => {
+  const handleExport = useCallback(async (type: 'sample-records' | 'boxes' | 'upper-items') => {
     try {
       await downloadAdminExport(type);
-      onNotify(type === 'sample-records' ? '样本记录已导出' : '盒子数据已导出', 'success');
+      const label = type === 'sample-records' ? '样本记录' : type === 'upper-items' ? '上层物品' : '盒子数据';
+      onNotify(`${label}已导出`, 'success');
     } catch (err: any) {
       onNotify(err.message || '导出失败', 'error');
     }
@@ -557,7 +560,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                 全局管理
               </h2>
               <div className="mt-1 text-[13px]" style={{ color: 'var(--app-muted)' }}>
-                用户、冰箱容量和样本异常的统一视图
+                用户、冰箱容量和样本记录的统一视图
               </div>
             </div>
             <button
@@ -586,11 +589,15 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
             />
             <AdminMetric
               icon={<Database size={18} />}
-              label="盒子 / 试管"
-              value={adminBoxes.length > 0 ? `${adminBoxes.length} · ${adminBoxes.reduce((s, b) => s + (b.tube_count || 0), 0)}管` : '--'}
+              label="占用 / 容量"
+              value={totalSamplesText}
               color="#0f766e"
             />
+            <AdminMetric icon={<Package size={18} />} label="上层物品" value={summary ? summary.totals.upperItems : (adminUpperItems.length || '--')} color="#7c3aed" />
+            <AdminMetric icon={<Database size={18} />} label="盒子 / 试管" value={summary ? `${summary.totals.boxes} · ${summary.totals.tubes}管` : '--'} color="#0f766e" />
+            <AdminMetric icon={<AlertTriangle size={18} />} label="异常" value={summary?.totals.abnormal ?? '--'} color="#dc2626" />
             <AdminMetric icon={<Users size={18} />} label="用户" value={users.length || '--'} color="#7c3aed" />
+            <AdminMetric icon={<Activity size={18} />} label="总占用率" value={summary ? `${summary.totals.usageRate}%` : '--'} color="#2563eb" />
           </div>
         </section>
 
@@ -666,7 +673,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                         </select>
                       </td>
                       <td className="px-3 py-3 text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
-                        样本 {user.sampleCount} · 副样本 {user.subSampleCount}
+                        样本 {user.sampleCount} · 旧副样本 {user.subSampleCount}
                       </td>
                       <td className="px-3 py-3 text-[12px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
                         {formatDate(user.createdAt)}
@@ -808,18 +815,33 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
 
         {/* Fridge overview */}
         <section className="rounded-xl p-4" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', boxShadow: '0 14px 40px rgba(15,23,42,0.06)' }}>
-          <h3 className="mb-3 text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>冰箱概览</h3>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>冰箱概览</h3>
+              <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
+                汇总容量、样本记录、盒子、试管与上层物品
+              </div>
+            </div>
+            <span className="rounded-full px-3 py-1 text-[12px]" style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)', color: 'var(--app-muted)' }}>
+              {summary?.refrigerators.length ?? 0} 台
+            </span>
+          </div>
           <div className="grid gap-2 sm:gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {summary?.refrigerators.map((fridge) => {
-              const usage = fridge.capacity > 0 ? Math.round((fridge.sampleCount / fridge.capacity) * 100) : 0;
+              const used = fridge.sampleCount + (fridge.tubeCount || 0) + (fridge.upperItemCount || 0);
+              const usage = fridge.usageRate ?? (fridge.capacity > 0 ? Math.round((used / fridge.capacity) * 100) : 0);
+              const abnormal = fridge.criticalCount + fridge.warningCount;
               return (
-                <div key={fridge.id} className="rounded-lg p-3" style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)' }}>
+                <div key={fridge.id} className="rounded-xl p-4" style={{ background: 'var(--app-panel-bg)', border: abnormal > 0 ? '1px solid rgba(239,68,68,0.28)' : '1px solid var(--app-border)' }}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="truncate text-[15px] font-medium" style={{ color: 'var(--app-text)' }}>{fridge.name}</div>
                       <div className="mt-1 text-[12px]" style={{ color: 'var(--app-muted)' }}>{fridge.id}</div>
                     </div>
-                    <span className="text-[13px] font-mono flex-shrink-0" style={{ color: usage > 80 ? '#ef4444' : usage > 50 ? '#f59e0b' : '#22c55e' }}>{usage}%</span>
+                    <div className="text-right flex-shrink-0">
+                      <span className="text-[15px] font-mono" style={{ color: usage > 80 ? '#ef4444' : usage > 50 ? '#f59e0b' : '#22c55e' }}>{usage}%</span>
+                      <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>占用率</div>
+                    </div>
                   </div>
                   <div className="mt-3 h-2 overflow-hidden rounded-full" style={{ background: 'var(--app-progress-track)' }}>
                     <div className="h-full rounded-full transition-all" style={{
@@ -827,10 +849,13 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                       background: usage > 80 ? '#ef4444' : usage > 50 ? '#f59e0b' : '#22c55e',
                     }} />
                   </div>
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                    <span>样本 {fridge.sampleCount}/{fridge.capacity}</span>
-                    <span>副样本 {fridge.subSampleCount}</span>
-                    <span style={{ color: fridge.criticalCount > 0 ? '#ef4444' : 'var(--app-muted)' }}>异常 {fridge.criticalCount + fridge.warningCount}</span>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
+                    <AdminMiniStat label="占用" value={`${used}/${fridge.capacity}`} />
+                    <AdminMiniStat label="上层物品" value={fridge.upperItemCount || 0} />
+                    <AdminMiniStat label="盒子 / 试管" value={`${fridge.boxCount || 0} / ${fridge.tubeCount || 0}`} />
+                    <AdminMiniStat label="旧系统样本" value={`${fridge.sampleCount} / ${fridge.subSampleCount}`} />
+                    <AdminMiniStat label="样本记录" value={fridge.sampleRecordCount || 0} />
+                    <AdminMiniStat label="异常" value={abnormal} color={abnormal > 0 ? '#ef4444' : undefined} />
                   </div>
                 </div>
               );
@@ -1267,7 +1292,7 @@ function SampleDetailCard({
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[12px]" style={{ color: statusColor }}>
             <Eye size={14} />
-            {sample.kind === 'sample' ? '主样本' : '副样本'}
+            {sample.kind === 'sample' ? '旧样本' : '旧副样本'}
           </div>
           <h4 className="mt-1 truncate text-[20px] font-semibold">{sample.name}</h4>
           <div className="mt-1 text-[13px] font-mono" style={{ color: 'var(--app-muted)' }}>
@@ -1430,6 +1455,23 @@ function AdminMetric({
       <div className="mt-2 text-[24px] font-semibold" style={{ color }}>
         {value}
       </div>
+    </div>
+  );
+}
+
+function AdminMiniStat({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: React.ReactNode;
+  color?: string;
+}) {
+  return (
+    <div className="rounded-lg px-2 py-2" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}>
+      <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>{label}</div>
+      <div className="mt-0.5 truncate text-[13px] font-medium" style={{ color: color || 'var(--app-text)' }}>{value}</div>
     </div>
   );
 }

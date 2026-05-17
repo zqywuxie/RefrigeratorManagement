@@ -27,6 +27,9 @@ import {
   BarChart3,
   Eye,
   EyeOff,
+  Package,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 import {
@@ -85,6 +88,7 @@ import { useIsMobile } from './components/ui/use-mobile';
 import { Button } from './components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './components/ui/sheet';
 import { Drawer, DrawerContent } from './components/ui/drawer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 
 type UploadedSampleItem = {
   id: string;
@@ -99,6 +103,22 @@ type UploadedSampleItem = {
   parentId?: string;
   parentName?: string;
 };
+
+type UploadedUpperItem = {
+  kind: 'upper-item';
+  id: string;
+  name: string;
+  type: string;
+  rowNumber: number;
+  quantity: number;
+  owner: string | null;
+  note: string | null;
+  boxMode: 'precise' | 'simple' | null;
+  refrigeratorId: string;
+  updatedAt: string;
+};
+
+type UploadedPanelItem = UploadedSampleItem | UploadedUpperItem;
 
 type BoxSamplePanelState = {
   tubes: Tube[];
@@ -184,6 +204,8 @@ function AppContent() {
   const [fridgeItems, setFridgeItems] = useState<UpperItem[]>([]);
   const [boxSamplePanel, setBoxSamplePanel] = useState<BoxSamplePanelState | null>(null);
   const [drawerSampleNavTarget, setDrawerSampleNavTarget] = useState<DrawerSampleNavTarget | null>(null);
+  const [upperItemNavTarget, setUpperItemNavTarget] = useState<{ fridgeId: string; itemId: string } | null>(null);
+  const [activeDrawerId, setActiveDrawerId] = useState<string | null>(null);
 
   // Pending imported samples (shared with DrawerFridgeView)
   const [pendingSamples, setPendingSamples] = useState<PendingImportSample[]>([]);
@@ -381,7 +403,10 @@ function AppContent() {
     });
 
     // New sample records
-    sampleRecords.filter((sr) => sr.uploader === username).forEach((sr) => {
+    sampleRecords.filter((sr) =>
+      sr.uploader === username &&
+      (!selectedFridgeId || sr.tubes.some((tube) => tube.fridge_id === selectedFridgeId))
+    ).forEach((sr) => {
       results.push({
         id: sr.id, name: sr.patient_name, type: sr.sample_type || '—', status: 'normal',
         temperature: -80, collectedAt: sr.collected_at || '',
@@ -390,9 +415,46 @@ function AppContent() {
     });
 
     return results.sort((a, b) => b.collectedAt.localeCompare(a.collectedAt));
-  }, [samples, sampleRecords, user]);
+  }, [samples, sampleRecords, selectedFridgeId, user]);
 
-  const handleOpenUploadedItem = useCallback((item: UploadedSampleItem) => {
+  const myUploadedUpperItems = React.useMemo<UploadedUpperItem[]>(() => {
+    const username = user!.username;
+    return upperItems
+      .filter((item) => (item.owner || '').trim() === username)
+      .map((item) => ({
+        kind: 'upper-item' as const,
+        id: item.id,
+        name: item.name,
+        type: item.item_type || '未分类',
+        rowNumber: item.row_number,
+        quantity: item.quantity,
+        owner: item.owner,
+        note: item.note,
+        boxMode: item.box_mode,
+        refrigeratorId: item.refrigerator_id,
+        updatedAt: item.updated_at || item.created_at || '',
+      }))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }, [upperItems, user]);
+
+  const handleUpperItemsChange = useCallback((items: UpperItem[]) => {
+    setUpperItems(items);
+    setUpperItemsCount(items.length);
+    setFridgeItems(items);
+  }, []);
+
+  const handleOpenUploadedItem = useCallback((item: UploadedPanelItem) => {
+    if (item.kind === 'upper-item') {
+      setActiveView('fridge');
+      setSelectedSampleId(null);
+      setViewingContainerId(null);
+      if (selectedFridgeId !== item.refrigeratorId) {
+        setSelectedFridgeId(item.refrigeratorId);
+      }
+      setUpperItemNavTarget({ fridgeId: item.refrigeratorId, itemId: item.id });
+      return;
+    }
+
     if (item.kind === 'subsample') {
       setSelectedSampleId(item.id);
       setViewingContainerId(item.parentId ?? null);
@@ -1111,6 +1173,7 @@ function AppContent() {
                       username={user!.username}
                       role={user!.role}
                       uploadedItems={myUploadedItems}
+                      uploadedUpperItems={myUploadedUpperItems}
                       hasBoxViewTubes={boxViewTubes.length > 0}
                       onOpenSample={(item) => { handleOpenUploadedItem(item); setMobileMenuOpen(false); }}
                       onLogout={logout}
@@ -1192,6 +1255,7 @@ function AppContent() {
               username={user!.username}
               role={user!.role}
               uploadedItems={myUploadedItems}
+              uploadedUpperItems={myUploadedUpperItems}
               hasBoxViewTubes={boxViewTubes.length > 0}
               onOpenSample={handleOpenUploadedItem}
               onLogout={logout}
@@ -1346,12 +1410,19 @@ function AppContent() {
                   drawerSampleNavTarget?.fridgeId === selectedFridge.id ? drawerSampleNavTarget : null
                 }
                 onSampleRecordNavigated={() => setDrawerSampleNavTarget(null)}
+                navigateToUpperItem={
+                  upperItemNavTarget?.fridgeId === selectedFridge.id
+                    ? { itemId: upperItemNavTarget.itemId }
+                    : null
+                }
+                onUpperItemNavigated={() => setUpperItemNavTarget(null)}
                 pendingSamples={pendingSamples}
                 onPendingSamplesChange={setPendingSamples}
                 onImportComplete={handleImportComplete}
                 onBoxViewChange={setBoxViewTubes}
                 onBoxSamplePanelChange={setBoxSamplePanel}
                 onFridgeDataChange={setFridgeItems}
+                onActiveDrawerChange={setActiveDrawerId}
                 onDataChanged={() => {
                   setSideMapRefreshKey((k) => k + 1);
                   Promise.all([
@@ -1379,6 +1450,13 @@ function AppContent() {
                 currentUsername={user!.username}
                 itemTypes={itemTypes}
                 onAddItemType={handleAddItemType}
+                navigateToItem={
+                  upperItemNavTarget?.fridgeId === selectedFridge.id
+                    ? { itemId: upperItemNavTarget.itemId }
+                    : null
+                }
+                onItemNavigated={() => setUpperItemNavTarget(null)}
+                onItemsChange={handleUpperItemsChange}
               />
             ) : (
               <FridgeUnit
@@ -1832,12 +1910,23 @@ function AppContent() {
                   onAddItemType={handleAddItemType}
                   navigateToDrawer={sideMapNavTarget}
                   onNavigated={() => setSideMapNavTarget(null)}
+                  navigateToSampleRecord={
+                    drawerSampleNavTarget?.fridgeId === selectedFridge.id ? drawerSampleNavTarget : null
+                  }
+                  onSampleRecordNavigated={() => setDrawerSampleNavTarget(null)}
+                  navigateToUpperItem={
+                    upperItemNavTarget?.fridgeId === selectedFridge.id
+                      ? { itemId: upperItemNavTarget.itemId }
+                      : null
+                  }
+                  onUpperItemNavigated={() => setUpperItemNavTarget(null)}
                   pendingSamples={pendingSamples}
                   onPendingSamplesChange={setPendingSamples}
                   onImportComplete={handleImportComplete}
                   onBoxViewChange={setBoxViewTubes}
                   onBoxSamplePanelChange={setBoxSamplePanel}
                   onFridgeDataChange={setFridgeItems}
+                  onActiveDrawerChange={setActiveDrawerId}
                   onDataChanged={() => {
                     setSideMapRefreshKey((k) => k + 1);
                     Promise.all([
@@ -1867,6 +1956,13 @@ function AppContent() {
                   currentUsername={user!.username}
                   itemTypes={itemTypes}
                   onAddItemType={handleAddItemType}
+                  navigateToItem={
+                    upperItemNavTarget?.fridgeId === selectedFridge.id
+                      ? { itemId: upperItemNavTarget.itemId }
+                      : null
+                  }
+                  onItemNavigated={() => setUpperItemNavTarget(null)}
+                  onItemsChange={handleUpperItemsChange}
                 />
               ) : (
                 <FridgeUnit
@@ -2258,6 +2354,7 @@ function UserMenu({
   username,
   role,
   uploadedItems,
+  uploadedUpperItems,
   hasBoxViewTubes,
   onOpenSample,
   onLogout,
@@ -2265,8 +2362,9 @@ function UserMenu({
   username: string;
   role: string;
   uploadedItems: UploadedSampleItem[];
+  uploadedUpperItems: UploadedUpperItem[];
   hasBoxViewTubes: boolean;
-  onOpenSample: (item: UploadedSampleItem) => void;
+  onOpenSample: (item: UploadedPanelItem) => void;
   onLogout: () => void;
 }) {
   const { theme, setTheme } = useTheme();
@@ -2281,9 +2379,31 @@ function UserMenu({
   const [message, setMessage] = useState('');
   const [registering, setRegistering] = useState(false);
   const [showUploads, setShowUploads] = useState(false);
+  const [uploadTab, setUploadTab] = useState<'samples' | 'items'>('samples');
+  const [uploadPages, setUploadPages] = useState({ samples: 0, items: 0 });
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const uploadPageSize = 4;
+  const samplePageCount = Math.max(1, Math.ceil(uploadedItems.length / uploadPageSize));
+  const itemPageCount = Math.max(1, Math.ceil(uploadedUpperItems.length / uploadPageSize));
+  const currentSampleUploadPage = Math.min(uploadPages.samples, samplePageCount - 1);
+  const currentItemUploadPage = Math.min(uploadPages.items, itemPageCount - 1);
+  const pagedUploadedSamples = uploadedItems.slice(
+    currentSampleUploadPage * uploadPageSize,
+    currentSampleUploadPage * uploadPageSize + uploadPageSize,
+  );
+  const pagedUploadedUpperItems = uploadedUpperItems.slice(
+    currentItemUploadPage * uploadPageSize,
+    currentItemUploadPage * uploadPageSize + uploadPageSize,
+  );
+
+  useEffect(() => {
+    setUploadPages((prev) => ({
+      samples: Math.min(prev.samples, samplePageCount - 1),
+      items: Math.min(prev.items, itemPageCount - 1),
+    }));
+  }, [samplePageCount, itemPageCount]);
 
   useEffect(() => {
     if (isMobile || (!showUploads && !showRegister)) return;
@@ -2340,49 +2460,57 @@ function UserMenu({
     }
   };
 
-  const uploadsPanelContent = (
-    <>
-      <div className="flex items-center justify-between mb-3">
-        <div className="min-w-0">
-          <div className="text-[13px]" style={{ color: 'var(--app-text)' }}>
-            我的上传样本
-          </div>
-          <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
-            当前冰箱 · {uploadedItems.length} 个
-          </div>
-        </div>
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{
-            background: 'var(--app-card-bg)',
-            border: '1px solid var(--app-border)',
-            color: '#2563eb',
-          }}
-        >
-          <FlaskConical size={16} />
-        </div>
-      </div>
+  const renderUploadPager = (tab: 'samples' | 'items', total: number) => {
+    const pageCount = tab === 'samples' ? samplePageCount : itemPageCount;
+    const page = tab === 'samples' ? Math.min(uploadPages.samples, pageCount - 1) : Math.min(uploadPages.items, pageCount - 1);
+    if (total <= uploadPageSize) return null;
 
-      {uploadedItems.length === 0 ? (
-        <div
-          className="rounded-lg px-3 py-5 text-center text-[13px]"
-          style={{
-            background: 'var(--app-card-bg)',
-            border: '1px solid var(--app-border)',
-            color: 'var(--app-muted)',
-          }}
+    return (
+      <div className="mt-3 flex items-center justify-between">
+        <button
+          type="button"
+          disabled={page === 0}
+          onClick={() => setUploadPages((prev) => ({ ...prev, [tab]: Math.max(0, page - 1) }))}
+          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] disabled:opacity-35"
+          style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', color: 'var(--app-muted)' }}
         >
+          <ChevronLeft size={13} />上一页
+        </button>
+        <span className="text-[11px] font-mono" style={{ color: 'var(--app-muted)' }}>
+          {page + 1}/{pageCount}
+        </span>
+        <button
+          type="button"
+          disabled={page >= pageCount - 1}
+          onClick={() => setUploadPages((prev) => ({ ...prev, [tab]: Math.min(pageCount - 1, page + 1) }))}
+          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] disabled:opacity-35"
+          style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', color: 'var(--app-muted)' }}
+        >
+          下一页<ChevronRight size={13} />
+        </button>
+      </div>
+    );
+  };
+
+  const renderUploadedSampleList = () => {
+    if (uploadedItems.length === 0) {
+      return (
+        <div className="rounded-lg px-3 py-5 text-center text-[13px]" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', color: 'var(--app-muted)' }}>
           当前冰箱暂无你上传的样本
         </div>
-      ) : (
-        <div className={`${isMobile ? 'max-h-[60vh]' : 'max-h-80'} overflow-y-auto pr-1 space-y-2`}>
-          {uploadedItems.map((item) => {
+      );
+    }
+
+    return (
+      <>
+        <div className="space-y-2">
+          {pagedUploadedSamples.map((item) => {
             const config = STATUS_CONFIG[item.status];
             const isNewRecord = item.id.startsWith('sr-');
             const location = isNewRecord
               ? `样本记录 · ${item.position} 管`
               : item.kind === 'subsample'
-                ? `${item.parentId} · 子格 ${item.position + 1}`
+                ? `${item.parentName || item.parentId} · 子格 ${item.position + 1}`
                 : `${item.compartment === 'upper' ? '上层' : '下层'} · 格位 ${item.position + 1}`;
             return (
               <button
@@ -2393,41 +2521,104 @@ function UserMenu({
                   setShowUploads(false);
                 }}
                 className="w-full rounded-lg px-3 py-2.5 text-left transition-all hover:brightness-95"
-                style={{
-                  background: 'var(--app-card-bg)',
-                  border: '1px solid var(--app-border)',
-                  color: 'var(--app-text)',
-                }}
+                style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', color: 'var(--app-text)' }}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ background: config.borderColor }}
-                      />
-                      <span className="text-[13px] truncate">
-                        {item.id} · {item.name}
-                      </span>
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: config.borderColor }} />
+                      <span className="text-[13px] truncate">{item.id} · {item.name}</span>
                     </div>
                     <div className="mt-1 text-[11px] truncate" style={{ color: 'var(--app-muted)' }}>
                       {item.type} · {location}
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-[11px]" style={{ color: config.color }}>
-                      {config.label}
-                    </div>
-                    <div className="text-[11px] mt-1" style={{ color: 'var(--app-muted)' }}>
-                      {item.temperature}°C
-                    </div>
+                    <div className="text-[11px]" style={{ color: config.color }}>{config.label}</div>
+                    <div className="text-[11px] mt-1" style={{ color: 'var(--app-muted)' }}>{item.temperature}°C</div>
                   </div>
                 </div>
               </button>
             );
           })}
         </div>
-      )}
+        {renderUploadPager('samples', uploadedItems.length)}
+      </>
+    );
+  };
+
+  const renderUploadedItemList = () => {
+    if (uploadedUpperItems.length === 0) {
+      return (
+        <div className="rounded-lg px-3 py-5 text-center text-[13px]" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', color: 'var(--app-muted)' }}>
+          当前冰箱暂无你上传的物品
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="space-y-2">
+          {pagedUploadedUpperItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                onOpenSample(item);
+                setShowUploads(false);
+              }}
+              className="w-full rounded-lg px-3 py-2.5 text-left transition-all hover:brightness-95"
+              style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', color: 'var(--app-text)' }}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#2563eb' }} />
+                    <span className="text-[13px] truncate">{item.name}</span>
+                  </div>
+                  <div className="mt-1 text-[11px] truncate" style={{ color: 'var(--app-muted)' }}>
+                    {item.type} · 第 {item.rowNumber} 行 · {item.boxMode === 'precise' ? '孔位盒' : '普通物品'}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-[11px]" style={{ color: '#2563eb' }}>×{item.quantity}</div>
+                  <div className="text-[11px] mt-1" style={{ color: 'var(--app-muted)' }}>定位</div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+        {renderUploadPager('items', uploadedUpperItems.length)}
+      </>
+    );
+  };
+
+  const uploadsPanelContent = (
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <div className="min-w-0">
+          <div className="text-[13px]" style={{ color: 'var(--app-text)' }}>我的上传</div>
+          <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
+            当前冰箱 · 样本 {uploadedItems.length} · 物品 {uploadedUpperItems.length}
+          </div>
+        </div>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', color: '#2563eb' }}>
+          {uploadTab === 'samples' ? <FlaskConical size={16} /> : <Package size={16} />}
+        </div>
+      </div>
+
+      <Tabs value={uploadTab} onValueChange={(value) => setUploadTab(value as 'samples' | 'items')} className="w-full">
+        <TabsList className="mb-3 grid w-full grid-cols-2">
+          <TabsTrigger value="samples">样本 {uploadedItems.length}</TabsTrigger>
+          <TabsTrigger value="items">物品 {uploadedUpperItems.length}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="samples" className="mt-0 outline-none">
+          {renderUploadedSampleList()}
+        </TabsContent>
+        <TabsContent value="items" className="mt-0 outline-none">
+          {renderUploadedItemList()}
+        </TabsContent>
+      </Tabs>
     </>
   );
 
