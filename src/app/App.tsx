@@ -1556,6 +1556,7 @@ function AppContent() {
                     fridgeName={selectedFridge.name}
                     upperTemperature={selectedFridge.upperTemperature}
                     lowerTemperature={selectedFridge.lowerTemperature}
+                    selectedDrawerId={activeDrawerId}
                     onDrawerClick={(drawerId, drawerLabel) => {
                       setSideMapNavTarget({ drawerId, drawerLabel });
                       setMobileSideMapOpen(false);
@@ -1763,6 +1764,7 @@ function AppContent() {
                 fridgeName={selectedFridge.name}
                 upperTemperature={selectedFridge.upperTemperature}
                 lowerTemperature={selectedFridge.lowerTemperature}
+                selectedDrawerId={activeDrawerId}
                 onDrawerClick={(drawerId, drawerLabel) => {
                   setSideMapNavTarget({ drawerId, drawerLabel });
                 }}
