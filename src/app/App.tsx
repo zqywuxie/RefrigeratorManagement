@@ -1537,11 +1537,11 @@ function AppContent() {
                         <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>{upperItemTypeStats.length} 类</span>
                       </div>
                       {displayedUpperItemTypeStats.length > 0 ? (
-                        <div className="space-y-2">
-                          {displayedUpperItemTypeStats.map(({ type, count }) => {
+                        <div className="flex gap-2 overflow-x-auto lg:flex-col lg:space-y-2 lg:overflow-visible">
+                          {displayedUpperItemTypeStats.slice(0, isMobile ? 4 : 8).map(({ type, count }) => {
                             const cfg = getItemTypeConfig(type);
                             return (
-                              <div key={type} className="flex items-center gap-2">
+                              <div key={type} className="flex items-center gap-2 flex-shrink-0 lg:flex-shrink">
                                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
                                 <span
                                   className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
@@ -1576,11 +1576,11 @@ function AppContent() {
                         <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>{sampleTypeStats.length} 类</span>
                       </div>
                       {displayedSampleTypeStats.length > 0 ? (
-                        <div className="space-y-2">
-                          {displayedSampleTypeStats.map(({ type, count }) => {
+                        <div className="flex gap-2 overflow-x-auto lg:flex-col lg:space-y-2 lg:overflow-visible">
+                          {displayedSampleTypeStats.slice(0, isMobile ? 4 : 8).map(({ type, count }) => {
                             const typeColor = getSampleTypeColor(type);
                             return (
-                              <div key={type} className="flex items-center gap-2">
+                              <div key={type} className="flex items-center gap-2 flex-shrink-0 lg:flex-shrink">
                                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: typeColor }} />
                                 <span
                                   className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
