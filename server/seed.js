@@ -117,7 +117,7 @@ const FRIDGE = {
   upper_cols: 3,
   lower_rows: 2,
   lower_cols: 2,
-  upper_temperature: -80,
+  upper_temperature: -20,
   lower_temperature: -80,
   fridge_type: 'drawer',
 };

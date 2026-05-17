@@ -37,6 +37,69 @@ async function ensureIndex(table, indexName, columnsSql) {
   }
 }
 
+const DEFAULT_REFRIGERATORS = [
+  {
+    id: 'fridge-default-001',
+    name: '主冰箱',
+    description: '默认生物样本存储冰箱',
+    upperRows: 2,
+    upperCols: 3,
+    lowerRows: 2,
+    lowerCols: 2,
+    upperTemperature: -20,
+    lowerTemperature: -80,
+    fridgeType: 'drawer',
+  },
+  {
+    id: 'fridge-shelf-4space-001',
+    name: '四层大空间冰箱',
+    description: '四层固定大空间存储冰箱',
+    upperRows: 2,
+    upperCols: 1,
+    lowerRows: 2,
+    lowerCols: 1,
+    upperTemperature: -20,
+    lowerTemperature: 4,
+    fridgeType: 'shelf',
+  },
+];
+
+async function ensureDefaultRefrigerators() {
+  for (const fridge of DEFAULT_REFRIGERATORS) {
+    await pool.query(
+      `INSERT INTO refrigerators (
+         id, name, description, upper_rows, upper_cols, lower_rows, lower_cols,
+         upper_temperature, lower_temperature, fridge_type
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         name = VALUES(name),
+         description = VALUES(description),
+         upper_rows = VALUES(upper_rows),
+         upper_cols = VALUES(upper_cols),
+         lower_rows = VALUES(lower_rows),
+         lower_cols = VALUES(lower_cols),
+         upper_temperature = VALUES(upper_temperature),
+         lower_temperature = VALUES(lower_temperature),
+         fridge_type = VALUES(fridge_type),
+         deleted_at = NULL,
+         deleted_by = NULL`,
+      [
+        fridge.id,
+        fridge.name,
+        fridge.description,
+        fridge.upperRows,
+        fridge.upperCols,
+        fridge.lowerRows,
+        fridge.lowerCols,
+        fridge.upperTemperature,
+        fridge.lowerTemperature,
+        fridge.fridgeType,
+      ],
+    );
+  }
+}
+
 export async function runSchemaMigrations() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -45,6 +108,19 @@ export async function runSchemaMigrations() {
       password_hash VARCHAR(255) NOT NULL,
       role ENUM('root','user') DEFAULT 'user',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS refrigerators (
+      id VARCHAR(36) PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      description TEXT,
+      upper_rows INT NOT NULL DEFAULT 2,
+      upper_cols INT NOT NULL DEFAULT 3,
+      lower_rows INT NOT NULL DEFAULT 2,
+      lower_cols INT NOT NULL DEFAULT 2,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB
   `);
   await ensureColumn('refrigerators', 'upper_temperature', '`upper_temperature` DECIMAL(5,1) NOT NULL DEFAULT -80.0');
@@ -69,6 +145,7 @@ export async function runSchemaMigrations() {
 
   // Drawer Freezer support
   await ensureColumn('refrigerators', 'fridge_type', "`fridge_type` ENUM('drawer','shelf') DEFAULT 'drawer' AFTER `lower_temperature`");
+  await ensureDefaultRefrigerators();
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS item_types (
