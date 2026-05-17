@@ -77,17 +77,13 @@ router.get('/summary', async (_req, res) => {
       ),
       pool.query(
         `SELECT
-          COUNT(*) AS sample_count,
-          SUM(CASE WHEN status = 'critical' THEN 1 ELSE 0 END) AS critical_count,
-          SUM(CASE WHEN status = 'warning' THEN 1 ELSE 0 END) AS warning_count
+          COUNT(*) AS sample_count
          FROM samples
          WHERE deleted_at IS NULL`,
       ),
       pool.query(
         `SELECT
-          COUNT(*) AS sub_sample_count,
-          SUM(CASE WHEN status = 'critical' THEN 1 ELSE 0 END) AS critical_count,
-          SUM(CASE WHEN status = 'warning' THEN 1 ELSE 0 END) AS warning_count
+          COUNT(*) AS sub_sample_count
          FROM sub_samples
          WHERE deleted_at IS NULL`,
       ),
@@ -103,7 +99,7 @@ router.get('/summary', async (_req, res) => {
       ),
       pool.query(
         `SELECT COUNT(*) AS box_count,
-                COALESCE(SUM(COALESCE(grid_rows, 0) * COALESCE(grid_cols, 0)), 0) AS box_capacity
+                COALESCE(SUM(COALESCE(b.grid_rows, 0) * COALESCE(b.grid_cols, 0)), 0) AS box_capacity
          FROM boxes b
          LEFT JOIN drawers d ON d.id = b.drawer_id AND d.deleted_at IS NULL
          LEFT JOIN upper_items ui ON ui.id = b.id AND ui.deleted_at IS NULL
@@ -129,16 +125,6 @@ router.get('/summary', async (_req, res) => {
          GROUP BY sample_type ORDER BY count DESC`
       ),
       pool.query(
-        `SELECT status, SUM(cnt) AS count
-         FROM (
-           SELECT status, COUNT(*) AS cnt FROM samples WHERE deleted_at IS NULL GROUP BY status
-           UNION ALL
-           SELECT status, COUNT(*) AS cnt FROM sub_samples WHERE deleted_at IS NULL GROUP BY status
-         ) combined
-         GROUP BY status
-         ORDER BY status`,
-      ),
-      pool.query(
         `SELECT type, SUM(cnt) AS count
          FROM (
            SELECT type, COUNT(*) AS cnt FROM samples WHERE deleted_at IS NULL GROUP BY type
@@ -158,16 +144,12 @@ router.get('/summary', async (_req, res) => {
           COALESCE(sr.sample_record_count, 0) AS sample_record_count,
           COALESCE(ui.upper_item_count, 0) AS upper_item_count,
           COALESCE(b.box_count, 0) AS box_count,
-          COALESCE(t.tube_count, 0) AS tube_count,
-          COALESCE(s.critical_count, 0) + COALESCE(ss.critical_count, 0) AS critical_count,
-          COALESCE(s.warning_count, 0) + COALESCE(ss.warning_count, 0) AS warning_count
+          COALESCE(t.tube_count, 0) AS tube_count
          FROM refrigerators r
          LEFT JOIN (
            SELECT
              refrigerator_id,
-             COUNT(*) AS sample_count,
-             SUM(CASE WHEN status = 'critical' THEN 1 ELSE 0 END) AS critical_count,
-             SUM(CASE WHEN status = 'warning' THEN 1 ELSE 0 END) AS warning_count
+             COUNT(*) AS sample_count
            FROM samples
            WHERE deleted_at IS NULL
            GROUP BY refrigerator_id
@@ -175,9 +157,7 @@ router.get('/summary', async (_req, res) => {
          LEFT JOIN (
            SELECT
              samples.refrigerator_id,
-             COUNT(*) AS sub_sample_count,
-             SUM(CASE WHEN sub_samples.status = 'critical' THEN 1 ELSE 0 END) AS critical_count,
-             SUM(CASE WHEN sub_samples.status = 'warning' THEN 1 ELSE 0 END) AS warning_count
+             COUNT(*) AS sub_sample_count
            FROM sub_samples
            JOIN samples ON samples.id = sub_samples.sample_id
            WHERE sub_samples.deleted_at IS NULL
@@ -279,9 +259,6 @@ router.get('/summary', async (_req, res) => {
         totalCapacity,
         usedSlots,
         usageRate: totalCapacity > 0 ? Math.round((usedSlots / totalCapacity) * 100) : 0,
-        critical: 0,
-        warning: 0,
-        abnormal: 0,
       },
       typeCounts: Array.from(mergedTypes, ([type, count]) => ({ type, count })),
       refrigerators: fridgeRows.map((row) => ({
@@ -294,8 +271,6 @@ router.get('/summary', async (_req, res) => {
         upperItemCount: Number(row.upper_item_count || 0),
         boxCount: Number(row.box_count || 0),
         tubeCount: Number(row.tube_count || 0),
-        criticalCount: Number(row.critical_count || 0),
-        warningCount: Number(row.warning_count || 0),
         usageRate: Number(row.capacity || 0) > 0
           ? Math.round(((Number(row.sample_count || 0) + Number(row.tube_count || 0) + Number(row.upper_item_count || 0)) / Number(row.capacity || 0)) * 100)
           : 0,

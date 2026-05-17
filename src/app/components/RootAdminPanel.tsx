@@ -48,7 +48,16 @@ import {
   createItemType,
 } from '../api';
 import { AddSampleModal } from './AddSampleModal';
-import { Compartment, Sample, SampleStatus, SubSample, SampleRecord, formatChineseShortDate } from '../types';
+import {
+  Compartment,
+  Sample,
+  SampleStatus,
+  SubSample,
+  SampleRecord,
+  formatChineseShortDate,
+  getItemTypeConfig,
+  getSampleTypeColor,
+} from '../types';
 import type { UpperItem } from '../types';
 import { useIsMobile } from './ui/use-mobile';
 import { AddItemModal } from './AddItemModal';
@@ -178,6 +187,16 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
       (sr.uploader || '').toLowerCase().includes(q)
     );
   }, [adminSampleRecords, srSearchQuery]);
+  const upperItemTypeDistribution = useMemo(() => {
+    const counts = new Map<string, number>();
+    adminUpperItems.forEach((item) => {
+      const type = item.item_type?.trim() || '未分类';
+      const quantity = Number(item.quantity);
+      counts.set(type, (counts.get(type) || 0) + (Number.isFinite(quantity) && quantity > 0 ? quantity : 1));
+    });
+    return Array.from(counts, ([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type, 'zh-CN'));
+  }, [adminUpperItems]);
 
   const loadAdminData = useCallback(async () => {
     setLoading(true);
@@ -719,10 +738,10 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
           </div>
         </section>
 
-        <div className="grid items-start gap-3 sm:gap-5 grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)]">
+        <div className="grid items-stretch gap-3 sm:gap-5 grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)]">
           <form
             onSubmit={handleCreateUser}
-            className="rounded-xl p-4"
+            className="h-full rounded-xl p-4"
             style={{
               background: 'var(--app-card-bg)',
               border: '1px solid var(--app-border)',
@@ -750,32 +769,55 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
             </div>
           </form>
 
-          {/* Dashboard: type distribution */}
-          <div className="space-y-4">
-            {/* Sample type distribution */}
-            <div className="rounded-xl p-4" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', boxShadow: '0 14px 40px rgba(15,23,42,0.06)' }}>
-              <h3 className="text-[15px] font-semibold mb-3" style={{ color: 'var(--app-text)' }}>样本类型分布</h3>
-              {(summary?.typeCounts || []).length === 0 ? (
-                <div className="py-4 text-center text-[13px]" style={{ color: 'var(--app-muted)' }}>暂无数据</div>
-              ) : (
-                <div className="space-y-2">
-                  {(summary?.typeCounts || []).slice(0, 8).map((item) => {
-                    const total = (summary?.typeCounts || []).reduce((s, i) => s + i.count, 0) || 1;
-                    const pct = Math.round((item.count / total) * 100);
-                    return (
-                      <div key={item.type}>
-                        <div className="flex justify-between text-[12px] mb-0.5">
-                          <span style={{ color: 'var(--app-text)' }}>{item.type}</span>
-                          <span className="font-mono" style={{ color: 'var(--app-muted)' }}>{item.count} ({pct}%)</span>
-                        </div>
-                        <div className="h-1.5 rounded-full" style={{ background: 'var(--app-progress-track)' }}>
-                          <div className="h-full rounded-full transition-all" style={{ width: `${Math.max(pct, 2)}%`, background: '#06b6d4' }} />
-                        </div>
-                      </div>
-                    );
-                  })}
+          {/* Dashboard: compact type distribution */}
+          <div className="h-full">
+            <div className="flex h-full flex-col rounded-xl p-3.5" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', boxShadow: '0 14px 40px rgba(15,23,42,0.06)' }}>
+              <div className="mb-2.5 flex items-center justify-between gap-3">
+                <h3 className="text-[15px] font-semibold" style={{ color: 'var(--app-text)' }}>类型分布</h3>
+                <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>样本 / 物品</span>
+              </div>
+              <div className="grid flex-1 gap-2.5 md:grid-cols-2">
+                <div className="rounded-lg p-2.5" style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)' }}>
+                  <div className="mb-2 text-[12px] font-medium" style={{ color: '#06b6d4' }}>样本类型</div>
+                  {(summary?.typeCounts || []).length === 0 ? (
+                    <div className="flex min-h-[84px] items-center justify-center rounded-md text-[12px]" style={{ background: 'var(--app-card-bg)', color: 'var(--app-muted)' }}>暂无样本数据</div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(summary?.typeCounts || []).slice(0, 8).map((item) => (
+                        <TypeStatChip
+                          key={item.type}
+                          title={item.type}
+                          count={item.count}
+                          color={getSampleTypeColor(item.type)}
+                          bgColor={`${getSampleTypeColor(item.type)}18`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+                <div className="rounded-lg p-2.5" style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)' }}>
+                  <div className="mb-2 text-[12px] font-medium" style={{ color: '#7c3aed' }}>物品类型</div>
+                  {upperItemTypeDistribution.length === 0 ? (
+                    <div className="flex min-h-[84px] items-center justify-center rounded-md text-[12px]" style={{ background: 'var(--app-card-bg)', color: 'var(--app-muted)' }}>暂无物品数据</div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {upperItemTypeDistribution.slice(0, 8).map((item) => {
+                        const cfg = getItemTypeConfig(item.type);
+                        return (
+                          <TypeStatChip
+                            key={item.type}
+                            title={cfg.label}
+                            count={item.count}
+                            color={cfg.color}
+                            bgColor={cfg.bgColor}
+                            tooltipTitle={item.type}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1437,6 +1479,34 @@ function AdminMiniStat({
     <div className="rounded-lg px-2 py-2" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)' }}>
       <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>{label}</div>
       <div className="mt-0.5 truncate text-[13px] font-medium" style={{ color: color || 'var(--app-text)' }}>{value}</div>
+    </div>
+  );
+}
+
+function TypeStatChip({
+  title,
+  count,
+  color,
+  bgColor,
+  tooltipTitle,
+}: {
+  title: string;
+  count: number;
+  color: string;
+  bgColor: string;
+  tooltipTitle?: string;
+}) {
+  return (
+    <div
+      className="flex min-h-[34px] items-center justify-between gap-2 rounded-md px-2 py-1.5"
+      style={{ background: bgColor, border: `1px solid ${color}30` }}
+      title={`${tooltipTitle || title}: ${count}`}
+    >
+      <span className="flex min-w-0 items-center gap-1.5 truncate text-[12px]" style={{ color: 'var(--app-text)' }}>
+        <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: color }} />
+        <span className="min-w-0 truncate">{title}</span>
+      </span>
+      <span className="flex-shrink-0 text-[13px] font-semibold tabular-nums" style={{ color }}>{count}</span>
     </div>
   );
 }

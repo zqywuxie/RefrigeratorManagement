@@ -30,9 +30,6 @@ export interface AdminSummary {
     totalCapacity: number;
     usedSlots: number;
     usageRate: number;
-    critical: number;
-    warning: number;
-    abnormal: number;
   };
   typeCounts: Array<{ type: string; count: number }>;
   refrigerators: Array<{
@@ -45,8 +42,6 @@ export interface AdminSummary {
     upperItemCount?: number;
     boxCount?: number;
     tubeCount?: number;
-    criticalCount: number;
-    warningCount: number;
     usageRate?: number;
   }>;
   owners: Array<{ username: string; sampleCount: number; subSampleCount: number }>;
