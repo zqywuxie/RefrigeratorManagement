@@ -197,7 +197,7 @@ function AppContent() {
   const [upperItems, setUpperItems] = useState<UpperItem[]>([]);
 
   // Side map state
-  const [showSideMap, setShowSideMap] = useState(window.innerWidth >= 1024);
+  const [showSideMap, setShowSideMap] = useState(false);
   const [sideMapNavTarget, setSideMapNavTarget] = useState<{ drawerId: string; drawerLabel: string } | null>(null);
   const [sideMapRefreshKey, setSideMapRefreshKey] = useState(0);
   const [boxViewTubes, setBoxViewTubes] = useState<Tube[]>([]);
@@ -1809,7 +1809,7 @@ function AppContent() {
           />
 
           {/* Center: Fridge */}
-          <div className="flex flex-1 w-full flex-col gap-5">
+          <div className="flex flex-1 w-full max-w-full lg:max-w-[860px] flex-col gap-5">
             {/* Search bar */}
               <div
                 className="flex w-full items-center gap-3 rounded-xl px-4 py-3"
