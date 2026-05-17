@@ -1790,7 +1790,7 @@ function AppContent() {
             </div>
           )}
 
-          <div className="flex-1 flex flex-col lg:flex-row gap-3 lg:gap-5 items-start min-w-0">
+          <div className="flex-1 flex flex-col lg:flex-row gap-3 lg:gap-5 items-start justify-center min-w-0">
           {/* Detail panel — left of fridge */}
           <DetailPanel
             item={selectedDetailItem}
