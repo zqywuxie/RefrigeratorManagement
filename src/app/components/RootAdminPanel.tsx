@@ -177,6 +177,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   const [selectedSRIde, setSelectedSRIde] = useState<Set<string>>(new Set());
   const [srBoxId, setSrBoxId] = useState<string>('__all__');
   const [distribTab, setDistribTab] = useState<"samples" | "items">("samples");
+  const [selectedFridgeForDistrib, setSelectedFridgeForDistrib] = useState<string>("");
 
   const filteredAdminSR = React.useMemo(() => {
     if (!srSearchQuery.trim()) return adminSampleRecords;
@@ -210,6 +211,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
         fetchAdminBoxes().catch(() => []),
       ]);
       setSummary(summaryData);
+      if (summaryData?.refrigerators?.length > 0 && !selectedFridgeForDistrib) setSelectedFridgeForDistrib(summaryData.refrigerators[0].id);
       setUsers(userData);
       setSamples(sampleData);
       setAdminBoxes(boxData);
@@ -770,59 +772,77 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
             </div>
           </form>
 
-          {/* Dashboard: compact type distribution */}
+          {/* Dashboard: compact type distribution by fridge */}
           <div className="h-full">
             <div className="flex h-full flex-col rounded-xl p-3.5" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', boxShadow: '0 14px 40px rgba(15,23,42,0.06)' }}>
               <div className="mb-2.5 flex items-center justify-between gap-3">
                 <h3 className="text-[15px] font-semibold" style={{ color: 'var(--app-text)' }}>类型分布</h3>
-                <div className="flex rounded-lg p-0.5" style={{ background: 'var(--app-input-bg)', border: '1px solid var(--app-input-border)' }}>
-                  {(['samples', 'items'] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setDistribTab(tab)}
-                      className="rounded-md px-2.5 py-1 text-[11px] transition-all"
-                      style={{
-                        background: distribTab === tab ? '#2563eb' : 'transparent',
-                        color: distribTab === tab ? '#fff' : 'var(--app-muted)',
-                      }}
-                    >
-                      {tab === 'samples' ? '样本' : '物品'}
-                    </button>
-                  ))}
+                <div className="flex gap-1 flex-wrap">
+                  <div className="flex rounded-lg p-0.5" style={{ background: 'var(--app-input-bg)', border: '1px solid var(--app-input-border)' }}>
+                    {(summary?.refrigerators || []).map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => setSelectedFridgeForDistrib(f.id)}
+                        className="rounded-md px-2.5 py-1 text-[11px] transition-all"
+                        style={{
+                          background: selectedFridgeForDistrib === f.id ? '#2563eb' : 'transparent',
+                          color: selectedFridgeForDistrib === f.id ? '#fff' : 'var(--app-muted)',
+                        }}
+                      >
+                        {f.name.length > 6 ? f.name.slice(0, 6) + '…' : f.name}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex rounded-lg p-0.5" style={{ background: 'var(--app-input-bg)', border: '1px solid var(--app-input-border)' }}>
+                    {(['samples', 'items'] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setDistribTab(tab)}
+                        className="rounded-md px-2 py-1 text-[11px] transition-all"
+                        style={{
+                          background: distribTab === tab ? '#2563eb' : 'transparent',
+                          color: distribTab === tab ? '#fff' : 'var(--app-muted)',
+                        }}
+                      >
+                        {tab === 'samples' ? '样本' : '物品'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="flex-1">
-                {distribTab === 'samples' ? (
-                  <div className="max-h-[300px] overflow-y-auto space-y-2">
-                    {(summary?.refrigerators || []).filter((f) => (f.typeDistribution || []).length > 0).length === 0 ? (
-                      <div className="flex min-h-[60px] items-center justify-center rounded-md text-[12px]" style={{ background: 'var(--app-card-bg)', color: 'var(--app-muted)' }}>暂无样本数据</div>
+                {(() => {
+                  const fridge = summary?.refrigerators.find((r) => r.id === selectedFridgeForDistrib);
+                  if (distribTab === 'samples') {
+                    const types = fridge?.typeDistribution || [];
+                    return types.length === 0 ? (
+                      <div className="flex min-h-[60px] items-center justify-center rounded-md text-[12px]" style={{ background: 'var(--app-card-bg)', color: 'var(--app-muted)' }}>该冰箱暂无样本类型数据</div>
                     ) : (
-                      (summary?.refrigerators || []).filter((f) => (f.typeDistribution || []).length > 0).map((fridge) => (
-                        <div key={fridge.id}>
-                          <div className="text-[11px] font-medium mb-1 truncate" style={{ color: 'var(--app-text)' }}>{fridge.name}</div>
-                          <div className="flex flex-wrap gap-1">
-                            {(fridge.typeDistribution || []).slice(0, 6).map((t) => (
-                              <TypeStatChip key={t.type} title={t.type} count={t.count} color={getSampleTypeColor(t.type)} bgColor={`${getSampleTypeColor(t.type)}18`} />
-                            ))}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                ) : (
-                  <div className="rounded-lg">
-                    {upperItemTypeDistribution.length === 0 ? (
-                      <div className="flex min-h-[60px] items-center justify-center rounded-md text-[12px]" style={{ background: 'var(--app-card-bg)', color: 'var(--app-muted)' }}>暂无物品数据</div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {upperItemTypeDistribution.slice(0, 8).map((item) => {
-                          const cfg = getItemTypeConfig(item.type);
-                          return <TypeStatChip key={item.type} title={cfg.label} count={item.count} color={cfg.color} bgColor={cfg.bgColor} tooltipTitle={item.type} />;
-                        })}
+                      <div className="flex flex-wrap gap-1.5">
+                        {types.map((t) => <TypeStatChip key={t.type} title={t.type} count={t.count} color={getSampleTypeColor(t.type)} bgColor={`${getSampleTypeColor(t.type)}18`} />)}
                       </div>
-                    )}
-                  </div>
-                )}
+                    );
+                  }
+                  // Items tab: show upper items for selected fridge
+                  const fridgeItems = adminUpperItems.filter((item) => item.refrigerator_id === selectedFridgeForDistrib);
+                  if (fridgeItems.length === 0) {
+                    return <div className="flex min-h-[60px] items-center justify-center rounded-md text-[12px]" style={{ background: 'var(--app-card-bg)', color: 'var(--app-muted)' }}>该冰箱暂无物品</div>;
+                  }
+                  const itemCounts = new Map<string, number>();
+                  fridgeItems.forEach((item) => {
+                    const t = item.item_type?.trim() || '未分类';
+                    itemCounts.set(t, (itemCounts.get(t) || 0) + 1);
+                  });
+                  const sorted = Array.from(itemCounts, ([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count);
+                  return (
+                    <div className="flex flex-wrap gap-1.5">
+                      {sorted.map((item) => {
+                        const cfg = getItemTypeConfig(item.type);
+                        return <TypeStatChip key={item.type} title={cfg.label} count={item.count} color={cfg.color} bgColor={cfg.bgColor} tooltipTitle={item.type} />;
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
