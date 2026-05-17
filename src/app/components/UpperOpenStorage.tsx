@@ -65,6 +65,21 @@ export function UpperOpenStorage({
     return rowItems.slice(start, start + ITEMS_PER_ROW_PAGE);
   };
 
+  // Auto-navigate to the page containing the highlighted item
+  useEffect(() => {
+    if (!highlightedItemId) return;
+    const targetItem = items.find((item) => item.id === highlightedItemId);
+    if (!targetItem) return;
+    // Reset filter to 'all' so the item is visible regardless of current filter
+    setFilterType('all');
+    const row = targetItem.row_number;
+    const allRowItems = items.filter((item) => item.row_number === row);
+    const idx = allRowItems.findIndex((item) => item.id === highlightedItemId);
+    if (idx < 0) return;
+    const targetPage = Math.floor(idx / ITEMS_PER_ROW_PAGE);
+    setRowPages((prev) => ({ ...prev, [row]: targetPage }));
+  }, [highlightedItemId, items]);
+
   useEffect(() => {
     setRowPages((prev) => {
       const next = { ...prev };

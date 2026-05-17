@@ -143,6 +143,7 @@ function AppContent() {
   const [refrigerators, setRefrigerators] = useState<Refrigerator[]>([]);
   const [selectedFridgeId, setSelectedFridgeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeView, setActiveView] = useState<'fridge' | 'admin'>('fridge');
   const [notification, setNotification] = useState<{
