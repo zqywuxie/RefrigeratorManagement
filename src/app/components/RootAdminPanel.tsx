@@ -778,22 +778,29 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
               </div>
               <div className="grid flex-1 gap-2.5 md:grid-cols-2">
                 <div className="rounded-lg p-2.5" style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)' }}>
-                  <div className="mb-2 text-[12px] font-medium" style={{ color: '#06b6d4' }}>样本类型</div>
-                  {(summary?.typeCounts || []).length === 0 ? (
-                    <div className="flex min-h-[84px] items-center justify-center rounded-md text-[12px]" style={{ background: 'var(--app-card-bg)', color: 'var(--app-muted)' }}>暂无样本数据</div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {(summary?.typeCounts || []).slice(0, 8).map((item) => (
-                        <TypeStatChip
-                          key={item.type}
-                          title={item.type}
-                          count={item.count}
-                          color={getSampleTypeColor(item.type)}
-                          bgColor={`${getSampleTypeColor(item.type)}18`}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  <div className="mb-2 text-[12px] font-medium" style={{ color: '#06b6d4' }}>样本类型（分冰箱）</div>
+                  <div className="max-h-[300px] overflow-y-auto space-y-2">
+                    {(summary?.refrigerators || []).filter((f) => (f.typeDistribution || []).length > 0).length === 0 ? (
+                      <div className="flex min-h-[60px] items-center justify-center rounded-md text-[12px]" style={{ background: 'var(--app-card-bg)', color: 'var(--app-muted)' }}>暂无样本数据</div>
+                    ) : (
+                      (summary?.refrigerators || []).filter((f) => (f.typeDistribution || []).length > 0).map((fridge) => (
+                        <div key={fridge.id}>
+                          <div className="text-[11px] font-medium mb-1 truncate" style={{ color: 'var(--app-text)' }}>{fridge.name}</div>
+                          <div className="flex flex-wrap gap-1">
+                            {(fridge.typeDistribution || []).slice(0, 6).map((t) => (
+                              <TypeStatChip
+                                key={t.type}
+                                title={t.type}
+                                count={t.count}
+                                color={getSampleTypeColor(t.type)}
+                                bgColor={`${getSampleTypeColor(t.type)}18`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
                 <div className="rounded-lg p-2.5" style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)' }}>
                   <div className="mb-2 text-[12px] font-medium" style={{ color: '#7c3aed' }}>物品类型</div>
