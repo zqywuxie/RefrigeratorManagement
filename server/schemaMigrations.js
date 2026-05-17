@@ -233,6 +233,35 @@ export async function runSchemaMigrations() {
   } catch (err) {
     console.warn('Skip sub_samples.id widen:', err.message);
   }
+  try {
+    const [foreignKeys] = await pool.query(
+      `SELECT CONSTRAINT_NAME
+       FROM information_schema.KEY_COLUMN_USAGE
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'sub_samples'
+         AND COLUMN_NAME = 'sample_id'
+         AND REFERENCED_TABLE_NAME = 'samples'`,
+    );
+    for (const fk of foreignKeys) {
+      await pool.query(`ALTER TABLE sub_samples DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``);
+    }
+    await pool.query('ALTER TABLE sub_samples MODIFY COLUMN sample_id VARCHAR(36) NOT NULL');
+    const [nextForeignKeys] = await pool.query(
+      `SELECT CONSTRAINT_NAME
+       FROM information_schema.KEY_COLUMN_USAGE
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'sub_samples'
+         AND COLUMN_NAME = 'sample_id'
+         AND REFERENCED_TABLE_NAME = 'samples'`,
+    );
+    if (nextForeignKeys.length === 0) {
+      await pool.query(
+        'ALTER TABLE sub_samples ADD CONSTRAINT sub_samples_ibfk_1 FOREIGN KEY (sample_id) REFERENCES samples(id) ON DELETE CASCADE',
+      );
+    }
+  } catch (err) {
+    console.warn('Skip sub_samples.sample_id widen:', err.message);
+  }
 
   // Allow NULL collected_at since route code passes null when not provided
   try {

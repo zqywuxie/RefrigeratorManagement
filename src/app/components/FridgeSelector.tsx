@@ -112,8 +112,6 @@ export function FridgeSelector({
       editingId,
       editName.trim(),
       editDesc.trim() || undefined,
-      parseTemperature(editUpperTemp, -20),
-      parseTemperature(editLowerTemp, 4),
     );
     setEditingId(null);
     setEditName('');
@@ -125,8 +123,6 @@ export function FridgeSelector({
     setEditingId(r.id);
     setEditName(r.name);
     setEditDesc(r.description || '');
-    setEditUpperTemp(String(r.upperTemperature));
-    setEditLowerTemp(String(r.lowerTemperature));
     setAdding(false);
   };
 
@@ -174,26 +170,6 @@ export function FridgeSelector({
                       {editError}
                     </div>
                   )}
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      step="0.1"
-                      placeholder="上层 °C"
-                      value={editUpperTemp}
-                      onChange={(e) => setEditUpperTemp(e.target.value)}
-                      className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                      style={fieldStyle}
-                    />
-                    <input
-                      type="number"
-                      step="0.1"
-                      placeholder="下层 °C"
-                      value={editLowerTemp}
-                      onChange={(e) => setEditLowerTemp(e.target.value)}
-                      className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                      style={fieldStyle}
-                    />
-                  </div>
                   <input
                     type="text"
                     placeholder="描述（选填）"
@@ -239,9 +215,6 @@ export function FridgeSelector({
                     border: `1px solid ${r.fridge_type === 'drawer' ? '#93c5fd' : '#86efac'}`,
                   }}>
                     {r.fridge_type === 'drawer' ? '抽屉' : '四层'}
-                  </span>
-                  <span className="text-[11px] font-mono mr-1" style={{ color: 'var(--app-muted)' }}>
-                    {r.upperTemperature}°/{r.lowerTemperature}°
                   </span>
                   {canManage && (
                     <div className="flex items-center gap-0.5 flex-shrink-0">
@@ -308,26 +281,6 @@ export function FridgeSelector({
                       {option.label}
                     </button>
                   ))}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    step="0.1"
-                    placeholder="上层 °C"
-                    value={addUpperTemp}
-                    onChange={(e) => setAddUpperTemp(e.target.value)}
-                    className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                    style={fieldStyle}
-                  />
-                  <input
-                    type="number"
-                    step="0.1"
-                    placeholder="下层 °C"
-                    value={addLowerTemp}
-                    onChange={(e) => setAddLowerTemp(e.target.value)}
-                    className="w-full px-2 py-1.5 rounded text-[14px] outline-none"
-                    style={fieldStyle}
-                  />
                 </div>
                 <input
                   type="text"

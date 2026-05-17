@@ -63,9 +63,7 @@ router.get('/summary', async (_req, res) => {
       [[upperItemTotals]],
       [[boxTotals]],
       [[tubeTotals]],
-      [srStatusRows],
       [srTypeRows],
-      [statusRows],
       [typeRows],
       [fridgeRows],
       [ownerRows],
@@ -106,21 +104,23 @@ router.get('/summary', async (_req, res) => {
       pool.query(
         `SELECT COUNT(*) AS box_count,
                 COALESCE(SUM(COALESCE(grid_rows, 0) * COALESCE(grid_cols, 0)), 0) AS box_capacity
-         FROM boxes
-         WHERE deleted_at IS NULL`
+         FROM boxes b
+         LEFT JOIN drawers d ON d.id = b.drawer_id AND d.deleted_at IS NULL
+         LEFT JOIN upper_items ui ON ui.id = b.id AND ui.deleted_at IS NULL
+         JOIN refrigerators r ON r.id = COALESCE(d.refrigerator_id, ui.refrigerator_id)
+         WHERE b.deleted_at IS NULL
+           AND r.deleted_at IS NULL`
       ),
       pool.query(
         `SELECT COUNT(*) AS tube_count
-         FROM tubes
-         WHERE deleted_at IS NULL`
-      ),
-      // Sample records status counts
-      pool.query(
-        `SELECT 'normal' as status, COUNT(*) as count FROM tubes WHERE status = 'normal'
-         UNION ALL SELECT 'warning', COUNT(*) FROM tubes WHERE status = 'warning'
-         UNION ALL SELECT 'critical', COUNT(*) FROM tubes WHERE status = 'critical'
-         UNION ALL SELECT 'used', COUNT(*) FROM tubes WHERE status = 'used'
-         UNION ALL SELECT 'pending', COUNT(*) FROM tubes WHERE status = 'pending'`
+         FROM tubes t
+         JOIN sample_records sr ON sr.id = t.sample_id AND sr.deleted_at IS NULL
+         JOIN boxes b ON b.id = t.box_id AND b.deleted_at IS NULL
+         LEFT JOIN drawers d ON d.id = b.drawer_id AND d.deleted_at IS NULL
+         LEFT JOIN upper_items ui ON ui.id = b.id AND ui.deleted_at IS NULL
+         JOIN refrigerators r ON r.id = COALESCE(d.refrigerator_id, ui.refrigerator_id)
+         WHERE t.deleted_at IS NULL
+           AND r.deleted_at IS NULL`
       ),
       // Sample records type counts
       pool.query(
@@ -186,12 +186,16 @@ router.get('/summary', async (_req, res) => {
          ) ss ON ss.refrigerator_id = r.id
          LEFT JOIN (
            SELECT
-             tubes.fridge_id AS refrigerator_id,
-             COUNT(DISTINCT tubes.sample_id) AS sample_record_count
-           FROM tubes
-           WHERE tubes.deleted_at IS NULL
-             AND tubes.fridge_id IS NOT NULL
-           GROUP BY tubes.fridge_id
+             COALESCE(d.refrigerator_id, ui.refrigerator_id) AS refrigerator_id,
+             COUNT(DISTINCT t.sample_id) AS sample_record_count
+           FROM tubes t
+           JOIN sample_records sr ON sr.id = t.sample_id AND sr.deleted_at IS NULL
+           JOIN boxes b ON b.id = t.box_id AND b.deleted_at IS NULL
+           LEFT JOIN drawers d ON d.id = b.drawer_id AND d.deleted_at IS NULL
+           LEFT JOIN upper_items ui ON ui.id = b.id AND ui.deleted_at IS NULL
+           WHERE t.deleted_at IS NULL
+             AND COALESCE(d.refrigerator_id, ui.refrigerator_id) IS NOT NULL
+           GROUP BY COALESCE(d.refrigerator_id, ui.refrigerator_id)
          ) sr ON sr.refrigerator_id = r.id
          LEFT JOIN (
            SELECT refrigerator_id, COUNT(*) AS upper_item_count
@@ -208,15 +212,22 @@ router.get('/summary', async (_req, res) => {
            LEFT JOIN drawers ON drawers.id = boxes.drawer_id
            LEFT JOIN upper_items ON upper_items.id = boxes.id AND upper_items.deleted_at IS NULL
            WHERE boxes.deleted_at IS NULL
+             AND (drawers.deleted_at IS NULL OR drawers.id IS NULL)
              AND COALESCE(drawers.refrigerator_id, upper_items.refrigerator_id) IS NOT NULL
            GROUP BY COALESCE(drawers.refrigerator_id, upper_items.refrigerator_id)
          ) b ON b.refrigerator_id = r.id
          LEFT JOIN (
-           SELECT fridge_id AS refrigerator_id, COUNT(*) AS tube_count
-           FROM tubes
-           WHERE deleted_at IS NULL
-             AND fridge_id IS NOT NULL
-           GROUP BY fridge_id
+           SELECT
+             COALESCE(d.refrigerator_id, ui.refrigerator_id) AS refrigerator_id,
+             COUNT(*) AS tube_count
+           FROM tubes t
+           JOIN sample_records sr ON sr.id = t.sample_id AND sr.deleted_at IS NULL
+           JOIN boxes b ON b.id = t.box_id AND b.deleted_at IS NULL
+           LEFT JOIN drawers d ON d.id = b.drawer_id AND d.deleted_at IS NULL
+           LEFT JOIN upper_items ui ON ui.id = b.id AND ui.deleted_at IS NULL
+           WHERE t.deleted_at IS NULL
+             AND COALESCE(d.refrigerator_id, ui.refrigerator_id) IS NOT NULL
+           GROUP BY COALESCE(d.refrigerator_id, ui.refrigerator_id)
          ) t ON t.refrigerator_id = r.id
          WHERE r.deleted_at IS NULL
          ORDER BY r.created_at ASC`,
@@ -227,15 +238,15 @@ router.get('/summary', async (_req, res) => {
           SUM(sample_count) AS sample_count,
           SUM(sub_sample_count) AS sub_sample_count
          FROM (
-           SELECT COALESCE(created_by, 'legacy') AS owner, COUNT(*) AS sample_count, 0 AS sub_sample_count
+           SELECT COALESCE(created_by, '历史数据') AS owner, COUNT(*) AS sample_count, 0 AS sub_sample_count
            FROM samples
            WHERE deleted_at IS NULL
-           GROUP BY COALESCE(created_by, 'legacy')
+           GROUP BY COALESCE(created_by, '历史数据')
            UNION ALL
-           SELECT COALESCE(created_by, 'legacy') AS owner, 0 AS sample_count, COUNT(*) AS sub_sample_count
+           SELECT COALESCE(created_by, '历史数据') AS owner, 0 AS sample_count, COUNT(*) AS sub_sample_count
            FROM sub_samples
            WHERE deleted_at IS NULL
-           GROUP BY COALESCE(created_by, 'legacy')
+           GROUP BY COALESCE(created_by, '历史数据')
          ) combined
          GROUP BY owner
          ORDER BY SUM(sample_count) + SUM(sub_sample_count) DESC, owner ASC`,
@@ -250,16 +261,6 @@ router.get('/summary', async (_req, res) => {
     const tubeCount = Number(tubeTotals.tube_count || 0);
     const totalCapacity = Number(refrigeratorTotals.total_capacity || 0) + Number(boxTotals.box_capacity || 0);
     const usedSlots = sampleCount + tubeCount + upperItemCount;
-    const criticalCount =
-      Number(sampleTotals.critical_count || 0) + Number(subSampleTotals.critical_count || 0);
-    const warningCount =
-      Number(sampleTotals.warning_count || 0) + Number(subSampleTotals.warning_count || 0);
-
-    // Merge status counts (old + new)
-    const mergedStatus = new Map();
-    for (const row of statusRows) mergedStatus.set(row.status, (mergedStatus.get(row.status) || 0) + Number(row.count || 0));
-    for (const row of srStatusRows) mergedStatus.set(row.status, (mergedStatus.get(row.status) || 0) + Number(row.count || 0));
-
     // Merge type counts (old + new)
     const mergedTypes = new Map();
     for (const row of typeRows) mergedTypes.set(row.type || '未分类', (mergedTypes.get(row.type || '未分类') || 0) + Number(row.count || 0));
@@ -278,11 +279,10 @@ router.get('/summary', async (_req, res) => {
         totalCapacity,
         usedSlots,
         usageRate: totalCapacity > 0 ? Math.round((usedSlots / totalCapacity) * 100) : 0,
-        critical: criticalCount,
-        warning: warningCount,
-        abnormal: criticalCount + warningCount,
+        critical: 0,
+        warning: 0,
+        abnormal: 0,
       },
-      statusCounts: Array.from(mergedStatus, ([status, count]) => ({ status, count })),
       typeCounts: Array.from(mergedTypes, ([type, count]) => ({ type, count })),
       refrigerators: fridgeRows.map((row) => ({
         id: row.id,

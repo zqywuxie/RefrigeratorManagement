@@ -109,19 +109,21 @@ export function BoxView({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1 text-[14px] hover:opacity-80 min-h-[44px]"
-          style={{ color: '#60a5fa' }}
-        >
-          <ArrowLeft size={18} />
-          返回抽屉列表
-        </button>
-        <span className="text-[16px] font-medium" style={{ color: 'var(--app-text)' }}>
-          抽屉 {drawer.label} · {boxes.length}/{capacity}
-        </span>
-        <div className="relative">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between sm:flex-1">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 text-[14px] hover:opacity-80 min-h-[44px]"
+            style={{ color: '#60a5fa' }}
+          >
+            <ArrowLeft size={18} />
+            返回
+          </button>
+          <span className="text-[16px] font-medium sm:absolute sm:left-1/2 sm:-translate-x-1/2" style={{ color: 'var(--app-text)' }}>
+            抽屉 {drawer.label} · {boxes.length}/{capacity}
+          </span>
+        </div>
+        <div className="relative self-end sm:self-auto">
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
