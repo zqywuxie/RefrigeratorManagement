@@ -1,3 +1,4 @@
+-- 样本记录表(新)：患者样本核心数据，必填姓名+编号，可选来源/类型/阶段/时间/标签/备注
 CREATE TABLE `sample_records` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `patient_name` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,

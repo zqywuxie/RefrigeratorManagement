@@ -1,3 +1,4 @@
+-- 抽屉表：冰箱下层抽屉，固定布局(第1层2×3=6个, 第2层5×3=15个)，冰箱创建时自动生成
 CREATE TABLE `drawers` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `refrigerator_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,

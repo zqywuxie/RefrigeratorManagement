@@ -1,3 +1,4 @@
+-- 盒子表：抽屉内的样本盒，支持简略(simple)和精细(precise)两种模式，精细模式设置网格行列
 CREATE TABLE `boxes` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `drawer_id` varchar(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,

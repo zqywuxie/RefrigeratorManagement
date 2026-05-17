@@ -1,3 +1,4 @@
+-- 试管表(新)：样本记录下的试管，每个试管占据盒子一个孔位(box_id+position唯一)，支持拖拽移动
 CREATE TABLE `tubes` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `sample_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,

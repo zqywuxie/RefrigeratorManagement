@@ -1,3 +1,4 @@
+-- 旧系统副样本表：legacy容器内的细分项
 CREATE TABLE `sub_samples` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `sample_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,

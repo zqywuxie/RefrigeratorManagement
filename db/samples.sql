@@ -1,3 +1,4 @@
+-- 旧系统样本表：legacy容器数据，上下层格子中的样本记录
 CREATE TABLE `samples` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `refrigerator_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,

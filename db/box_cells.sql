@@ -1,3 +1,4 @@
+-- 盒子孔位表(旧)：精细模式下的盒内样本格位，已被tubes表替代
 CREATE TABLE `box_cells` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `box_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,

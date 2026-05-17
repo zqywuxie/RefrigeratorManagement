@@ -1,7 +1,10 @@
--- Biofridge Database Schema
--- Generated: 2026-05-17T02:36:40.293Z
+-- ============================================================
+-- Biofridge 实验室冰箱管理系统 - 数据库结构
+-- Generated: 2026-05-17T02:39:43.544Z
+-- ============================================================
 
 -- Table: box_cells
+-- 盒子孔位表(旧)：精细模式下的盒内样本格位，已被tubes表替代
 CREATE TABLE `box_cells` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `box_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -17,6 +20,7 @@ CREATE TABLE `box_cells` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: boxes
+-- 盒子表：抽屉内的样本盒，支持简略(simple)和精细(precise)两种模式，精细模式设置网格行列
 CREATE TABLE `boxes` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `drawer_id` varchar(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -42,6 +46,7 @@ CREATE TABLE `boxes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: drawers
+-- 抽屉表：冰箱下层抽屉，固定布局(第1层2×3=6个, 第2层5×3=15个)，冰箱创建时自动生成
 CREATE TABLE `drawers` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `refrigerator_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -59,6 +64,7 @@ CREATE TABLE `drawers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: item_types
+-- 物品类型表：上层物品的分类标签（试剂/样本/耗材/临时物品）
 CREATE TABLE `item_types` (
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -66,6 +72,7 @@ CREATE TABLE `item_types` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: refrigerators
+-- 冰箱表：存储冰箱信息，包括类型(drawer/shelf)、行列数、温度、软删除
 CREATE TABLE `refrigerators` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -85,6 +92,7 @@ CREATE TABLE `refrigerators` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: sample_records
+-- 样本记录表(新)：患者样本核心数据，必填姓名+编号，可选来源/类型/阶段/时间/标签/备注
 CREATE TABLE `sample_records` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `patient_name` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -105,12 +113,14 @@ CREATE TABLE `sample_records` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: sample_types
+-- 样本类型表：样本的分类标签（血清/血浆/尿液/DNA/组织/全血等）
 CREATE TABLE `sample_types` (
   `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: samples
+-- 旧系统样本表：legacy容器数据，上下层格子中的样本记录
 CREATE TABLE `samples` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `refrigerator_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -141,6 +151,7 @@ CREATE TABLE `samples` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: sub_samples
+-- 旧系统副样本表：legacy容器内的细分项
 CREATE TABLE `sub_samples` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `sample_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -167,6 +178,7 @@ CREATE TABLE `sub_samples` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: tubes
+-- 试管表(新)：样本记录下的试管，每个试管占据盒子一个孔位(box_id+position唯一)，支持拖拽移动
 CREATE TABLE `tubes` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `sample_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -189,6 +201,7 @@ CREATE TABLE `tubes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: upper_items
+-- 上层物品表：冰箱上层开放存储的物品，卡片式管理，支持box_mode切换为孔位模式
 CREATE TABLE `upper_items` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `refrigerator_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -215,6 +228,7 @@ CREATE TABLE `upper_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: users
+-- 用户表：存储系统登录用户（root/admin/user），密码hash，角色
 CREATE TABLE `users` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,

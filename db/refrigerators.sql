@@ -1,3 +1,4 @@
+-- 冰箱表：存储冰箱信息，包括类型(drawer/shelf)、行列数、温度、软删除
 CREATE TABLE `refrigerators` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,

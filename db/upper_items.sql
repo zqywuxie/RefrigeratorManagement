@@ -1,3 +1,4 @@
+-- 上层物品表：冰箱上层开放存储的物品，卡片式管理，支持box_mode切换为孔位模式
 CREATE TABLE `upper_items` (
   `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `refrigerator_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
