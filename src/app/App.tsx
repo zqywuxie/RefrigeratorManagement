@@ -1790,7 +1790,7 @@ function AppContent() {
             </div>
           )}
 
-          <div className="flex-1 flex flex-col lg:flex-row gap-3 lg:gap-5 items-start justify-center min-w-0">
+          <div className="flex-1 flex flex-col lg:flex-row gap-3 lg:gap-5 items-start min-w-0">
           {/* Detail panel — left of fridge */}
           <DetailPanel
             item={selectedDetailItem}
@@ -1809,7 +1809,7 @@ function AppContent() {
           />
 
           {/* Center: Fridge */}
-          <div className="flex w-full max-w-full lg:max-w-[860px] flex-col gap-5">
+          <div className="flex flex-1 w-full flex-col gap-5">
             {/* Search bar */}
               <div
                 className="flex w-full items-center gap-3 rounded-xl px-4 py-3"
