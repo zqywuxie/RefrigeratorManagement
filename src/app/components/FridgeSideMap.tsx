@@ -68,7 +68,7 @@ function MiniDrawerBlock({
         style={{
           aspectRatio,
           ...(minHeight ? { minHeight: `${minHeight}px` } : {}),
-          background: isSelected ? '#06b6d418' : oc.bg,
+          background: isSelected ? oc.bg.replace(/0\.\d+/, '0.30') : oc.bg,
           border: isSelected ? '2px solid #22d3ee' : `1px solid ${oc.border}`,
           boxShadow: isSelected ? '0 0 12px rgba(34,211,238,0.35)' : 'none',
         }}
