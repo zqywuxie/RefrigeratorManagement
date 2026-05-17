@@ -33,49 +33,32 @@ import {
 } from 'lucide-react';
 
 import {
-  Sample,
-  SubSample,
-  SampleStatus,
-  Compartment,
-  CompartmentGridConfig,
   Refrigerator,
-  STATUS_CONFIG,
-  DEFAULT_COMPARTMENT_GRIDS,
-  compartmentCapacity,
   FridgeType,
   DEFAULT_ITEM_TYPES,
-  SampleRecord,
   UpperItem,
-  PendingImportSample,
   Tube,
+  SampleRecord,
+  PendingImportSample,
+  STATUS_CONFIG,
   getItemTypeConfig,
   getSampleTypeColor,
+  formatChineseShortDate,
 } from './types';
 import {
   fetchRefrigerators,
   createRefrigerator as apiCreateRefrigerator,
   deleteRefrigerator as apiDeleteRefrigerator,
   updateRefrigerator as apiUpdateRefrigerator,
-  fetchSamples,
-  createSample,
-  updateSample,
-  deleteSample,
-  createSubSample,
-  updateSubSample,
-  deleteSubSample,
-  fetchSampleTypes,
-  createSampleType,
   fetchItemTypes,
   createItemType,
-  fetchSampleRecord,
   fetchSampleRecords,
+  fetchSampleTypes,
+  createSampleType,
   fetchDrawers,
   fetchUpperItems,
 } from './api';
-import { FridgeUnit } from './components/FridgeUnit';
 import { FridgeSelector } from './components/FridgeSelector';
-import { DetailPanel, DetailItem } from './components/DetailPanel';
-import { AddSampleModal } from './components/AddSampleModal';
 import { RootAdminPanel } from './components/RootAdminPanel';
 import { AuthProvider, useAuth } from './AuthContext';
 import { DrawerFridgeView } from './components/DrawerFridgeView';
@@ -90,18 +73,12 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './co
 import { Drawer, DrawerContent } from './components/ui/drawer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 
-type UploadedSampleItem = {
+type UploadedRecordItem = {
   id: string;
   name: string;
   type: string;
-  status: SampleStatus;
-  temperature: number;
-  collectedAt: string;
-  kind: 'sample' | 'subsample';
-  compartment?: Compartment;
-  position: number;
-  parentId?: string;
-  parentName?: string;
+  createdAt: string;
+  uploader: string;
 };
 
 type UploadedUpperItem = {
@@ -118,7 +95,7 @@ type UploadedUpperItem = {
   updatedAt: string;
 };
 
-type UploadedPanelItem = UploadedSampleItem | UploadedUpperItem;
+type UploadedPanelItem = UploadedRecordItem | UploadedUpperItem;
 
 type BoxSamplePanelState = {
   tubes: Tube[];
@@ -165,28 +142,17 @@ function AppContent() {
   const { user, logout, isRoot } = useAuth();
   const [refrigerators, setRefrigerators] = useState<Refrigerator[]>([]);
   const [selectedFridgeId, setSelectedFridgeId] = useState<string | null>(null);
-  const [samples, setSamples] = useState<Sample[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeView, setActiveView] = useState<'fridge' | 'admin'>('fridge');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [addTarget, setAddTarget] = useState<{
-    compartment: Compartment;
-    position: number;
-    isSubSample?: boolean;
-    containerId?: string;
-  } | null>(null);
   const [notification, setNotification] = useState<{
     msg: string;
     type: 'info' | 'warn' | 'success' | 'error';
   } | null>(null);
   const [tick, setTick] = useState(0);
 
-  const [viewingContainerId, setViewingContainerId] = useState<string | null>(null);
-  const [editItem, setEditItem] = useState<DetailItem | null>(null);
-  const [sampleTypes, setSampleTypes] = useState<string[]>(['血清', '血浆', '尿液', 'DNA', '组织', '全血']);
   const [itemTypes, setItemTypes] = useState<string[]>(DEFAULT_ITEM_TYPES);
+  const [sampleTypes, setSampleTypes] = useState<string[]>([]);
   const [sampleRecords, setSampleRecords] = useState<SampleRecord[]>([]);
   const [drawerCount, setDrawerCount] = useState(0);
   const [drawerBoxCount, setDrawerBoxCount] = useState(0);
@@ -274,17 +240,15 @@ function AppContent() {
     fetchSampleRecords({}).then(setSampleRecords).catch(() => {});
   }, []);
 
-  // Load samples when fridge changes
+  // Load sample records, drawers, upper items when fridge changes
   useEffect(() => {
     if (!selectedFridgeId) return;
     setLoading(true);
     Promise.all([
-      fetchSamples(selectedFridgeId).catch(() => []),
       fetchSampleRecords({}).catch(() => []),
       fetchDrawers(selectedFridgeId).catch(() => []),
       fetchUpperItems(selectedFridgeId).catch(() => []),
-    ]).then(([sampleData, srData, drawerData, upperItemsData]) => {
-      setSamples(sampleData);
+    ]).then(([srData, drawerData, upperItemsData]) => {
       setSampleRecords(srData);
       setDrawerCount(drawerData.length);
       setDrawerBoxCount(drawerData.reduce((s: number, d: any) => s + (d.box_count ?? 0), 0));
@@ -304,12 +268,6 @@ function AppContent() {
   }, [selectedFridgeId]);
 
   const selectedFridge = refrigerators.find((r) => r.id === selectedFridgeId) ?? null;
-  const compartmentGrids: Record<Compartment, CompartmentGridConfig> = selectedFridge
-    ? {
-        upper: { rows: selectedFridge.upperRows, cols: selectedFridge.upperCols },
-        lower: { rows: selectedFridge.lowerRows, cols: selectedFridge.lowerCols },
-      }
-    : DEFAULT_COMPARTMENT_GRIDS;
 
   const showNotif = useCallback((
     msg: string,
@@ -320,102 +278,27 @@ function AppContent() {
   }, []);
 
   const isDrawerFridge = selectedFridge?.fridge_type === 'drawer';
-  const upperCapacity = compartmentGrids.upper.rows * compartmentGrids.upper.cols;
-  const lowerCapacity = compartmentGrids.lower.rows * compartmentGrids.lower.cols;
-  const totalCapacity = isDrawerFridge ? drawerCount + upperItemsCount : upperCapacity + lowerCapacity;
+  const totalCapacity = drawerCount + upperItemsCount;
 
-  const viewingContainer = viewingContainerId
-    ? samples.find((s) => s.id === viewingContainerId) ?? null
-    : null;
-
-  const matchedIds = React.useMemo<Set<string>>(() => {
-    if (!searchQuery.trim()) return new Set();
-    const q = searchQuery.toLowerCase();
-    const ids = new Set<string>();
-    for (const s of samples) {
-      if (
-        s.id.toLowerCase().includes(q) ||
-        s.name.toLowerCase().includes(q) ||
-        s.type.includes(q) ||
-        s.patientId.toLowerCase().includes(q) ||
-        (s.uploader || '').toLowerCase().includes(q) ||
-        s.tags.some((t) => t.toLowerCase().includes(q)) ||
-        STATUS_CONFIG[s.status].label.includes(q)
-      ) {
-        ids.add(s.id);
-      }
-      for (const ss of s.subSamples) {
-        if (
-          ss.id.toLowerCase().includes(q) ||
-          ss.name.toLowerCase().includes(q) ||
-          ss.type.includes(q) ||
-          ss.patientId.toLowerCase().includes(q) ||
-          (ss.uploader || '').toLowerCase().includes(q) ||
-          ss.tags.some((t) => t.toLowerCase().includes(q)) ||
-          STATUS_CONFIG[ss.status].label.includes(q)
-        ) {
-          ids.add(ss.id);
-        }
-      }
-    }
-    return ids;
-  }, [samples, searchQuery]);
-
-  const selectedDetailItem: DetailItem | null = React.useMemo(() => {
-    if (!selectedSampleId) return null;
-    if (viewingContainer) {
-      const ss = viewingContainer.subSamples.find((s) => s.id === selectedSampleId);
-      if (ss) return { kind: 'subsample', data: ss, containerId: viewingContainer.id };
-    }
-    const sample = samples.find((s) => s.id === selectedSampleId);
-    if (sample) return { kind: 'sample', data: sample };
-    for (const s of samples) {
-      const ss = s.subSamples.find((sub) => sub.id === selectedSampleId);
-      if (ss) return { kind: 'subsample', data: ss, containerId: s.id };
-    }
-    return null;
-  }, [selectedSampleId, samples, viewingContainer]);
-
-  const myUploadedItems = React.useMemo<UploadedSampleItem[]>(() => {
+  const myUploadedItems = React.useMemo<UploadedRecordItem[]>(() => {
     const username = user!.username;
-    const results: UploadedSampleItem[] = [];
+    const results: UploadedRecordItem[] = [];
 
-    // Old samples
-    const isMine = (item: { createdBy?: string; uploader?: string }) =>
-      item.createdBy ? item.createdBy === username : (item.uploader || '').trim() === username;
-    samples.forEach((sample) => {
-      if (isMine(sample)) {
-        results.push({
-          id: sample.id, name: sample.name, type: sample.type, status: sample.status,
-          temperature: sample.temperature, collectedAt: sample.collectedAt,
-          kind: 'sample', compartment: sample.compartment, position: sample.position,
-        });
-      }
-      sample.subSamples.forEach((ss) => {
-        if (isMine(ss)) {
-          results.push({
-            id: ss.id, name: ss.name, type: ss.type, status: ss.status,
-            temperature: ss.temperature, collectedAt: ss.collectedAt,
-            kind: 'subsample', position: ss.position, parentId: sample.id, parentName: sample.name,
-          });
-        }
-      });
-    });
-
-    // New sample records
     sampleRecords.filter((sr) =>
       sr.uploader === username &&
       (!selectedFridgeId || sr.tubes.some((tube) => tube.fridge_id === selectedFridgeId))
     ).forEach((sr) => {
       results.push({
-        id: sr.id, name: sr.patient_name, type: sr.sample_type || '—', status: 'normal',
-        temperature: -80, collectedAt: sr.collected_at || '',
-        kind: 'sample', compartment: 'upper', position: sr.tube_count || 0,
+        id: sr.id,
+        name: sr.patient_name,
+        type: sr.sample_type || '—',
+        createdAt: sr.created_at || '',
+        uploader: sr.uploader || '',
       });
     });
 
-    return results.sort((a, b) => b.collectedAt.localeCompare(a.collectedAt));
-  }, [samples, sampleRecords, selectedFridgeId, user]);
+    return results.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }, [sampleRecords, selectedFridgeId, user]);
 
   const myUploadedUpperItems = React.useMemo<UploadedUpperItem[]>(() => {
     const username = user!.username;
@@ -447,24 +330,10 @@ function AppContent() {
     if (item.kind === 'upper-item') {
       setActiveView('fridge');
       setSelectedSampleId(null);
-      setViewingContainerId(null);
       if (selectedFridgeId !== item.refrigeratorId) {
         setSelectedFridgeId(item.refrigeratorId);
       }
       setUpperItemNavTarget({ fridgeId: item.refrigeratorId, itemId: item.id });
-      return;
-    }
-
-    if (item.kind === 'subsample') {
-      setSelectedSampleId(item.id);
-      setViewingContainerId(item.parentId ?? null);
-      return;
-    }
-
-    const sample = samples.find((candidate) => candidate.id === item.id);
-    if (sample) {
-      setSelectedSampleId(item.id);
-      setViewingContainerId(null);
       return;
     }
 
@@ -473,7 +342,6 @@ function AppContent() {
     if (sampleRecord && locTube?.fridge_id && locTube.drawer_id && locTube.box_id) {
       setActiveView('fridge');
       setSelectedSampleId(null);
-      setViewingContainerId(null);
       if (selectedFridgeId !== locTube.fridge_id) {
         setSelectedFridgeId(locTube.fridge_id);
       }
@@ -488,8 +356,7 @@ function AppContent() {
     }
 
     setSelectedSampleId(item.id);
-    setViewingContainerId(null);
-  }, [sampleRecords, samples, selectedFridgeId]);
+  }, [sampleRecords, selectedFridgeId]);
 
   // ── Fridge handlers ──
 
@@ -588,389 +455,18 @@ function AppContent() {
     [selectedFridgeId],
   );
 
-  // ── Container handlers ──
-
-  const handleDrop = useCallback(
-    async (sampleId: string, toCompartment: Compartment, toPosition: number) => {
-      if (!selectedFridgeId) return;
-      const prev = [...samples];
-      const moving = prev.find((s) => s.id === sampleId);
-      if (!moving) return;
-      const targetCapacity = toCompartment === 'upper' ? upperCapacity : lowerCapacity;
-      if (toPosition >= targetCapacity) return;
-      const occupying = prev.find(
-        (s) =>
-          s.compartment === toCompartment &&
-          s.position === toPosition &&
-          s.id !== sampleId,
-      );
-
-      const next = prev.map((s) => {
-        if (s.id === sampleId) return { ...s, compartment: toCompartment, position: toPosition };
-        if (occupying && s.id === occupying.id)
-          return { ...s, compartment: moving.compartment, position: moving.position };
-        return s;
-      });
-      setSamples(next);
-
-      try {
-        await updateSample(selectedFridgeId, sampleId, { compartment: toCompartment, position: toPosition });
-        if (occupying) {
-          await updateSample(selectedFridgeId, occupying.id, {
-            compartment: moving.compartment,
-            position: moving.position,
-          });
-        }
-        showNotif('样本已移动', 'success');
-      } catch {
-        setSamples(prev);
-        showNotif('移动失败', 'error');
-      }
-    },
-    [selectedFridgeId, samples, upperCapacity, lowerCapacity],
-  );
-
-  const handleDeleteSample = useCallback(
-    async (id: string) => {
-      if (!selectedFridgeId) return;
-      if (!window.confirm(`确定删除样本 ${id}？此操作不可撤销。`)) return;
-      const prev = [...samples];
-      setSamples((s) => s.filter((s) => s.id !== id));
-      setSelectedSampleId((sel) => (sel === id ? null : sel));
-      setViewingContainerId((vid) => (vid === id ? null : vid));
-      try {
-        await deleteSample(selectedFridgeId, id);
-        showNotif('样本已删除', 'warn');
-      } catch {
-        setSamples(prev);
-        showNotif('删除失败', 'error');
-      }
-    },
-    [selectedFridgeId, samples],
-  );
-
-  const handleAddSample = useCallback(
-    async (sample: Sample) => {
-      if (!selectedFridgeId) return;
-      try {
-        await createSample(selectedFridgeId, { ...sample, subSamples: undefined as any });
-        const data = await fetchSamples(selectedFridgeId);
-        setSamples(data);
-        showNotif(`样本 ${sample.id} 已添加`, 'success');
-      } catch (err: any) {
-        showNotif(`添加失败: ${err.message}`, 'error');
-      }
-    },
-    [selectedFridgeId],
-  );
-
-  const handleStatusChange = useCallback(
-    async (id: string, status: SampleStatus, containerId?: string) => {
-      if (!selectedFridgeId) return;
-      try {
-        if (containerId) {
-          await updateSubSample(containerId, id, { status });
-        } else {
-          await updateSample(selectedFridgeId, id, { status });
-        }
-        const data = await fetchSamples(selectedFridgeId);
-        setSamples(data);
-        showNotif('状态已更新', 'info');
-      } catch (err: any) {
-        showNotif(`更新失败: ${err.message}`, 'error');
-      }
-    },
-    [selectedFridgeId],
-  );
-
-  const handleSlotClick = useCallback(
-    (compartment: Compartment, position: number, containerId?: string) => {
-      setAddTarget({ compartment, position, isSubSample: !!containerId, containerId });
-      setEditItem(null);
-      setShowAddModal(true);
-    },
-    [],
-  );
-
-  const handleOpenAddSubSample = useCallback(
-    (containerId: string, position: number) => {
-      const container = samples.find((sample) => sample.id === containerId);
-      if (!container) return;
-      setAddTarget({
-        compartment: container.compartment,
-        position,
-        isSubSample: true,
-        containerId,
-      });
-      setEditItem(null);
-      setShowAddModal(true);
-    },
-    [samples],
-  );
-
-  const handleAddButtonClick = () => {
-    if (viewingContainer) {
-      const capacity = viewingContainer.gridRows * viewingContainer.gridCols;
-      for (let i = 0; i < capacity; i++) {
-        if (!viewingContainer.subSamples.some((ss) => ss.position === i)) {
-          setAddTarget({
-            compartment: viewingContainer.compartment,
-            position: i,
-            isSubSample: true,
-            containerId: viewingContainer.id,
-          });
-          setShowAddModal(true);
-          return;
-        }
-      }
-      showNotif('容器已满，无法添加更多副样本', 'error');
-    } else {
-      const allSlots: { compartment: Compartment; position: number }[] = [
-        ...Array.from({ length: upperCapacity }, (_, i) => ({
-          compartment: 'upper' as Compartment,
-          position: i,
-        })),
-        ...Array.from({ length: lowerCapacity }, (_, i) => ({
-          compartment: 'lower' as Compartment,
-          position: i,
-        })),
-      ];
-      const firstEmpty = allSlots.find(
-        ({ compartment, position }) =>
-          !samples.some(
-            (s) => s.compartment === compartment && s.position === position,
-          ),
-      );
-      if (firstEmpty) {
-        setAddTarget(firstEmpty);
-        setShowAddModal(true);
-      } else {
-        showNotif('冰箱已满，无法添加更多样本', 'error');
-      }
-    }
-  };
-
-  // ── Grid resize handlers ──
-
-  const handleUpdateCompartmentGrid = useCallback(
-    async (compartment: Compartment, grid: CompartmentGridConfig) => {
-      const newCapacity = grid.rows * grid.cols;
-      const hasOverflow = samples.some(
-        (s) => s.compartment === compartment && s.position >= newCapacity,
-      );
-      if (hasOverflow) {
-        showNotif(
-          `无法缩小 ${
-            compartment === 'upper' ? '上层' : '下层'
-          } 网格：超出位置的样本仍存在，请先移除或移动`,
-          'error',
-        );
-        return;
-      }
-      if (selectedFridgeId) {
-        const updateData =
-          compartment === 'upper'
-            ? { upperRows: grid.rows, upperCols: grid.cols }
-            : { lowerRows: grid.rows, lowerCols: grid.cols };
-        try {
-          const data = await apiUpdateRefrigerator(selectedFridgeId, updateData);
-          setRefrigerators((prev) =>
-            prev.map((r) =>
-              r.id === selectedFridgeId
-                ? {
-                    ...r,
-                    upperRows: data.upper_rows,
-                    upperCols: data.upper_cols,
-                    lowerRows: data.lower_rows,
-                    lowerCols: data.lower_cols,
-                    upperTemperature: Number(data.upper_temperature ?? r.upperTemperature),
-                    lowerTemperature: Number(data.lower_temperature ?? r.lowerTemperature),
-                  }
-                : r,
-            ),
-          );
-          showNotif(
-            `${compartment === 'upper' ? '上层' : '下层'} 网格 → ${grid.rows}×${grid.cols}`,
-            'success',
-          );
-        } catch (err: any) {
-          showNotif(`更新网格失败: ${err.message}`, 'error');
-        }
-      }
-    },
-    [samples, selectedFridgeId],
-  );
-
-  const handleUpdateContainerGrid = useCallback(
-    async (containerId: string, gridRows: number, gridCols: number) => {
-      if (!selectedFridgeId) return;
-      const container = samples.find((s) => s.id === containerId);
-      if (!container) return;
-      const newCapacity = gridRows * gridCols;
-      const hasOverflow = container.subSamples.some((ss) => ss.position >= newCapacity);
-      if (hasOverflow) {
-        showNotif(`无法缩小容器 ${containerId} 网格：超出位置的副样本仍存在`, 'error');
-        return;
-      }
-      try {
-        await updateSample(selectedFridgeId, containerId, { gridRows, gridCols });
-        const data = await fetchSamples(selectedFridgeId);
-        setSamples(data);
-        showNotif(`容器 ${containerId} 网格已更新`, 'success');
-      } catch (err: any) {
-        showNotif(`更新失败: ${err.message}`, 'error');
-      }
-    },
-    [samples, selectedFridgeId],
-  );
-
-  // ── Container navigation ──
-
-  const handleEnterContainer = useCallback((containerId: string) => {
-    setViewingContainerId(containerId);
-    setSelectedSampleId(null);
-  }, []);
-
-  const handleExitContainer = useCallback(() => {
-    setViewingContainerId(null);
-    setSelectedSampleId(null);
-  }, []);
-
-  // ── Sub-sample handlers ──
-
-  const handleDropSubSample = useCallback(
-    async (subSampleId: string, containerId: string, toPosition: number) => {
-      const prev = [...samples];
-      const container = prev.find((s) => s.id === containerId);
-      if (!container) return;
-      const moving = container.subSamples.find((ss) => ss.id === subSampleId);
-      if (!moving) return;
-      const totalSlots = container.gridRows * container.gridCols;
-      if (toPosition >= totalSlots) return;
-      const occupying = container.subSamples.find(
-        (ss) => ss.position === toPosition && ss.id !== subSampleId,
-      );
-
-      const next = prev.map((s) => {
-        if (s.id !== containerId) return s;
-        return {
-          ...s,
-          subSamples: s.subSamples.map((ss) => {
-            if (ss.id === subSampleId) return { ...ss, position: toPosition };
-            if (occupying && ss.id === occupying.id) return { ...ss, position: moving.position };
-            return ss;
-          }),
-        };
-      });
-      setSamples(next);
-
-      try {
-        await updateSubSample(containerId, subSampleId, { position: toPosition });
-        if (occupying) {
-          await updateSubSample(containerId, occupying.id, { position: moving.position });
-        }
-        showNotif('副样本已移动', 'success');
-      } catch {
-        setSamples(prev);
-        showNotif('移动失败', 'error');
-      }
-    },
-    [samples],
-  );
-
-  const handleDeleteSubSample = useCallback(
-    async (containerId: string, subSampleId: string) => {
-      if (!window.confirm(`确定删除副样本 ${subSampleId}？此操作不可撤销。`)) return;
-      const prev = [...samples];
-      setSamples((ps) =>
-        ps.map((s) =>
-          s.id === containerId
-            ? { ...s, subSamples: s.subSamples.filter((ss) => ss.id !== subSampleId) }
-            : s,
-        ),
-      );
-      setSelectedSampleId((sel) => (sel === subSampleId ? null : sel));
-      try {
-        await deleteSubSample(containerId, subSampleId);
-        showNotif('副样本已删除', 'warn');
-      } catch {
-        setSamples(prev);
-        showNotif('删除失败', 'error');
-      }
-    },
-    [samples],
-  );
-
-  const handleAddSubSample = useCallback(
-    async (containerId: string, subSample: SubSample) => {
-      try {
-        await createSubSample(containerId, subSample);
-        if (selectedFridgeId) {
-          const data = await fetchSamples(selectedFridgeId);
-          setSamples(data);
-        }
-        showNotif(`副样本 ${subSample.id} 已添加`, 'success');
-      } catch (err: any) {
-        showNotif(`添加失败: ${err.message}`, 'error');
-      }
-    },
-    [selectedFridgeId],
-  );
-
-  // ── Edit handlers ──
-
-  const handleEditSample = useCallback(
-    async (sample: Sample) => {
-      if (!selectedFridgeId) return;
-      try {
-        await updateSample(selectedFridgeId, sample.id, sample);
-        const data = await fetchSamples(selectedFridgeId);
-        setSamples(data);
-        setSelectedSampleId(sample.id);
-        setEditItem(null);
-        setShowAddModal(false);
-        showNotif(`样本 ${sample.id} 已更新`, 'success');
-      } catch (err: any) {
-        showNotif(`更新失败: ${err.message}`, 'error');
-      }
-    },
-    [selectedFridgeId],
-  );
-
-  const handleEditSubSample = useCallback(
-    async (containerId: string, subSample: SubSample) => {
-      if (!selectedFridgeId) return;
-      try {
-        await updateSubSample(containerId, subSample.id, subSample);
-        const data = await fetchSamples(selectedFridgeId);
-        setSamples(data);
-        setSelectedSampleId(subSample.id);
-        setEditItem(null);
-        setShowAddModal(false);
-        showNotif(`副样本 ${subSample.id} 已更新`, 'success');
-      } catch (err: any) {
-        showNotif(`更新失败: ${err.message}`, 'error');
-      }
-    },
-    [selectedFridgeId],
-  );
-
-  const handleOpenEdit = useCallback((item: DetailItem) => {
-    setAddTarget(null);
-    setEditItem(item);
-    setShowAddModal(true);
-  }, []);
-
   const handleAddSampleType = useCallback(
     async (name: string) => {
       setSampleTypes((prev) => (prev.includes(name) ? prev : [...prev, name]));
       try {
         await createSampleType(name);
-      } catch {
-        // type may already exist, ignore error
+      } catch (err: any) {
+        if (err?.message === 'Type already exists') return;
+        setSampleTypes((prev) => prev.filter((t) => t !== name));
+        showNotif(`创建样本类型「${name}」失败: ${err?.message || '未知错误'}`, 'error');
       }
     },
-    [],
+    [showNotif],
   );
 
   const handleAddItemType = useCallback(
@@ -978,28 +474,30 @@ function AppContent() {
       setItemTypes((prev) => (prev.includes(name) ? prev : [...prev, name]));
       try {
         await createItemType(name);
-      } catch {
-        // type may already exist, ignore error
+      } catch (err: any) {
+        if (err?.message === 'Type already exists') return;
+        setItemTypes((prev) => prev.filter((t) => t !== name));
+        showNotif(`创建物品类型「${name}」失败: ${err?.message || '未知错误'}`, 'error');
       }
     },
-    [],
+    [showNotif],
   );
 
   // ── Stats ──
 
   const usedSlots = isDrawerFridge ? drawerBoxCount : upperItemsCount;
-  const criticalCount = samples.filter((s) => s.status === 'critical').length;
-  const warningCount = samples.filter((s) => s.status === 'warning').length;
 
-  const totalSubSamples = samples.reduce((sum, s) => sum + s.subSamples.length, 0);
-  const criticalSubCount = samples.reduce(
-    (sum, s) => sum + s.subSamples.filter((ss) => ss.status === 'critical').length,
-    0,
-  );
-  const warningSubCount = samples.reduce(
-    (sum, s) => sum + s.subSamples.filter((ss) => ss.status === 'warning').length,
-    0,
-  );
+  // Compute tube stats from sample records for the current fridge
+  const fridgeTubes = React.useMemo(() => {
+    if (!selectedFridgeId) return [];
+    return sampleRecords.flatMap((sr) =>
+      (sr.tubes || []).filter((t) => t.fridge_id === selectedFridgeId)
+    );
+  }, [sampleRecords, selectedFridgeId]);
+
+  const totalTubes = fridgeTubes.length;
+  const criticalCount = fridgeTubes.filter((t) => t.status === 'critical').length;
+  const warningCount = fridgeTubes.filter((t) => t.status === 'warning').length;
   const upperItemTypeStats = React.useMemo(() => {
     const counts = new Map<string, number>();
 
@@ -1128,12 +626,12 @@ function AppContent() {
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              {criticalCount + criticalSubCount > 0 && (
+              {criticalCount + warningCount > 0 && (
                 <div
                   className="min-w-[22px] h-[22px] rounded-full flex items-center justify-center text-[11px] font-bold"
                   style={{ background: '#ef4444', color: '#fff' }}
                 >
-                  {criticalCount + criticalSubCount}
+                  {criticalCount + warningCount}
                 </div>
               )}
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -1300,19 +798,19 @@ function AppContent() {
                 value={`${usedSlots}/${totalCapacity}`}
                 color="#60a5fa"
               />
-              {totalSubSamples > 0 && (
+              {totalTubes > 0 && (
                 <StatChip
                   icon={<Layers size={16} />}
                   label="副样本"
-                  value={`${totalSubSamples}`}
+                  value={`${totalTubes}`}
                   color="#a78bfa"
                 />
               )}
-              {criticalCount + criticalSubCount > 0 && (
+              {criticalCount + warningCount > 0 && (
                 <StatChip
                   icon={<AlertTriangle size={16} />}
                   label="严重警报"
-                  value={`${criticalCount + criticalSubCount} 个`}
+                  value={`${criticalCount + warningCount} 个`}
                   color="#ef4444"
                 />
               )}
@@ -1324,8 +822,9 @@ function AppContent() {
         {activeView === 'admin' && isRoot ? (
           <RootAdminPanel currentUsername={user!.username} onNotify={showNotif} />
         ) : isMobile ? (
-    <main className="flex-1 flex flex-col gap-3 p-3 overflow-auto">
+    <main className="flex-1 flex flex-col gap-3 p-3 overflow-auto pb-28">
           {/* Search bar */}
+          <div className="sticky top-0 z-30 -mx-3 -mt-3 px-3 pt-3 pb-3" style={{ background: 'var(--app-bg)', backdropFilter: 'blur(10px)' }}>
           <div
             className="flex w-full items-center gap-3 rounded-xl px-4 py-3"
             style={{
@@ -1346,7 +845,7 @@ function AppContent() {
             {searchQuery && (
               <div className="flex items-center gap-1">
                 <span className="text-[14px]" style={{ color: '#2563eb' }}>
-                  {matchedIds.size} 个
+                  {globalFilteredRecords.length} 个
                 </span>
                 <button
                   onClick={() => setSearchQuery('')}
@@ -1407,9 +906,10 @@ function AppContent() {
               ))}
             </div>
           )}
+          </div>
 
           {/* Loading state */}
-          {loading && !viewingContainer && (
+          {loading && (
             <div
               className="flex h-[200px] w-full items-center justify-center rounded-2xl"
               style={{
@@ -1422,7 +922,7 @@ function AppContent() {
           )}
 
           {/* The fridge */}
-          {(!loading || viewingContainer) && selectedFridgeId && selectedFridge && (
+          {!loading && selectedFridgeId && selectedFridge && (
             selectedFridge.fridge_type === 'drawer' ? (
               <DrawerFridgeView
                 fridge={selectedFridge}
@@ -1471,7 +971,7 @@ function AppContent() {
                   });
                 }}
               />
-            ) : selectedFridge.fridge_type === 'shelf' && !viewingContainer ? (
+            ) : selectedFridge.fridge_type === 'shelf' ? (
               <ShelfFridgeView
                 fridge={selectedFridge}
                 currentUsername={user!.username}
@@ -1486,25 +986,15 @@ function AppContent() {
                 onItemsChange={handleUpperItemsChange}
               />
             ) : (
-              <FridgeUnit
-                samples={samples}
-                selectedSampleId={selectedSampleId}
-                matchedIds={matchedIds}
-                searchQuery={searchQuery}
-                compartmentGrids={compartmentGrids}
-                canManageFridge={isRoot}
-                viewingContainer={viewingContainer}
-                onDropSample={handleDrop}
-                onDeleteSample={handleDeleteSample}
-                onSlotClick={handleSlotClick}
-                onEnterContainer={handleEnterContainer}
-                onExitContainer={handleExitContainer}
-                onDropSubSample={handleDropSubSample}
-                onAddSubSample={handleOpenAddSubSample}
-                onDeleteSubSample={handleDeleteSubSample}
-                onUpdateCompartmentGrid={handleUpdateCompartmentGrid}
-                onUpdateContainerGrid={handleUpdateContainerGrid}
-              />
+              <div
+                className="flex h-[200px] w-full items-center justify-center rounded-2xl"
+                style={{
+                  background: 'var(--app-card-bg)',
+                  border: '1px solid var(--app-border)',
+                }}
+              >
+                <span style={{ color: 'var(--app-muted)' }}>不支持的冰箱类型</span>
+              </div>
             )
           )}
 
@@ -1637,15 +1127,14 @@ function AppContent() {
                               <div key={type} className="flex items-center gap-2 flex-shrink-0 lg:flex-shrink">
                                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
                                 <span
-                                  className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
+                                  className="min-w-0 truncate rounded-md px-2 py-1 text-[13px]"
                                   title={type}
                                   style={{
                                     background: cfg.bgColor,
                                     border: '1px solid ' + cfg.color + '30',
                                     color: cfg.color,
                                   }}
-                                >{cfg.label}</span>
-                                <span className="min-w-8 text-right text-[14px] font-mono" style={{ color: '#2563eb' }}>{count}</span>
+                                >{cfg.label}&nbsp;<span className="font-semibold tabular-nums">×{count}</span></span>
                               </div>
                             );
                           })}
@@ -1676,15 +1165,14 @@ function AppContent() {
                               <div key={type} className="flex items-center gap-2 flex-shrink-0 lg:flex-shrink">
                                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: typeColor }} />
                                 <span
-                                  className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-[13px]"
+                                  className="min-w-0 truncate rounded-md px-2 py-1 text-[13px]"
                                   title={type}
                                   style={{
                                     background: typeColor + '18',
                                     border: `1px solid ${typeColor}30`,
                                     color: 'var(--app-text)',
                                   }}
-                                >{type}</span>
-                                <span className="min-w-8 text-right text-[14px] font-mono" style={{ color: '#2563eb' }}>{count}</span>
+                                >{type}&nbsp;<span className="font-semibold tabular-nums" style={{ color: typeColor }}>×{count}</span></span>
                               </div>
                             );
                           })}
@@ -1749,24 +1237,6 @@ function AppContent() {
             </DrawerContent>
           </Drawer>
 
-          {/* ── MOBILE: DetailPanel Drawer (bottom) ── */}
-          <Drawer open={!!selectedDetailItem} onOpenChange={(open) => { if (!open) setSelectedSampleId(null); }}>
-            <DrawerContent className="max-h-[85vh]">
-              <DetailPanel
-                item={selectedDetailItem}
-                onClose={() => setSelectedSampleId(null)}
-                onStatusChange={handleStatusChange}
-                onDelete={(id, containerId) => {
-                  if (containerId) { handleDeleteSubSample(containerId, id); }
-                  else { handleDeleteSample(id); }
-                  setSelectedSampleId(null);
-                }}
-                onEdit={handleOpenEdit}
-                currentUser={user!.username}
-                isRoot={isRoot}
-              />
-            </DrawerContent>
-          </Drawer>
         </main>
         ) : (
     <main className="flex-1 flex gap-3 lg:gap-6 p-3 lg:p-6 overflow-auto items-start">{/* DESKTOP LAYOUT — UNCHANGED */}
@@ -1791,23 +1261,6 @@ function AppContent() {
           )}
 
           <div className="flex-1 flex flex-col lg:flex-row gap-3 lg:gap-5 items-start justify-center min-w-0">
-          {/* Detail panel — left of fridge */}
-          <DetailPanel
-            item={selectedDetailItem}
-            onClose={() => setSelectedSampleId(null)}
-            onStatusChange={handleStatusChange}
-            onDelete={(id, containerId) => {
-              if (containerId) {
-                handleDeleteSubSample(containerId, id);
-              } else {
-                handleDeleteSample(id);
-              }
-            }}
-            onEdit={handleOpenEdit}
-            currentUser={user!.username}
-            isRoot={isRoot}
-          />
-
           {/* Center: Fridge */}
           <div className="flex flex-1 w-full max-w-full lg:max-w-[860px] flex-col gap-5">
             {/* Search bar */}
@@ -1831,7 +1284,7 @@ function AppContent() {
               {searchQuery && (
                 <div className="flex items-center gap-1">
                   <span className="text-[14px]" style={{ color: '#2563eb' }}>
-                    {matchedIds.size} 个匹配
+                    {globalFilteredRecords.length} 个匹配
                   </span>
                   <button
                     onClick={() => setSearchQuery('')}
@@ -1900,7 +1353,7 @@ function AppContent() {
             )}
 
             {/* Loading state */}
-            {loading && !viewingContainer && (
+            {loading && (
               <div
                 className="flex h-[200px] w-full items-center justify-center rounded-2xl"
                 style={{
@@ -1913,7 +1366,7 @@ function AppContent() {
             )}
 
             {/* The fridge */}
-            {(!loading || viewingContainer) && selectedFridgeId && selectedFridge && (
+            {!loading && selectedFridgeId && selectedFridge && (
               selectedFridge.fridge_type === 'drawer' ? (
                 <DrawerFridgeView
                   fridge={selectedFridge}
@@ -1964,7 +1417,7 @@ function AppContent() {
                     });
                   }}
                 />
-              ) : selectedFridge.fridge_type === 'shelf' && !viewingContainer ? (
+              ) : selectedFridge.fridge_type === 'shelf' ? (
                 <ShelfFridgeView
                   fridge={selectedFridge}
                   currentUsername={user!.username}
@@ -1979,26 +1432,15 @@ function AppContent() {
                   onItemsChange={handleUpperItemsChange}
                 />
               ) : (
-                <FridgeUnit
-                  samples={samples}
-                  selectedSampleId={selectedSampleId}
-                  matchedIds={matchedIds}
-                  searchQuery={searchQuery}
-                  compartmentGrids={compartmentGrids}
-                  canManageFridge={isRoot}
-                  viewingContainer={viewingContainer}
-                  onDropSample={handleDrop}
-                  
-                  onDeleteSample={handleDeleteSample}
-                  onSlotClick={handleSlotClick}
-                  onEnterContainer={handleEnterContainer}
-                  onExitContainer={handleExitContainer}
-                  onDropSubSample={handleDropSubSample}
-                  onAddSubSample={handleOpenAddSubSample}
-                  onDeleteSubSample={handleDeleteSubSample}
-                  onUpdateCompartmentGrid={handleUpdateCompartmentGrid}
-                  onUpdateContainerGrid={handleUpdateContainerGrid}
-                />
+                <div
+                  className="flex h-[200px] w-full items-center justify-center rounded-2xl"
+                  style={{
+                    background: 'var(--app-card-bg)',
+                    border: '1px solid var(--app-border)',
+                  }}
+                >
+                  <span style={{ color: 'var(--app-muted)' }}>不支持的冰箱类型</span>
+                </div>
               )
             )}
 
@@ -2279,49 +1721,6 @@ function AppContent() {
           )}
         </AnimatePresence>
 
-        {/* ── ADD / EDIT MODAL ── */}
-        {activeView === 'fridge' && (
-        <AddSampleModal
-          isOpen={showAddModal}
-          targetCompartment={addTarget?.compartment ?? null}
-          targetPosition={addTarget?.position ?? null}
-          onClose={() => {
-            setShowAddModal(false);
-            setEditItem(null);
-            setAddTarget(null);
-          }}
-          onAdd={handleAddSample}
-          onAddSubSample={handleAddSubSample}
-          existingIds={samples.map((s) => s.id)}
-          containers={samples}
-          upperTemperature={selectedFridge?.upperTemperature ?? -20}
-          lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
-          currentUsername={user!.username}
-          isSubSampleMode={addTarget?.isSubSample ?? false}
-          parentContainerId={
-            editItem?.kind === 'subsample'
-              ? editItem.containerId
-              : addTarget?.containerId ?? undefined
-          }
-          parentContainer={
-            editItem?.kind === 'subsample'
-              ? samples.find((s) => s.id === editItem.containerId) ?? undefined
-              : addTarget?.containerId
-                ? samples.find((s) => s.id === addTarget.containerId) ?? undefined
-                : undefined
-          }
-          editSample={
-            editItem?.kind === 'sample' ? editItem.data as Sample : null
-          }
-          editSubSample={
-            editItem?.kind === 'subsample' ? editItem.data as SubSample : null
-          }
-          onEditSample={handleEditSample}
-          onEditSubSample={handleEditSubSample}
-          sampleTypes={sampleTypes}
-          onAddSampleType={handleAddSampleType}
-        />
-        )}
       </div>
     </DndProvider>
   );
@@ -2364,7 +1763,7 @@ function UserMenu({
 }: {
   username: string;
   role: string;
-  uploadedItems: UploadedSampleItem[];
+  uploadedItems: UploadedRecordItem[];
   uploadedUpperItems: UploadedUpperItem[];
   hasBoxViewTubes: boolean;
   onOpenSample: (item: UploadedPanelItem) => void;
@@ -2508,16 +1907,9 @@ function UserMenu({
       <>
         <div className="space-y-2">
           {pagedUploadedSamples.map((item) => {
-            const config = STATUS_CONFIG[item.status];
-            const isNewRecord = item.id.startsWith('sr-');
-            const location = isNewRecord
-              ? `样本记录 · ${item.position} 管`
-              : item.kind === 'subsample'
-                ? `${item.parentName || item.parentId} · 子格 ${item.position + 1}`
-                : `${item.compartment === 'upper' ? '上层' : '下层'} · 格位 ${item.position + 1}`;
             return (
               <button
-                key={`${item.kind}-${item.id}`}
+                key={item.id}
                 type="button"
                 onClick={() => {
                   onOpenSample(item);
@@ -2528,17 +1920,13 @@ function UserMenu({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: config.borderColor }} />
-                      <span className="text-[13px] truncate">{item.id} · {item.name}</span>
-                    </div>
+                    <span className="text-[13px] truncate">{item.name}</span>
                     <div className="mt-1 text-[11px] truncate" style={{ color: 'var(--app-muted)' }}>
-                      {item.type} · {location}
+                      {item.type} · {item.uploader}
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-[11px]" style={{ color: config.color }}>{config.label}</div>
-                    <div className="text-[11px] mt-1" style={{ color: 'var(--app-muted)' }}>{item.temperature}°C</div>
+                    <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>{formatChineseShortDate(item.createdAt)}</div>
                   </div>
                 </div>
               </button>

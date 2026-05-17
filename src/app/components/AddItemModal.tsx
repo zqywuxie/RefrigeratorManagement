@@ -60,7 +60,7 @@ export function AddItemModal({
     setGridPreset(0);
     setCustomRows(editItem?.grid_rows || 10);
     setCustomCols(editItem?.grid_cols || 10);
-  }, [isOpen, editItem, defaultRow, currentUsername, itemTypes]);
+  }, [isOpen, editItem, defaultRow, currentUsername]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,6 +120,17 @@ export function AddItemModal({
                 <input
                   value={newTypeName}
                   onChange={(e) => setNewTypeName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const nextType = newTypeName.trim();
+                      if (!nextType) return;
+                      onAddItemType(nextType);
+                      setItemType(nextType);
+                      setNewTypeName('');
+                      setShowNewType(false);
+                    }
+                  }}
                   placeholder="新物品类型"
                   autoFocus
                   className="min-w-0 flex-1 px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
@@ -138,6 +149,16 @@ export function AddItemModal({
                   className="px-2 rounded-lg text-[12px] min-h-[44px]"
                   style={{ background: '#2563eb', color: '#fff' }}
                 >添加</button>
+                <button
+                  type="button"
+                  onClick={() => { setShowNewType(false); setNewTypeName(''); }}
+                  className="px-2 rounded-lg text-[12px] min-h-[44px]"
+                  style={{
+                    background: 'var(--app-subtle-bg)',
+                    border: '1px solid var(--app-subtle-border)',
+                    color: 'var(--app-subtle-text)',
+                  }}
+                >取消</button>
               </div>
             ) : (
               <div className="flex gap-1">

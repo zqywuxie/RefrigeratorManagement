@@ -285,6 +285,17 @@ export function AddSampleRecordModal({
                       <input
                         value={newTypeName}
                         onChange={(e) => setNewTypeName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const nextType = newTypeName.trim();
+                            if (!nextType) return;
+                            onAddSampleType(nextType);
+                            setSampleType(nextType);
+                            setNewTypeName('');
+                            setShowNewType(false);
+                          }
+                        }}
                         placeholder="新样本类型"
                         autoFocus
                         className="min-w-0 flex-1 rounded-lg px-3 py-2 text-[16px] outline-none sm:text-[14px] min-h-[44px]"

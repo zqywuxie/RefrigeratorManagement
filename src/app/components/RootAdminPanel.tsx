@@ -21,12 +21,15 @@ import {
   AdminSampleItem,
   AdminUser,
   AdminBox,
+  AdminSampleTypeInfo,
+  AdminItemTypeInfo,
   createAdminUser,
   createSampleType,
+  renameSampleType,
+  deleteSampleType,
   deleteAdminUser,
   deleteSample,
   deleteSubSample,
-  fetchAdminSamples,
   fetchAdminSummary,
   fetchAdminUsers,
   fetchAdminBoxes,
@@ -46,8 +49,11 @@ import {
   updateAdminUpperItem,
   fetchItemTypes,
   createItemType,
+  renameItemType,
+  deleteItemType,
+  fetchAdminSampleTypes,
+  fetchAdminItemTypes,
 } from '../api';
-import { AddSampleModal } from './AddSampleModal';
 import {
   Compartment,
   Sample,
@@ -61,7 +67,7 @@ import {
 import type { UpperItem } from '../types';
 import { useIsMobile } from './ui/use-mobile';
 import { AddItemModal } from './AddItemModal';
-import { DEFAULT_ITEM_TYPES } from '../types';
+import { DEFAULT_ITEM_TYPES, DEFAULT_SAMPLE_TYPES } from '../types';
 
 type NotifyType = 'info' | 'warn' | 'success' | 'error';
 
@@ -128,6 +134,11 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<AuthUser['role']>('user');
   const [resetPasswords, setResetPasswords] = useState<Record<string, string>>({});
+  const [adminSampleTypeInfos, setAdminSampleTypeInfos] = useState<AdminSampleTypeInfo[]>([]);
+  const [adminItemTypeInfos, setAdminItemTypeInfos] = useState<AdminItemTypeInfo[]>([]);
+  const [typeMgmtTab, setTypeMgmtTab] = useState<'samples' | 'items'>('samples');
+  const [newTypeName, setNewTypeName] = useState('');
+  const [typeMgmtBusy, setTypeMgmtBusy] = useState<string | null>(null);
 
   const rootCount = useMemo(() => users.filter((user) => user.role === 'root').length, [users]);
   const availableSampleTypes = useMemo(() => {
@@ -203,29 +214,17 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   const loadAdminData = useCallback(async () => {
     setLoading(true);
     try {
-      const [summaryData, userData, sampleData, sampleTypeData, boxData] = await Promise.all([
+      const [summaryData, userData, sampleTypeData, boxData] = await Promise.all([
         fetchAdminSummary(),
         fetchAdminUsers(),
-        fetchAdminSamples(),
         fetchSampleTypes().catch(() => []),
         fetchAdminBoxes().catch(() => []),
       ]);
       setSummary(summaryData);
       if (summaryData?.refrigerators?.length > 0 && !selectedFridgeForDistrib) setSelectedFridgeForDistrib(summaryData.refrigerators[0].id);
       setUsers(userData);
-      setSamples(sampleData);
       setAdminBoxes(boxData);
-      setSampleTypes(() => {
-        const merged = new Set<string>([
-          ...sampleTypeData,
-          ...sampleData.map((sample) => sample.type),
-        ]);
-        return Array.from(merged).sort((a, b) => a.localeCompare(b, 'zh-CN'));
-      });
-      setSelectedSampleId((current) => {
-        if (current && sampleData.some((sample) => sample.id === current)) return current;
-        return sampleData[0]?.id ?? null;
-      });
+      setSampleTypes(sampleTypeData);
     } catch (err: any) {
       onNotify(err.message || '加载管理数据失败', 'error');
     } finally {
@@ -249,6 +248,128 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
   useEffect(() => {
     fetchAdminUpperItems().then(setAdminUpperItems).catch(() => {});
   }, []);
+
+  const loadTypeMgmt = useCallback(async () => {
+    try {
+      const [st, it] = await Promise.all([
+        fetchAdminSampleTypes().catch(() => []),
+        fetchAdminItemTypes().catch(() => []),
+      ]);
+      setAdminSampleTypeInfos(st);
+      setAdminItemTypeInfos(it);
+    } catch {
+      // non-critical
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTypeMgmt();
+  }, [loadTypeMgmt]);
+
+  const handleTypeMgmtCreateSampleType = async () => {
+    const name = newTypeName.trim();
+    if (!name) return;
+    setTypeMgmtBusy('__create_sample__');
+    try {
+      await createSampleType(name);
+      onNotify(`样本类型 "${name}" 已创建`, 'success');
+      setNewTypeName('');
+      await loadTypeMgmt();
+    } catch (err: any) {
+      onNotify(err.message || '创建失败', 'error');
+    } finally {
+      setTypeMgmtBusy(null);
+    }
+  };
+
+  const handleTypeMgmtCreateItemType = async () => {
+    const name = newTypeName.trim();
+    if (!name) return;
+    setTypeMgmtBusy('__create_item__');
+    try {
+      await createItemType(name);
+      onNotify(`物品类型 "${name}" 已创建`, 'success');
+      setNewTypeName('');
+      await loadTypeMgmt();
+    } catch (err: any) {
+      onNotify(err.message || '创建失败', 'error');
+    } finally {
+      setTypeMgmtBusy(null);
+    }
+  };
+
+  const handleTypeMgmtDeleteSampleType = async (name: string) => {
+    setTypeMgmtBusy(name);
+    try {
+      await deleteSampleType(name);
+      onNotify(`样本类型 "${name}" 已删除`, 'warn');
+      await loadTypeMgmt();
+      await loadAdminData();
+    } catch (err: any) {
+      onNotify(err.message || '删除失败', 'error');
+    } finally {
+      setTypeMgmtBusy(null);
+    }
+  };
+
+  const handleTypeMgmtDeleteItemType = async (name: string) => {
+    setTypeMgmtBusy(name);
+    try {
+      await deleteItemType(name);
+      onNotify(`物品类型 "${name}" 已删除`, 'warn');
+      await loadTypeMgmt();
+      await loadAdminData();
+      // also refresh upper items and item types list
+      const [newItemTypes, newUpperItems] = await Promise.all([
+        fetchItemTypes().catch(() => null),
+        fetchAdminUpperItems().catch(() => null),
+      ]);
+      if (newItemTypes) setItemTypes(newItemTypes.length > 0 ? newItemTypes : DEFAULT_ITEM_TYPES);
+      if (newUpperItems) setAdminUpperItems(newUpperItems);
+    } catch (err: any) {
+      onNotify(err.message || '删除失败', 'error');
+    } finally {
+      setTypeMgmtBusy(null);
+    }
+  };
+
+  const handleTypeMgmtRenameSampleType = async (oldName: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || oldName === trimmed) return;
+    setTypeMgmtBusy(oldName);
+    try {
+      await renameSampleType(oldName, trimmed);
+      onNotify(`样本类型 "${oldName}" 已重命名为 "${trimmed}"`, 'success');
+      await loadTypeMgmt();
+      await loadAdminData();
+    } catch (err: any) {
+      onNotify(err.message || '重命名失败', 'error');
+    } finally {
+      setTypeMgmtBusy(null);
+    }
+  };
+
+  const handleTypeMgmtRenameItemType = async (oldName: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || oldName === trimmed) return;
+    setTypeMgmtBusy(oldName);
+    try {
+      await renameItemType(oldName, trimmed);
+      onNotify(`物品类型 "${oldName}" 已重命名为 "${trimmed}"`, 'success');
+      await loadTypeMgmt();
+      await loadAdminData();
+      const [newItemTypes, newUpperItems] = await Promise.all([
+        fetchItemTypes().catch(() => null),
+        fetchAdminUpperItems().catch(() => null),
+      ]);
+      if (newItemTypes) setItemTypes(newItemTypes.length > 0 ? newItemTypes : DEFAULT_ITEM_TYPES);
+      if (newUpperItems) setAdminUpperItems(newUpperItems);
+    } catch (err: any) {
+      onNotify(err.message || '重命名失败', 'error');
+    } finally {
+      setTypeMgmtBusy(null);
+    }
+  };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -332,6 +453,62 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
       // ignore duplicate or unavailable endpoint
     }
   }, []);
+
+  const handleRenameSampleType = useCallback(async (oldName: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || oldName === trimmed) return;
+    try {
+      await renameSampleType(oldName, trimmed);
+      onNotify(`样本类型 "${oldName}" 已重命名为 "${trimmed}"`, 'success');
+      await loadAdminData();
+    } catch (err: any) {
+      onNotify(err.message || '重命名失败', 'error');
+    }
+  }, [loadAdminData, onNotify]);
+
+  const handleDeleteSampleType = useCallback(async (name: string) => {
+    try {
+      await deleteSampleType(name);
+      onNotify(`样本类型 "${name}" 已删除`, 'warn');
+      await loadAdminData();
+    } catch (err: any) {
+      onNotify(err.message || '删除失败', 'error');
+    }
+  }, [loadAdminData, onNotify]);
+
+  const handleRenameItemType = useCallback(async (oldName: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || oldName === trimmed) return;
+    try {
+      await renameItemType(oldName, trimmed);
+      onNotify(`物品类型 "${oldName}" 已重命名为 "${trimmed}"`, 'success');
+      const [newItemTypes, newUpperItems] = await Promise.all([
+        fetchItemTypes().catch(() => null),
+        fetchAdminUpperItems().catch(() => null),
+      ]);
+      if (newItemTypes) setItemTypes(newItemTypes.length > 0 ? newItemTypes : DEFAULT_ITEM_TYPES);
+      if (newUpperItems) setAdminUpperItems(newUpperItems);
+      await loadAdminData();
+    } catch (err: any) {
+      onNotify(err.message || '重命名失败', 'error');
+    }
+  }, [loadAdminData, onNotify]);
+
+  const handleDeleteItemType = useCallback(async (name: string) => {
+    try {
+      await deleteItemType(name);
+      onNotify(`物品类型 "${name}" 已删除`, 'warn');
+      const [newItemTypes, newUpperItems] = await Promise.all([
+        fetchItemTypes().catch(() => null),
+        fetchAdminUpperItems().catch(() => null),
+      ]);
+      if (newItemTypes) setItemTypes(newItemTypes.length > 0 ? newItemTypes : DEFAULT_ITEM_TYPES);
+      if (newUpperItems) setAdminUpperItems(newUpperItems);
+      await loadAdminData();
+    } catch (err: any) {
+      onNotify(err.message || '删除失败', 'error');
+    }
+  }, [loadAdminData, onNotify]);
 
   const handleEditOpen = useCallback((sample: AdminSampleItem) => {
     setEditingSample(sample);
@@ -819,7 +996,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                       <div className="flex min-h-[60px] items-center justify-center rounded-md text-[12px]" style={{ background: 'var(--app-card-bg)', color: 'var(--app-muted)' }}>该冰箱暂无样本类型数据</div>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
-                        {types.map((t) => <TypeStatChip key={t.type} title={t.type} count={t.count} color={getSampleTypeColor(t.type)} bgColor={`${getSampleTypeColor(t.type)}18`} />)}
+                        {types.map((t) => <TypeStatChip key={t.type} title={t.type} count={t.count} color={getSampleTypeColor(t.type)} bgColor={`${getSampleTypeColor(t.type)}18`} onRename={(newName) => handleRenameSampleType(t.type, newName)} onDelete={() => handleDeleteSampleType(t.type)} disabled={t.type === '未分类'} />)}
                       </div>
                     );
                   }
@@ -838,7 +1015,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                     <div className="flex flex-wrap gap-1.5">
                       {sorted.map((item) => {
                         const cfg = getItemTypeConfig(item.type);
-                        return <TypeStatChip key={item.type} title={cfg.label} count={item.count} color={cfg.color} bgColor={cfg.bgColor} tooltipTitle={item.type} />;
+                        return <TypeStatChip key={item.type} title={cfg.label} count={item.count} color={cfg.color} bgColor={cfg.bgColor} tooltipTitle={item.type} onRename={(newName) => handleRenameItemType(item.type, newName)} onDelete={() => handleDeleteItemType(item.type)} disabled={item.type === '未分类'} />;
                       })}
                     </div>
                   );
@@ -847,6 +1024,163 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
             </div>
           </div>
         </div>
+
+        {/* Type Management */}
+        <section className="rounded-xl p-4" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', boxShadow: '0 14px 40px rgba(15,23,42,0.06)' }}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-[17px] font-semibold" style={{ color: 'var(--app-text)' }}>类型管理</h3>
+              <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>管理所有可复用的样本类型与物品类型标签，含使用计数</div>
+            </div>
+            <div className="flex rounded-lg p-0.5" style={{ background: 'var(--app-input-bg)', border: '1px solid var(--app-input-border)' }}>
+              {(['samples', 'items'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setTypeMgmtTab(tab)}
+                  className="rounded-md px-3 py-1.5 text-[12px] transition-all"
+                  style={{
+                    background: typeMgmtTab === tab ? '#2563eb' : 'transparent',
+                    color: typeMgmtTab === tab ? '#fff' : 'var(--app-muted)',
+                  }}
+                >
+                  {tab === 'samples' ? '样本类型' : '物品类型'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Add new type */}
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <input
+              value={newTypeName}
+              onChange={(e) => setNewTypeName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  typeMgmtTab === 'samples' ? handleTypeMgmtCreateSampleType() : handleTypeMgmtCreateItemType();
+                }
+              }}
+              placeholder={typeMgmtTab === 'samples' ? '输入新样本类型名称' : '输入新物品类型名称'}
+              className="flex-1 rounded-lg px-3 py-2 text-[14px] outline-none min-h-[40px]"
+              style={inputStyle}
+            />
+            <button
+              onClick={typeMgmtTab === 'samples' ? handleTypeMgmtCreateSampleType : handleTypeMgmtCreateItemType}
+              disabled={typeMgmtBusy === '__create_sample__' || typeMgmtBusy === '__create_item__' || !newTypeName.trim()}
+              className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-[13px] disabled:opacity-40 min-h-[40px]"
+              style={{ background: '#2563eb', color: '#fff' }}
+            >
+              <Plus size={15} />
+              新增
+            </button>
+          </div>
+
+          {/* Type list */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="rounded-lg text-[12px]" style={{ background: 'var(--app-panel-bg)' }}>
+                  <th className="rounded-l-lg px-3 py-2.5" style={{ color: 'var(--app-muted)' }}>类型名称</th>
+                  {typeMgmtTab === 'samples' ? (
+                    <>
+                      <th className="px-3 py-2.5 text-right" style={{ color: 'var(--app-muted)' }}>格位样本</th>
+                      <th className="px-3 py-2.5 text-right" style={{ color: 'var(--app-muted)' }}>副样本</th>
+                      <th className="px-3 py-2.5 text-right" style={{ color: 'var(--app-muted)' }}>样本记录</th>
+                      <th className="px-3 py-2.5 text-right" style={{ color: 'var(--app-muted)' }}>盒子</th>
+                    </>
+                  ) : (
+                    <th className="px-3 py-2.5 text-right" style={{ color: 'var(--app-muted)' }}>上层物品</th>
+                  )}
+                  <th className="px-3 py-2.5 text-center" style={{ color: 'var(--app-muted)' }}>合计</th>
+                  <th className="rounded-r-lg px-3 py-2.5 text-right" style={{ color: 'var(--app-muted)' }}>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(typeMgmtTab === 'samples' ? adminSampleTypeInfos : adminItemTypeInfos).map((info) => {
+                  const isDefault =
+                    typeMgmtTab === 'samples'
+                      ? DEFAULT_SAMPLE_TYPES.includes(info.name)
+                      : DEFAULT_ITEM_TYPES.includes(info.name);
+                  const isUncategorized = info.name === '未分类';
+                  const protectDelete = isDefault || isUncategorized;
+                  const busy = typeMgmtBusy === info.name;
+                  const rowBg = { background: 'var(--app-panel-bg)' };
+                  const cellMuted = { color: 'var(--app-muted)' };
+                  const cellText = { color: 'var(--app-text)' };
+                  return (
+                    <tr key={info.name} style={{ opacity: busy ? 0.5 : 1 }}>
+                      <td className="rounded-l-lg px-3 py-2.5 text-[13px]" style={{ ...rowBg, ...cellText }}>
+                        <div className="flex items-center gap-1.5">
+                          {typeMgmtTab === 'samples' ? (
+                            <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: getSampleTypeColor(info.name) }} />
+                          ) : (
+                            <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: getItemTypeConfig(info.name).color }} />
+                          )}
+                          {info.name}
+                        </div>
+                      </td>
+                      {typeMgmtTab === 'samples' ? (
+                        <>
+                          <td className="px-3 py-2.5 text-right text-[13px] tabular-nums" style={{ ...rowBg, ...(info.total === 0 ? cellMuted : cellText) }}>{(info as AdminSampleTypeInfo).sampleCount}</td>
+                          <td className="px-3 py-2.5 text-right text-[13px] tabular-nums" style={{ ...rowBg, ...(info.total === 0 ? cellMuted : cellText) }}>{(info as AdminSampleTypeInfo).subSampleCount}</td>
+                          <td className="px-3 py-2.5 text-right text-[13px] tabular-nums" style={{ ...rowBg, ...(info.total === 0 ? cellMuted : cellText) }}>{(info as AdminSampleTypeInfo).recordCount}</td>
+                          <td className="px-3 py-2.5 text-right text-[13px] tabular-nums" style={{ ...rowBg, ...(info.total === 0 ? cellMuted : cellText) }}>{(info as AdminSampleTypeInfo).boxCount}</td>
+                        </>
+                      ) : (
+                        <td className="px-3 py-2.5 text-right text-[13px] tabular-nums" style={{ ...rowBg, ...(info.total === 0 ? cellMuted : cellText) }}>{(info as AdminItemTypeInfo).upperItemCount}</td>
+                      )}
+                      <td className="px-3 py-2.5 text-center text-[13px] tabular-nums font-semibold" style={{ ...rowBg, ...(info.total === 0 ? cellMuted : cellText) }}>
+                        {info.total}
+                      </td>
+                      <td className="rounded-r-lg px-3 py-2.5 text-right" style={rowBg}>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            disabled={busy || isUncategorized}
+                            onClick={() => {
+                              const newName = window.prompt(`重命名类型 "${info.name}" 为：`, info.name);
+                              if (newName && newName.trim() && newName.trim() !== info.name) {
+                                typeMgmtTab === 'samples'
+                                  ? handleTypeMgmtRenameSampleType(info.name, newName.trim())
+                                  : handleTypeMgmtRenameItemType(info.name, newName.trim());
+                              }
+                            }}
+                            className="rounded-md p-2 disabled:opacity-30 min-h-[36px] min-w-[36px] hover:scale-110 transition-transform"
+                            style={{ color: '#2563eb' }}
+                            title={isUncategorized ? '不可重命名默认类型' : '重命名'}
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            disabled={busy || protectDelete}
+                            onClick={() => {
+                              if (window.confirm(`确认删除类型 "${info.name}"？\n${info.total > 0 ? `当前有 ${info.total} 条数据使用了该类型，将被设为默认值。` : '该类型未被任何数据使用。'}`)) {
+                                typeMgmtTab === 'samples'
+                                  ? handleTypeMgmtDeleteSampleType(info.name)
+                                  : handleTypeMgmtDeleteItemType(info.name);
+                              }
+                            }}
+                            className="rounded-md p-2 disabled:opacity-30 min-h-[36px] min-w-[36px] hover:scale-110 transition-transform"
+                            style={{ color: protectDelete ? 'var(--app-muted)' : '#ef4444' }}
+                            title={protectDelete ? '默认类型不可删除' : '删除'}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {(typeMgmtTab === 'samples' ? adminSampleTypeInfos : adminItemTypeInfos).length === 0 && (
+                  <tr>
+                    <td colSpan={typeMgmtTab === 'samples' ? 7 : 4} className="rounded-lg px-3 py-8 text-center text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
+                      暂无类型
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         {/* Fridge overview */}
         <section className="rounded-xl p-4" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', boxShadow: '0 14px 40px rgba(15,23,42,0.06)' }}>
@@ -890,21 +1224,6 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                     <AdminMiniStat label="格位样本 / 副样本" value={`${fridge.sampleCount} / ${fridge.subSampleCount}`} />
                     <AdminMiniStat label="样本记录" value={fridge.sampleRecordCount || 0} />
                   </div>
-                  {fridge.typeDistribution && fridge.typeDistribution.length > 0 && (
-                    <div className="mt-2 pt-2 border-t" style={{ borderColor: 'var(--app-border)' }}>
-                      <div className="text-[10px] mb-1" style={{ color: 'var(--app-muted)' }}>样本类型分布</div>
-                      <div className="flex flex-wrap gap-1">
-                        {fridge.typeDistribution.slice(0, 6).map((t) => {
-                          const tc = getSampleTypeColor(t.type);
-                          return (
-                            <span key={t.type} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: tc + '20', color: tc, border: '1px solid ' + tc + '40' }}>
-                              {t.type} ×{t.count}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -1530,23 +1849,95 @@ function TypeStatChip({
   color,
   bgColor,
   tooltipTitle,
+  onRename,
+  onDelete,
+  disabled,
 }: {
   title: string;
   count: number;
   color: string;
   bgColor: string;
   tooltipTitle?: string;
+  onRename?: (newName: string) => void;
+  onDelete?: () => void;
+  disabled?: boolean;
 }) {
+  const isMobile = useIsMobile();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(title);
+  const [hovered, setHovered] = useState(false);
+
+  const showActions = !disabled && (onRename || onDelete);
+  const visible = isMobile || hovered;
+
+  const submitEdit = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== title) {
+      onRename?.(trimmed);
+    }
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div
+        className="flex min-h-[34px] items-center gap-1.5 rounded-md px-2 py-1.5"
+        style={{ background: bgColor, border: `1px solid ${color}60` }}
+      >
+        <input
+          autoFocus
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') submitEdit(); if (e.key === 'Escape') setIsEditing(false); }}
+          onBlur={submitEdit}
+          className="min-w-0 flex-1 rounded px-1 py-0.5 text-[12px] outline-none"
+          style={{ background: 'var(--app-card-bg)', color: 'var(--app-text)', border: '1px solid var(--app-border)' }}
+        />
+        <span className="flex-shrink-0 text-[13px] font-semibold tabular-nums" style={{ color }}>{count}</span>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="flex min-h-[34px] items-center justify-between gap-2 rounded-md px-2 py-1.5"
+      className="group flex min-h-[34px] items-center justify-between gap-2 rounded-md px-2 py-1.5 relative"
       style={{ background: bgColor, border: `1px solid ${color}30` }}
-      title={`${tooltipTitle || title}: ${count}`}
+      title={visible ? undefined : `${tooltipTitle || title}: ${count}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <span className="flex min-w-0 items-center gap-1.5 truncate text-[12px]" style={{ color: 'var(--app-text)' }}>
         <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: color }} />
         <span className="min-w-0 truncate">{title}</span>
       </span>
+      {showActions && (
+        <span
+          className="flex items-center gap-0.5 flex-shrink-0 transition-opacity"
+          style={{ opacity: visible ? 1 : 0 }}
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); setEditValue(title); setIsEditing(true); }}
+            className="flex h-5 w-5 items-center justify-center rounded hover:scale-110 transition-transform"
+            style={{ color }}
+            title="重命名"
+          >
+            <Pencil size={11} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm(`确认删除类型 "${title}"？\n所有关联记录的类型将被清空或设为默认值。`)) {
+                onDelete?.();
+              }
+            }}
+            className="flex h-5 w-5 items-center justify-center rounded hover:scale-110 transition-transform"
+            style={{ color }}
+            title="删除"
+          >
+            <Trash2 size={11} />
+          </button>
+        </span>
+      )}
       <span className="flex-shrink-0 text-[13px] font-semibold tabular-nums" style={{ color }}>{count}</span>
     </div>
   );

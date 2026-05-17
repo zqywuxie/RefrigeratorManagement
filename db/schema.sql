@@ -3,22 +3,6 @@
 -- Generated: 2026-05-17T02:39:43.544Z
 -- ============================================================
 
--- Table: box_cells
--- 盒子孔位表(旧)：精细模式下的盒内样本格位，已被tubes表替代
-CREATE TABLE `box_cells` (
-  `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `box_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `position` int NOT NULL,
-  `barcode` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `sample_name` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `sample_volume` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `sample_status` enum('normal','warning','critical','used','pending') COLLATE utf8mb4_unicode_ci DEFAULT 'normal',
-  `note` text COLLATE utf8mb4_unicode_ci,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uniq_box_position` (`box_id`,`position`),
-  CONSTRAINT `box_cells_ibfk_1` FOREIGN KEY (`box_id`) REFERENCES `boxes` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Table: boxes
 -- 盒子表：抽屉内的样本盒，支持简略(simple)和精细(precise)两种模式，精细模式设置网格行列
 CREATE TABLE `boxes` (
@@ -117,64 +101,6 @@ CREATE TABLE `sample_records` (
 CREATE TABLE `sample_types` (
   `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Table: samples
--- 旧系统样本表：legacy容器数据，上下层格子中的样本记录
-CREATE TABLE `samples` (
-  `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `refrigerator_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `name` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `status` enum('normal','warning','critical','used','pending') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'normal',
-  `temperature` decimal(5,1) NOT NULL,
-  `collected_at` date DEFAULT NULL,
-  `patient_id` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `uploader` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `created_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `tags` json DEFAULT NULL,
-  `compartment` enum('upper','lower') COLLATE utf8mb4_unicode_ci NOT NULL,
-  `position` int NOT NULL,
-  `note` text COLLATE utf8mb4_unicode_ci,
-  `volume` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `grid_rows` int NOT NULL DEFAULT '2',
-  `grid_cols` int NOT NULL DEFAULT '2',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_fridge` (`refrigerator_id`),
-  KEY `idx_fridge_comp_pos` (`refrigerator_id`,`compartment`,`position`),
-  KEY `idx_samples_active_position` (`refrigerator_id`,`deleted_at`,`compartment`,`position`),
-  CONSTRAINT `samples_ibfk_1` FOREIGN KEY (`refrigerator_id`) REFERENCES `refrigerators` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Table: sub_samples
--- 旧系统副样本表：legacy容器内的细分项
-CREATE TABLE `sub_samples` (
-  `id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `sample_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `name` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `status` enum('normal','warning','critical','used','pending') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'normal',
-  `temperature` decimal(5,1) NOT NULL,
-  `collected_at` date DEFAULT NULL,
-  `patient_id` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `uploader` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `created_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `tags` json DEFAULT NULL,
-  `position` int NOT NULL,
-  `note` text COLLATE utf8mb4_unicode_ci,
-  `volume` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `deleted_at` timestamp NULL DEFAULT NULL,
-  `deleted_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_sample` (`sample_id`),
-  KEY `idx_sub_samples_active_position` (`sample_id`,`deleted_at`,`position`),
-  CONSTRAINT `sub_samples_ibfk_1` FOREIGN KEY (`sample_id`) REFERENCES `samples` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: tubes

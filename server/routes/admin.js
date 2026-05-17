@@ -57,14 +57,11 @@ router.get('/summary', async (_req, res) => {
   try {
     const [
       [[refrigeratorTotals]],
-      [[sampleTotals]],
-      [[subSampleTotals]],
       [[srTotals]],
       [[upperItemTotals]],
       [[boxTotals]],
       [[tubeTotals]],
       [srTypeRows],
-      [typeRows],
       [fridgeRows],
       [ownerRows],
     ] = await Promise.all([
@@ -73,18 +70,6 @@ router.get('/summary', async (_req, res) => {
           COUNT(*) AS refrigerator_count,
           COALESCE(SUM(upper_rows * upper_cols + lower_rows * lower_cols), 0) AS total_capacity
          FROM refrigerators
-         WHERE deleted_at IS NULL`,
-      ),
-      pool.query(
-        `SELECT
-          COUNT(*) AS sample_count
-         FROM samples
-         WHERE deleted_at IS NULL`,
-      ),
-      pool.query(
-        `SELECT
-          COUNT(*) AS sub_sample_count
-         FROM sub_samples
          WHERE deleted_at IS NULL`,
       ),
       // Sample records totals
@@ -125,45 +110,15 @@ router.get('/summary', async (_req, res) => {
          GROUP BY sample_type ORDER BY count DESC`
       ),
       pool.query(
-        `SELECT type, SUM(cnt) AS count
-         FROM (
-           SELECT type, COUNT(*) AS cnt FROM samples WHERE deleted_at IS NULL GROUP BY type
-           UNION ALL
-           SELECT type, COUNT(*) AS cnt FROM sub_samples WHERE deleted_at IS NULL GROUP BY type
-         ) combined
-         GROUP BY type
-         ORDER BY count DESC, type ASC`,
-      ),
-      pool.query(
         `SELECT
           r.id,
           r.name,
           (r.upper_rows * r.upper_cols + r.lower_rows * r.lower_cols + COALESCE(b.box_capacity, 0)) AS capacity,
-          COALESCE(s.sample_count, 0) AS sample_count,
-          COALESCE(ss.sub_sample_count, 0) AS sub_sample_count,
           COALESCE(sr.sample_record_count, 0) AS sample_record_count,
           COALESCE(ui.upper_item_count, 0) AS upper_item_count,
           COALESCE(b.box_count, 0) AS box_count,
           COALESCE(t.tube_count, 0) AS tube_count
          FROM refrigerators r
-         LEFT JOIN (
-           SELECT
-             refrigerator_id,
-             COUNT(*) AS sample_count
-           FROM samples
-           WHERE deleted_at IS NULL
-           GROUP BY refrigerator_id
-         ) s ON s.refrigerator_id = r.id
-         LEFT JOIN (
-           SELECT
-             samples.refrigerator_id,
-             COUNT(*) AS sub_sample_count
-           FROM sub_samples
-           JOIN samples ON samples.id = sub_samples.sample_id
-           WHERE sub_samples.deleted_at IS NULL
-             AND samples.deleted_at IS NULL
-           GROUP BY samples.refrigerator_id
-         ) ss ON ss.refrigerator_id = r.id
          LEFT JOIN (
            SELECT
              COALESCE(d.refrigerator_id, ui.refrigerator_id) AS refrigerator_id,
@@ -213,37 +168,22 @@ router.get('/summary', async (_req, res) => {
          ORDER BY r.created_at ASC`,
       ),
       pool.query(
-        `SELECT
-          owner,
-          SUM(sample_count) AS sample_count,
-          SUM(sub_sample_count) AS sub_sample_count
-         FROM (
-           SELECT COALESCE(created_by, '历史数据') AS owner, COUNT(*) AS sample_count, 0 AS sub_sample_count
-           FROM samples
-           WHERE deleted_at IS NULL
-           GROUP BY COALESCE(created_by, '历史数据')
-           UNION ALL
-           SELECT COALESCE(created_by, '历史数据') AS owner, 0 AS sample_count, COUNT(*) AS sub_sample_count
-           FROM sub_samples
-           WHERE deleted_at IS NULL
-           GROUP BY COALESCE(created_by, '历史数据')
-         ) combined
-         GROUP BY owner
-         ORDER BY SUM(sample_count) + SUM(sub_sample_count) DESC, owner ASC`,
+        `SELECT COALESCE(uploader, '历史数据') AS owner,
+                COUNT(*) AS count
+         FROM sample_records
+         WHERE deleted_at IS NULL
+         GROUP BY COALESCE(uploader, '历史数据')
+         ORDER BY count DESC, owner ASC`,
       ),
     ]);
 
-    const sampleCount = Number(sampleTotals.sample_count || 0);
-    const subSampleCount = Number(subSampleTotals.sub_sample_count || 0);
     const srCount = Number(srTotals.sr_count || 0);
     const upperItemCount = Number(upperItemTotals.upper_item_count || 0);
     const boxCount = Number(boxTotals.box_count || 0);
     const tubeCount = Number(tubeTotals.tube_count || 0);
     const totalCapacity = Number(refrigeratorTotals.total_capacity || 0) + Number(boxTotals.box_capacity || 0);
-    const usedSlots = sampleCount + tubeCount + upperItemCount;
-    // Merge type counts (old + new)
+    const usedSlots = tubeCount + upperItemCount;
     const mergedTypes = new Map();
-    for (const row of typeRows) mergedTypes.set(row.type || '未分类', (mergedTypes.get(row.type || '未分类') || 0) + Number(row.count || 0));
     for (const row of srTypeRows) mergedTypes.set(row.type || '未分类', (mergedTypes.get(row.type || '未分类') || 0) + Number(row.count || 0));
 
     // Per-fridge sample type distribution from sample_records via tubes
@@ -265,13 +205,11 @@ router.get('/summary', async (_req, res) => {
     res.json({
       totals: {
         refrigerators: Number(refrigeratorTotals.refrigerator_count || 0),
-        samples: sampleCount,
-        subSamples: subSampleCount,
         sampleRecords: srCount,
         upperItems: upperItemCount,
         boxes: boxCount,
         tubes: tubeCount,
-        totalItems: sampleCount + subSampleCount + srCount + upperItemCount,
+        totalItems: srCount + upperItemCount,
         totalCapacity,
         usedSlots,
         usageRate: totalCapacity > 0 ? Math.round((usedSlots / totalCapacity) * 100) : 0,
@@ -281,120 +219,20 @@ router.get('/summary', async (_req, res) => {
         id: row.id,
         name: row.name,
         capacity: Number(row.capacity || 0),
-        sampleCount: Number(row.sample_count || 0),
-        subSampleCount: Number(row.sub_sample_count || 0),
         sampleRecordCount: Number(row.sample_record_count || 0),
         upperItemCount: Number(row.upper_item_count || 0),
         boxCount: Number(row.box_count || 0),
         tubeCount: Number(row.tube_count || 0),
         typeDistribution: fridgeTypeMap.get(row.id) || [],
         usageRate: Number(row.capacity || 0) > 0
-          ? Math.round(((Number(row.sample_count || 0) + Number(row.tube_count || 0) + Number(row.upper_item_count || 0)) / Number(row.capacity || 0)) * 100)
+          ? Math.round(((Number(row.tube_count || 0) + Number(row.upper_item_count || 0)) / Number(row.capacity || 0)) * 100)
           : 0,
       })),
       owners: ownerRows.map((row) => ({
         username: row.owner,
-        sampleCount: Number(row.sample_count || 0),
-        subSampleCount: Number(row.sub_sample_count || 0),
+        recordCount: Number(row.count || 0),
       })),
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/samples', async (_req, res) => {
-  try {
-    const [rows] = await pool.query(
-      `SELECT *
-       FROM (
-         SELECT
-           'sample' AS kind,
-           samples.id,
-           samples.name,
-           samples.type,
-           samples.status,
-           samples.temperature,
-           samples.collected_at,
-           samples.patient_id,
-           samples.uploader,
-           samples.created_by,
-           samples.tags,
-           samples.note,
-           samples.volume,
-           refrigerators.id AS refrigerator_id,
-           refrigerators.name AS refrigerator_name,
-           samples.compartment,
-           samples.position,
-           NULL AS parent_id,
-           NULL AS parent_name,
-           COALESCE(sub_counts.sub_sample_count, 0) AS sub_sample_count
-         FROM samples
-         JOIN refrigerators ON refrigerators.id = samples.refrigerator_id
-         LEFT JOIN (
-           SELECT sample_id, COUNT(*) AS sub_sample_count
-           FROM sub_samples
-           WHERE deleted_at IS NULL
-           GROUP BY sample_id
-         ) sub_counts ON sub_counts.sample_id = samples.id
-         WHERE samples.deleted_at IS NULL
-           AND refrigerators.deleted_at IS NULL
-         UNION ALL
-         SELECT
-           'subsample' AS kind,
-           sub_samples.id,
-           sub_samples.name,
-           sub_samples.type,
-           sub_samples.status,
-           sub_samples.temperature,
-           sub_samples.collected_at,
-           sub_samples.patient_id,
-           sub_samples.uploader,
-           sub_samples.created_by,
-           sub_samples.tags,
-           sub_samples.note,
-           sub_samples.volume,
-           refrigerators.id AS refrigerator_id,
-           refrigerators.name AS refrigerator_name,
-           samples.compartment,
-           sub_samples.position,
-           samples.id AS parent_id,
-           samples.name AS parent_name,
-           0 AS sub_sample_count
-         FROM sub_samples
-         JOIN samples ON samples.id = sub_samples.sample_id
-         JOIN refrigerators ON refrigerators.id = samples.refrigerator_id
-         WHERE sub_samples.deleted_at IS NULL
-           AND samples.deleted_at IS NULL
-           AND refrigerators.deleted_at IS NULL
-       ) items
-       ORDER BY collected_at DESC, refrigerator_name ASC, kind ASC, id ASC`,
-    );
-
-    res.json(
-      rows.map((row) => ({
-        kind: row.kind,
-        id: row.id,
-        name: row.name,
-        type: row.type,
-        status: row.status,
-        temperature: Number(row.temperature),
-        collectedAt: formatDbDate(row.collected_at),
-        patientId: row.patient_id || '',
-        uploader: row.uploader || '',
-        createdBy: row.created_by || undefined,
-        tags: parseTags(row.tags),
-        note: row.note || '',
-        volume: row.volume || '',
-        refrigeratorId: row.refrigerator_id,
-        refrigeratorName: row.refrigerator_name,
-        compartment: row.compartment,
-        position: Number(row.position || 0),
-        parentId: row.parent_id || undefined,
-        parentName: row.parent_name || undefined,
-        subSampleCount: Number(row.sub_sample_count || 0),
-      })),
-    );
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -403,25 +241,8 @@ router.get('/samples', async (_req, res) => {
 router.get('/users', async (_req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT
-        u.username,
-        u.role,
-        u.created_at,
-        COALESCE(s.sample_count, 0) AS sample_count,
-        COALESCE(ss.sub_sample_count, 0) AS sub_sample_count
+      `SELECT u.username, u.role, u.created_at
        FROM users u
-       LEFT JOIN (
-         SELECT created_by, COUNT(*) AS sample_count
-         FROM samples
-         WHERE created_by IS NOT NULL AND deleted_at IS NULL
-         GROUP BY created_by
-       ) s ON s.created_by = u.username
-       LEFT JOIN (
-         SELECT created_by, COUNT(*) AS sub_sample_count
-         FROM sub_samples
-         WHERE created_by IS NOT NULL AND deleted_at IS NULL
-         GROUP BY created_by
-       ) ss ON ss.created_by = u.username
        ORDER BY CASE WHEN u.role = 'root' THEN 0 ELSE 1 END, u.username ASC`,
     );
     res.json(
@@ -429,8 +250,6 @@ router.get('/users', async (_req, res) => {
         username: row.username,
         role: row.role,
         createdAt: row.created_at,
-        sampleCount: Number(row.sample_count || 0),
-        subSampleCount: Number(row.sub_sample_count || 0),
       })),
     );
   } catch (err) {
@@ -457,8 +276,6 @@ router.post('/users', async (req, res) => {
       username,
       role,
       createdAt: new Date().toISOString(),
-      sampleCount: 0,
-      subSampleCount: 0,
     });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: '用户已存在' });
@@ -508,18 +325,10 @@ router.patch('/users/:username', async (req, res) => {
     const [[updated]] = await pool.query('SELECT username, role, created_at FROM users WHERE username = ?', [
       username,
     ]);
-    const [[counts]] = await pool.query(
-      `SELECT
-        COALESCE((SELECT COUNT(*) FROM samples WHERE created_by = ? AND deleted_at IS NULL), 0) AS sample_count,
-        COALESCE((SELECT COUNT(*) FROM sub_samples WHERE created_by = ? AND deleted_at IS NULL), 0) AS sub_sample_count`,
-      [username, username]
-    );
     res.json({
       username: updated.username,
       role: updated.role,
       createdAt: updated.created_at,
-      sampleCount: Number(counts.sample_count || 0),
-      subSampleCount: Number(counts.sub_sample_count || 0),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -678,6 +487,66 @@ router.put('/upper-items/:id', async (req, res) => {
     values.push(id);
     await pool.query(`UPDATE upper_items SET ${fields.join(', ')} WHERE id = ?`, values);
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/sample-types — all sample types with per-table usage counts
+router.get('/sample-types', async (_req, res) => {
+  try {
+    const [[typeRows], [recordCounts], [boxCounts]] = await Promise.all([
+      pool.query('SELECT name FROM sample_types ORDER BY name'),
+      pool.query('SELECT sample_type AS type, COUNT(*) AS cnt FROM sample_records WHERE deleted_at IS NULL AND sample_type IS NOT NULL GROUP BY sample_type'),
+      pool.query('SELECT sample_type AS type, COUNT(*) AS cnt FROM boxes WHERE deleted_at IS NULL AND sample_type IS NOT NULL GROUP BY sample_type'),
+    ]);
+
+    const recordCountMap = new Map();
+    for (const r of recordCounts) recordCountMap.set(r.type, Number(r.cnt));
+    const boxCountMap = new Map();
+    for (const r of boxCounts) boxCountMap.set(r.type, Number(r.cnt));
+
+    const result = typeRows.map((t) => {
+      const recordCount = recordCountMap.get(t.name) || 0;
+      const boxCount = boxCountMap.get(t.name) || 0;
+      return {
+        name: t.name,
+        recordCount,
+        boxCount,
+        total: recordCount + boxCount,
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/item-types — all item types with usage counts
+router.get('/item-types', async (_req, res) => {
+  try {
+    const [[typeRows], [itemCounts]] = await Promise.all([
+      pool.query('SELECT name FROM item_types ORDER BY name'),
+      pool.query(
+        `SELECT ui.item_type AS type, COUNT(*) AS cnt
+         FROM upper_items ui
+         JOIN refrigerators r ON r.id = ui.refrigerator_id AND r.deleted_at IS NULL
+         WHERE ui.deleted_at IS NULL
+         GROUP BY ui.item_type`,
+      ),
+    ]);
+
+    const countMap = new Map();
+    for (const r of itemCounts) countMap.set(r.type, Number(r.cnt));
+
+    const result = typeRows.map((t) => ({
+      name: t.name,
+      upperItemCount: countMap.get(t.name) || 0,
+      total: countMap.get(t.name) || 0,
+    }));
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

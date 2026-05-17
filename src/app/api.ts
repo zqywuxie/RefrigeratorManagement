@@ -1,5 +1,4 @@
 import type { AuthUser } from './AuthContext';
-import { Sample, SubSample } from './types';
 import type { UpperItem, Drawer, Box, BoxCell, SampleRecord, Tube } from './types';
 
 export interface RefrigeratorResponse {
@@ -52,29 +51,6 @@ export interface AdminUser {
   role: AuthUser['role'];
   createdAt: string;
   sampleCount: number;
-  subSampleCount: number;
-}
-
-export interface AdminSampleItem {
-  kind: 'sample' | 'subsample';
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  temperature: number;
-  collectedAt: string;
-  patientId: string;
-  uploader: string;
-  createdBy?: string;
-  tags: string[];
-  note: string;
-  volume: string;
-  refrigeratorId: string;
-  refrigeratorName: string;
-  compartment: 'upper' | 'lower';
-  position: number;
-  parentId?: string;
-  parentName?: string;
   subSampleCount: number;
 }
 
@@ -295,6 +271,17 @@ export async function createSampleType(name: string): Promise<{ name: string }> 
   });
 }
 
+export async function renameSampleType(oldName: string, newName: string): Promise<{ oldName: string; newName: string }> {
+  return fetchJSON(`${BASE}/sample-types/${encodeURIComponent(oldName)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ newName }),
+  });
+}
+
+export async function deleteSampleType(name: string): Promise<void> {
+  await fetchJSON(`${BASE}/sample-types/${encodeURIComponent(name)}`, { method: 'DELETE' });
+}
+
 // ── Item Types ──
 
 export async function fetchItemTypes(): Promise<string[]> {
@@ -306,6 +293,42 @@ export async function createItemType(name: string): Promise<{ name: string }> {
     method: 'POST',
     body: JSON.stringify({ name }),
   });
+}
+
+export async function renameItemType(oldName: string, newName: string): Promise<{ oldName: string; newName: string }> {
+  return fetchJSON(`${BASE}/item-types/${encodeURIComponent(oldName)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ newName }),
+  });
+}
+
+export async function deleteItemType(name: string): Promise<void> {
+  await fetchJSON(`${BASE}/item-types/${encodeURIComponent(name)}`, { method: 'DELETE' });
+}
+
+// ── Admin Type Management ──
+
+export interface AdminSampleTypeInfo {
+  name: string;
+  sampleCount: number;
+  subSampleCount: number;
+  recordCount: number;
+  boxCount: number;
+  total: number;
+}
+
+export interface AdminItemTypeInfo {
+  name: string;
+  upperItemCount: number;
+  total: number;
+}
+
+export async function fetchAdminSampleTypes(): Promise<AdminSampleTypeInfo[]> {
+  return fetchJSON(`${BASE}/admin/sample-types`);
+}
+
+export async function fetchAdminItemTypes(): Promise<AdminItemTypeInfo[]> {
+  return fetchJSON(`${BASE}/admin/item-types`);
 }
 
 // ── Upper Items ──

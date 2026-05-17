@@ -2,8 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import refrigeratorsRouter from './routes/refrigerators.js';
-import samplesRouter from './routes/samples.js';
-import subSamplesRouter from './routes/subSamples.js';
 import sampleTypesRouter from './routes/sampleTypes.js';
 import itemTypesRouter from './routes/itemTypes.js';
 import authRouter from './routes/auth.js';
@@ -36,8 +34,6 @@ app.get('/api/health', async (_req, res) => {
 });
 
 app.use('/api/refrigerators', refrigeratorsRouter);
-app.use('/api/refrigerators', samplesRouter);
-app.use('/api/samples', subSamplesRouter);
 app.use('/api/sample-types', sampleTypesRouter);
 app.use('/api/item-types', itemTypesRouter);
 app.use('/api/auth', authRouter);

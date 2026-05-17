@@ -1,6 +1,5 @@
 export type SampleStatus = 'normal' | 'warning' | 'critical' | 'used' | 'pending';
 export type SampleType = string;
-export type Compartment = 'upper' | 'lower';
 
 export interface Refrigerator {
   id: string;
@@ -15,63 +14,9 @@ export interface Refrigerator {
   lowerTemperature: number;
 }
 
-export interface SubSample {
-  id: string;
-  name: string;
-  type: SampleType;
-  status: SampleStatus;
-  temperature: number;
-  collectedAt: string;
-  patientId: string;
-  uploader: string;
-  createdBy?: string;
-  tags: string[];
-  position: number;
-  note?: string;
-  volume?: string;
-}
-
-export interface Sample {
-  id: string;
-  name: string;
-  type: SampleType;
-  status: SampleStatus;
-  temperature: number;
-  collectedAt: string;
-  patientId: string;
-  uploader: string;
-  createdBy?: string;
-  tags: string[];
-  compartment: Compartment;
-  position: number;
-  note?: string;
-  volume?: string;
-  gridRows: number;
-  gridCols: number;
-  subSamples: SubSample[];
-}
-
-export interface CompartmentGridConfig {
-  rows: number;
-  cols: number;
-}
-
 export const GRID_MIN = 1;
 export const GRID_MAX_ROWS = 5;
 export const GRID_MAX_COLS = 5;
-
-export const DEFAULT_COMPARTMENT_GRIDS: Record<Compartment, CompartmentGridConfig> = {
-  upper: { rows: 2, cols: 3 },
-  lower: { rows: 2, cols: 2 },
-};
-
-export function compartmentCapacity(config: CompartmentGridConfig): number {
-  return config.rows * config.cols;
-}
-
-export function positionToGrid(pos: number, cols: number): { row: number; col: number } {
-  return { row: Math.floor(pos / cols), col: pos % cols };
-}
 
 export function formatChineseShortDate(value?: string | null): string {
   if (!value) return '-';
@@ -91,9 +36,6 @@ export function formatChineseShortDate(value?: string | null): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}/${month}/${day}`;
 }
-
-export const UPPER_CAPACITY = compartmentCapacity(DEFAULT_COMPARTMENT_GRIDS.upper);
-export const LOWER_CAPACITY = compartmentCapacity(DEFAULT_COMPARTMENT_GRIDS.lower);
 
 export const DEFAULT_SAMPLE_TYPES: SampleType[] = ['血清', '血浆', '尿液', 'DNA', '组织', '全血'];
 

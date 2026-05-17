@@ -375,7 +375,7 @@ export function DrawerFridgeView({
     setHoveredSampleId(null);
   }, [selectedDrawerId, handleBackToFridge]);
 
-  const breadcrumbNodes: BreadcrumbNode[] = [{ label: fridge.name }];
+  const breadcrumbNodes: BreadcrumbNode[] = [{ label: fridge.name, onClick: handleBackToFridge }];
   if (viewLevel === 'drawer' || viewLevel === 'box') {
     breadcrumbNodes.push({ label: `抽屉 ${selectedDrawerLabel}`, onClick: handleBackToDrawer });
   }

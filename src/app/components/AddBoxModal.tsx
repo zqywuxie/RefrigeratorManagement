@@ -64,7 +64,7 @@ export function AddBoxModal({
       (preset) => preset.rows === editBox?.grid_rows && preset.cols === editBox?.grid_cols,
     );
     setGridPreset(presetIndex >= 0 ? presetIndex : 0);
-  }, [isOpen, editBox, sampleTypes]);
+  }, [isOpen, editBox]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,6 +190,17 @@ export function AddBoxModal({
                   <input
                     value={newTypeName}
                     onChange={(e) => setNewTypeName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const nextType = newTypeName.trim();
+                        if (!nextType) return;
+                        onAddSampleType(nextType);
+                        setSampleType(nextType);
+                        setNewTypeName('');
+                        setShowNewType(false);
+                      }
+                    }}
                     placeholder="新样本类型"
                     autoFocus
                     className="min-w-0 flex-1 px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
@@ -208,6 +219,16 @@ export function AddBoxModal({
                     className="px-2 rounded-lg text-[12px] min-h-[44px]"
                     style={{ background: '#2563eb', color: '#fff' }}
                   >添加</button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowNewType(false); setNewTypeName(''); }}
+                    className="px-2 rounded-lg text-[12px] min-h-[44px]"
+                    style={{
+                      background: 'var(--app-subtle-bg)',
+                      border: '1px solid var(--app-subtle-border)',
+                      color: 'var(--app-subtle-text)',
+                    }}
+                  >取消</button>
                 </div>
               ) : (
                 <div className="flex gap-1">

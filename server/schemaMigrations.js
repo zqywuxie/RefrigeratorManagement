@@ -128,20 +128,8 @@ export async function runSchemaMigrations() {
   // Update existing fridges to -80°C
   await pool.query("UPDATE refrigerators SET upper_temperature = -80 WHERE upper_temperature IS NULL OR upper_temperature > 0");
   await pool.query("UPDATE refrigerators SET lower_temperature = -80 WHERE lower_temperature IS NULL OR lower_temperature > 0");
-  await ensureColumn('samples', 'uploader', '`uploader` VARCHAR(100) NULL AFTER `patient_id`');
-  await ensureColumn('sub_samples', 'uploader', '`uploader` VARCHAR(100) NULL AFTER `patient_id`');
-  await ensureColumn('samples', 'created_by', '`created_by` VARCHAR(50) NULL AFTER `uploader`');
-  await ensureColumn('sub_samples', 'created_by', '`created_by` VARCHAR(50) NULL AFTER `uploader`');
   await ensureColumn('refrigerators', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `updated_at`');
   await ensureColumn('refrigerators', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
-  await ensureColumn('samples', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `updated_at`');
-  await ensureColumn('samples', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
-  await ensureColumn('sub_samples', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `updated_at`');
-  await ensureColumn('sub_samples', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
-  await dropIndexIfExists('samples', 'uniq_samples_fridge_compartment_position');
-  await dropIndexIfExists('sub_samples', 'uniq_sub_samples_sample_position');
-  await ensureIndex('samples', 'idx_samples_active_position', '`refrigerator_id`, `deleted_at`, `compartment`, `position`');
-  await ensureIndex('sub_samples', 'idx_sub_samples_active_position', '`sample_id`, `deleted_at`, `position`');
 
   // Drawer Freezer support
   await ensureColumn('refrigerators', 'fridge_type', "`fridge_type` ENUM('drawer','shelf') DEFAULT 'drawer' AFTER `lower_temperature`");
@@ -299,58 +287,6 @@ export async function runSchemaMigrations() {
   await ensureColumn('upper_items', 'grid_rows', '`grid_rows` INT NULL AFTER `box_mode`');
   await ensureColumn('upper_items', 'grid_cols', '`grid_cols` INT NULL AFTER `grid_rows`');
 
-  // Widen samples/sub_samples PKs from VARCHAR(20) to VARCHAR(36) to match UUIDs
-  try {
-    await pool.query('ALTER TABLE samples MODIFY COLUMN id VARCHAR(36) NOT NULL');
-  } catch (err) {
-    console.warn('Skip samples.id widen:', err.message);
-  }
-  try {
-    await pool.query('ALTER TABLE sub_samples MODIFY COLUMN id VARCHAR(36) NOT NULL');
-  } catch (err) {
-    console.warn('Skip sub_samples.id widen:', err.message);
-  }
-  try {
-    const [foreignKeys] = await pool.query(
-      `SELECT CONSTRAINT_NAME
-       FROM information_schema.KEY_COLUMN_USAGE
-       WHERE TABLE_SCHEMA = DATABASE()
-         AND TABLE_NAME = 'sub_samples'
-         AND COLUMN_NAME = 'sample_id'
-         AND REFERENCED_TABLE_NAME = 'samples'`,
-    );
-    for (const fk of foreignKeys) {
-      await pool.query(`ALTER TABLE sub_samples DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``);
-    }
-    await pool.query('ALTER TABLE sub_samples MODIFY COLUMN sample_id VARCHAR(36) NOT NULL');
-    const [nextForeignKeys] = await pool.query(
-      `SELECT CONSTRAINT_NAME
-       FROM information_schema.KEY_COLUMN_USAGE
-       WHERE TABLE_SCHEMA = DATABASE()
-         AND TABLE_NAME = 'sub_samples'
-         AND COLUMN_NAME = 'sample_id'
-         AND REFERENCED_TABLE_NAME = 'samples'`,
-    );
-    if (nextForeignKeys.length === 0) {
-      await pool.query(
-        'ALTER TABLE sub_samples ADD CONSTRAINT sub_samples_ibfk_1 FOREIGN KEY (sample_id) REFERENCES samples(id) ON DELETE CASCADE',
-      );
-    }
-  } catch (err) {
-    console.warn('Skip sub_samples.sample_id widen:', err.message);
-  }
-
-  // Allow NULL collected_at since route code passes null when not provided
-  try {
-    await pool.query('ALTER TABLE samples MODIFY COLUMN collected_at DATE NULL');
-  } catch (err) {
-    console.warn('Skip samples.collected_at nullable:', err.message);
-  }
-  try {
-    await pool.query('ALTER TABLE sub_samples MODIFY COLUMN collected_at DATE NULL');
-  } catch (err) {
-    console.warn('Skip sub_samples.collected_at nullable:', err.message);
-  }
 
   // Add missing deleted_by tracking columns
   await ensureColumn('upper_items', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');

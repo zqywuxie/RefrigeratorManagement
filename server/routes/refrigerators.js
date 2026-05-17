@@ -101,21 +101,6 @@ router.put('/:id', authenticate, requireRoot, async (req, res) => {
     const newUpperTemperature = upperTemperature ?? existing.upper_temperature ?? -20;
     const newLowerTemperature = lowerTemperature ?? existing.lower_temperature ?? 4;
 
-    // Validate: no samples at positions >= new capacity
-    const upperCap = newUpperRows * newUpperCols;
-    const lowerCap = newLowerRows * newLowerCols;
-    const [[{ cnt: upperOverflow }]] = await pool.query(
-      'SELECT COUNT(*) as cnt FROM samples WHERE refrigerator_id = ? AND deleted_at IS NULL AND compartment = ? AND position >= ?',
-      [id, 'upper', upperCap],
-    );
-    const [[{ cnt: lowerOverflow }]] = await pool.query(
-      'SELECT COUNT(*) as cnt FROM samples WHERE refrigerator_id = ? AND deleted_at IS NULL AND compartment = ? AND position >= ?',
-      [id, 'lower', lowerCap],
-    );
-    if (upperOverflow > 0 || lowerOverflow > 0) {
-      return res.status(409).json({ error: '无法缩小网格：部分样本位置超出新网格范围' });
-    }
-
     await pool.query(
       `UPDATE refrigerators SET name = ?, description = ?, upper_rows = ?, upper_cols = ?, lower_rows = ?, lower_cols = ?, upper_temperature = ?, lower_temperature = ?
        WHERE id = ?`,
@@ -147,17 +132,6 @@ router.delete('/:id', authenticate, requireRoot, async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Refrigerator not found' });
     await pool.query(
       'UPDATE refrigerators SET deleted_at = CURRENT_TIMESTAMP, deleted_by = ? WHERE id = ?',
-      [req.user.username, req.params.id],
-    );
-    await pool.query(
-      'UPDATE samples SET deleted_at = CURRENT_TIMESTAMP, deleted_by = ? WHERE refrigerator_id = ? AND deleted_at IS NULL',
-      [req.user.username, req.params.id],
-    );
-    await pool.query(
-      `UPDATE sub_samples
-       JOIN samples ON samples.id = sub_samples.sample_id
-       SET sub_samples.deleted_at = CURRENT_TIMESTAMP, sub_samples.deleted_by = ?
-       WHERE samples.refrigerator_id = ? AND sub_samples.deleted_at IS NULL`,
       [req.user.username, req.params.id],
     );
     await pool.query(
