@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Thermometer } from 'lucide-react';
 import { createUpperItem, deleteUpperItem, fetchUpperItems, updateUpperItem } from '../api';
 import { Refrigerator, UpperItem } from '../types';
 import { AddItemModal } from './AddItemModal';
@@ -126,10 +125,6 @@ export function ShelfFridgeView({
             与主冰箱上层一致的开放式物品存储
           </div>
         </div>
-        <div className="flex items-center gap-1 text-[12px]" style={{ color: 'var(--app-muted)' }}>
-          <Thermometer size={14} />
-          {fridge.upperTemperature}° / {fridge.lowerTemperature}°
-        </div>
       </div>
 
       {loading && items.length === 0 ? (
@@ -144,9 +139,6 @@ export function ShelfFridgeView({
                 <div className="flex items-center gap-2">
                   <span className="text-[13px]" style={{ color: 'var(--app-muted)' }}>
                     第 {row} 行 · {rowItems.length} 件
-                  </span>
-                  <span className="text-[11px] font-mono" style={{ color: row <= 2 ? '#2563eb' : '#15803d' }}>
-                    {temperature}°C
                   </span>
                 </div>
                 <button

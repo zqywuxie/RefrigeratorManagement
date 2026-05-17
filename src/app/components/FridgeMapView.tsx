@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import {
-  Layers, Package, Map as MapIcon, Thermometer, Grid3X3, ChevronRight,
+  Layers, Package, Map as MapIcon, Grid3X3, ChevronRight,
 } from 'lucide-react';
 import {
   UpperItem, Drawer, Box, getOccupancyRate, getOccupancyColor,
@@ -13,8 +13,6 @@ interface FridgeMapViewProps {
   upperItems: UpperItem[];
   layer1Drawers: Drawer[];
   layer2Drawers: Drawer[];
-  upperTemperature: number;
-  lowerTemperature: number;
   onDrawerClick: (drawerId: string) => void;
   onUpperItemClick?: (itemId: string) => void;
   onViewFridge?: () => void;
@@ -76,8 +74,6 @@ export function FridgeMapView({
   upperItems,
   layer1Drawers,
   layer2Drawers,
-  upperTemperature,
-  lowerTemperature,
   onDrawerClick,
   onUpperItemClick,
   onViewFridge,
@@ -86,11 +82,11 @@ export function FridgeMapView({
 
   const zoneInfo = () => {
     if (selectedZone === 'upper') {
-      return { name: '上层开放存储', count: upperItems.length, subtitle: `${upperTemperature}°C`, subtitleColor: '#2563eb' };
+      return { name: '上层开放存储', count: upperItems.length };
     } else if (selectedZone === 'layer1') {
-      return { name: '下层-上层抽屉区', count: layer1Drawers.length, subtitle: `${lowerTemperature}°C`, subtitleColor: '#15803d' };
+      return { name: '下层-上层抽屉区', count: layer1Drawers.length };
     } else {
-      return { name: '下层-下层抽屉区', count: layer2Drawers.length, subtitle: `${lowerTemperature}°C`, subtitleColor: '#15803d' };
+      return { name: '下层-下层抽屉区', count: layer2Drawers.length };
     }
   };
 
@@ -113,12 +109,6 @@ export function FridgeMapView({
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-[13px]" style={{ color: 'var(--app-muted)' }}>
-              <Thermometer size={14} />
-              <span style={{ color: '#2563eb' }}>{upperTemperature}°C</span>
-              <span>/</span>
-              <span style={{ color: '#15803d' }}>{lowerTemperature}°C</span>
-            </div>
             <div className="flex items-center gap-2 text-[13px]" style={{ color: 'var(--app-muted)' }}>
               <Package size={14} />
               <span>{totalBoxes}/{totalCapacity} 盒</span>
@@ -170,7 +160,7 @@ export function FridgeMapView({
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[15px] font-medium" style={{ color: 'var(--app-text)' }}>
-                    上层开放存储 {upperTemperature}°C
+                    上层开放存储
                   </div>
                   <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
                     2 行 · {upperItems.length} 件物品
@@ -242,7 +232,7 @@ export function FridgeMapView({
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[15px] font-medium" style={{ color: 'var(--app-text)' }}>
-                    第一层抽屉区 {lowerTemperature}°C
+                    第一层抽屉区
                   </div>
                   <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
                     {DRAWER_LAYER1.rows}×{DRAWER_LAYER1.cols} · {layer1Drawers.length} 个抽屉
@@ -272,7 +262,7 @@ export function FridgeMapView({
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[15px] font-medium" style={{ color: 'var(--app-text)' }}>
-                    第二层抽屉区 {lowerTemperature}°C
+                    第二层抽屉区
                   </div>
                   <div className="text-[12px]" style={{ color: 'var(--app-muted)' }}>
                     {DRAWER_LAYER2.rows}×{DRAWER_LAYER2.cols} · {layer2Drawers.length} 个抽屉
@@ -314,16 +304,13 @@ export function FridgeMapView({
           <div className="flex items-center gap-2">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: info.subtitleColor + '20' }}
+              style={{ background: '#2563eb20' }}
             >
-              <MapIcon size={16} color={info.subtitleColor} />
+              <MapIcon size={16} color="#2563eb" />
             </div>
             <div>
               <div className="text-[14px] font-medium" style={{ color: 'var(--app-text)' }}>
                 {info.name}
-              </div>
-              <div className="text-[11px]" style={{ color: info.subtitleColor }}>
-                {info.subtitle}
               </div>
             </div>
           </div>

@@ -10,8 +10,6 @@ interface FridgeSelectorProps {
   onAdd: (
     name: string,
     description?: string,
-    upperTemperature?: number,
-    lowerTemperature?: number,
     fridgeType?: FridgeType,
   ) => void;
   onDelete: (id: string) => void;
@@ -19,8 +17,6 @@ interface FridgeSelectorProps {
     id: string,
     name: string,
     description?: string,
-    upperTemperature?: number,
-    lowerTemperature?: number,
   ) => void;
 }
 
@@ -37,14 +33,10 @@ export function FridgeSelector({
   const [adding, setAdding] = useState(false);
   const [addName, setAddName] = useState('');
   const [addDesc, setAddDesc] = useState('');
-  const [addUpperTemp, setAddUpperTemp] = useState('-20');
-  const [addLowerTemp, setAddLowerTemp] = useState('4');
   const [addFridgeType, setAddFridgeType] = useState<FridgeType>('drawer');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
-  const [editUpperTemp, setEditUpperTemp] = useState('-20');
-  const [editLowerTemp, setEditLowerTemp] = useState('4');
   const [addError, setAddError] = useState('');
   const [editError, setEditError] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
@@ -63,10 +55,6 @@ export function FridgeSelector({
 
   const selectedName =
     refrigerators.find((r) => r.id === selectedId)?.name ?? '选择冰箱';
-  const parseTemperature = (value: string, fallback: number) => {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  };
   const fieldStyle: React.CSSProperties = {
     background: 'var(--app-card-bg)',
     border: '1px solid var(--app-border)',
@@ -88,14 +76,10 @@ export function FridgeSelector({
     onAdd(
       addName.trim(),
       addDesc.trim() || undefined,
-      parseTemperature(addUpperTemp, -20),
-      parseTemperature(addLowerTemp, 4),
       addFridgeType,
     );
     setAddName('');
     setAddDesc('');
-    setAddUpperTemp('-20');
-    setAddLowerTemp('4');
     setAddFridgeType('drawer');
     setAdding(false);
   };

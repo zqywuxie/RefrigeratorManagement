@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Thermometer, Droplets, Zap } from 'lucide-react';
+import { Droplets, Zap } from 'lucide-react';
 import {
   Sample,
   SubSample,
@@ -21,8 +21,6 @@ interface FridgeUnitProps {
   matchedIds: Set<string>;
   searchQuery: string;
   compartmentGrids: Record<Compartment, CompartmentGridConfig>;
-  upperTemperature: number;
-  lowerTemperature: number;
   canManageFridge: boolean;
   viewingContainer: Sample | null;
   onDropSample: (
@@ -152,8 +150,6 @@ export function FridgeUnit({
   matchedIds,
   searchQuery,
   compartmentGrids,
-  upperTemperature,
-  lowerTemperature,
   canManageFridge,
   viewingContainer,
   onDropSample,
@@ -193,9 +189,6 @@ export function FridgeUnit({
   const hasWarning = samples.some(
     (s) => s.status === 'warning' || s.status === 'critical',
   );
-
-  const upperTemp = upperTemperature;
-  const lowerTemp = lowerTemperature;
 
   const upperGrid = compartmentGrids.upper;
   const lowerGrid = compartmentGrids.lower;
@@ -322,22 +315,9 @@ export function FridgeUnit({
                     上层 / Upper
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Thermometer
-                    size={18}
-                    className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]"
-                    color={hasWarning ? '#f59e0b' : 'var(--fridge-accent)'}
-                  />
-                  <span
-                    className="text-[15px] sm:text-[18px] font-mono tabular-nums"
-                    style={{ color: hasWarning ? '#f59e0b' : 'var(--fridge-accent)' }}
-                  >
-                    {upperTemp}°C
-                  </span>
-                  <span className="text-[13px]" style={{ color: 'var(--app-subtle-text)' }}>
-                    {upperSamples.length}/{upperCapacity}
-                  </span>
-                </div>
+                <span className="text-[13px]" style={{ color: 'var(--app-subtle-text)' }}>
+                  {upperSamples.length}/{upperCapacity}
+                </span>
               </div>
 
               {canManageFridge && (
@@ -461,18 +441,9 @@ export function FridgeUnit({
                 下层 / Lower
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <Thermometer size={18} className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" color="var(--fridge-accent)" />
-              <span
-                className="text-[15px] sm:text-[18px] font-mono"
-                style={{ color: 'var(--fridge-accent)' }}
-              >
-                {lowerTemp}°C
-              </span>
-              <span className="text-[13px]" style={{ color: 'var(--app-subtle-text)' }}>
-                {lowerSamples.length}/{lowerCapacity}
-              </span>
-            </div>
+            <span className="text-[13px]" style={{ color: 'var(--app-subtle-text)' }}>
+              {lowerSamples.length}/{lowerCapacity}
+            </span>
           </div>
 
           {canManageFridge && (

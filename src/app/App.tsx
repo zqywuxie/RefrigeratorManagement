@@ -497,8 +497,6 @@ function AppContent() {
     async (
       name: string,
       description?: string,
-      upperTemperature = -20,
-      lowerTemperature = 4,
       fridgeType: FridgeType = 'drawer',
     ) => {
       try {
@@ -510,8 +508,6 @@ function AppContent() {
           upperCols: isShelf ? 1 : 3,
           lowerRows: isShelf ? 2 : 2,
           lowerCols: isShelf ? 1 : 2,
-          upperTemperature,
-          lowerTemperature,
           fridgeType,
         });
         const newFridge: Refrigerator = {
@@ -522,8 +518,8 @@ function AppContent() {
           upperCols: data.upper_cols,
           lowerRows: data.lower_rows,
           lowerCols: data.lower_cols,
-          upperTemperature: Number(data.upper_temperature ?? upperTemperature),
-          lowerTemperature: Number(data.lower_temperature ?? lowerTemperature),
+          upperTemperature: Number(data.upper_temperature ?? -20),
+          lowerTemperature: Number(data.lower_temperature ?? 4),
           fridge_type: (data.fridge_type as FridgeType) || fridgeType,
         };
         setRefrigerators((prev) => [...prev, newFridge]);
@@ -541,15 +537,11 @@ function AppContent() {
       id: string,
       name: string,
       description?: string,
-      upperTemperature?: number,
-      lowerTemperature?: number,
     ) => {
       try {
         const data = await apiUpdateRefrigerator(id, {
           name,
           description,
-          upperTemperature,
-          lowerTemperature,
         });
         setRefrigerators((prev) =>
           prev.map((r) =>
@@ -1465,8 +1457,6 @@ function AppContent() {
                 matchedIds={matchedIds}
                 searchQuery={searchQuery}
                 compartmentGrids={compartmentGrids}
-                upperTemperature={selectedFridge?.upperTemperature ?? -20}
-                lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
                 canManageFridge={isRoot}
                 viewingContainer={viewingContainer}
                 onDropSample={handleDrop}
@@ -1497,7 +1487,7 @@ function AppContent() {
               </span>
               {isRoot && (
                 <button
-                  onClick={async () => { await handleAddFridge('主冰箱', '默认冰箱', -20, 4, 'drawer'); await handleAddFridge('四层大空间冰箱', '四层固定大空间存储冰箱', -20, 4, 'shelf'); }}
+                  onClick={async () => { await handleAddFridge('主冰箱', '默认冰箱', 'drawer'); await handleAddFridge('四层大空间冰箱', '四层固定大空间存储冰箱', 'shelf'); }}
                   className="px-4 py-2 rounded-lg text-[14px]"
                   style={{
                     background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
@@ -1554,8 +1544,6 @@ function AppContent() {
                   <FridgeSideMap
                     fridgeId={selectedFridge.id}
                     fridgeName={selectedFridge.name}
-                    upperTemperature={selectedFridge.upperTemperature}
-                    lowerTemperature={selectedFridge.lowerTemperature}
                     selectedDrawerId={activeDrawerId}
                     onDrawerClick={(drawerId, drawerLabel) => {
                       setSideMapNavTarget({ drawerId, drawerLabel });
@@ -1762,8 +1750,6 @@ function AppContent() {
               <FridgeSideMap
                 fridgeId={selectedFridge.id}
                 fridgeName={selectedFridge.name}
-                upperTemperature={selectedFridge.upperTemperature}
-                lowerTemperature={selectedFridge.lowerTemperature}
                 selectedDrawerId={activeDrawerId}
                 onDrawerClick={(drawerId, drawerLabel) => {
                   setSideMapNavTarget({ drawerId, drawerLabel });
@@ -1973,8 +1959,6 @@ function AppContent() {
                   matchedIds={matchedIds}
                   searchQuery={searchQuery}
                   compartmentGrids={compartmentGrids}
-                  upperTemperature={selectedFridge?.upperTemperature ?? -20}
-                  lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
                   canManageFridge={isRoot}
                   viewingContainer={viewingContainer}
                   onDropSample={handleDrop}
@@ -2006,7 +1990,7 @@ function AppContent() {
                 </span>
                 {isRoot && (
                   <button
-                    onClick={async () => { await handleAddFridge('主冰箱', '默认冰箱', -20, 4, 'drawer'); await handleAddFridge('四层大空间冰箱', '四层固定大空间存储冰箱', -20, 4, 'shelf'); }}
+                    onClick={async () => { await handleAddFridge('主冰箱', '默认冰箱', 'drawer'); await handleAddFridge('四层大空间冰箱', '四层固定大空间存储冰箱', 'shelf'); }}
                     className="px-4 py-2 rounded-lg text-[14px]"
                     style={{
                       background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useTheme } from 'next-themes';
-import { Thermometer, Package, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import {
   UpperItem, Drawer, getOccupancyRate, getOccupancyColor,
   DRAWER_LAYER1, DRAWER_LAYER2, getItemTypeConfig,
@@ -12,8 +12,6 @@ import { useIsMobile } from './ui/use-mobile';
 interface FridgeSideMapProps {
   fridgeId: string;
   fridgeName: string;
-  upperTemperature: number;
-  lowerTemperature: number;
   selectedDrawerId?: string | null;
   refreshKey?: number;
   onDrawerClick: (drawerId: string, drawerLabel: string) => void;
@@ -130,8 +128,6 @@ function MiniDrawerBlock({
 export function FridgeSideMap({
   fridgeId,
   fridgeName,
-  upperTemperature,
-  lowerTemperature,
   selectedDrawerId,
   refreshKey = 0,
   onDrawerClick,
