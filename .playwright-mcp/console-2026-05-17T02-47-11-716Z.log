@@ -1,0 +1,256 @@
+[     571ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:21608
+[     813ms] [ERROR] Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?%s%s 
+
+Check the render method of `SlotClone`. 
+    at Button (http://localhost:5173/src/app/components/ui/button.tsx:46:3)
+    at http://localhost:5173/node_modules/.vite/deps/chunk-UIBJWPTM.js?v=f40e0179:73:11
+    at http://localhost:5173/node_modules/.vite/deps/chunk-UIBJWPTM.js?v=f40e0179:54:11
+    at http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:150:13
+    at http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:77:13
+    at SheetTrigger (http://localhost:5173/src/app/components/ui/sheet.tsx:30:6)
+    at Provider (http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:55:15)
+    at Dialog (http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:42:5)
+    at Sheet (http://localhost:5173/src/app/components/ui/sheet.tsx:21:21)
+    at div
+    at header
+    at div
+    at DndProvider2 (http://localhost:5173/node_modules/.vite/deps/react-dnd.js?v=f40e0179:1482:9)
+    at AppContent (http://localhost:5173/src/app/App.tsx?t=1778985979279:147:36)
+    at AppGate (http://localhost:5173/src/app/App.tsx?t=1778985979279:111:29)
+    at AuthProvider (http://localhost:5173/src/app/AuthContext.tsx?t=1778985663171:21:32)
+    at V (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:44:25)
+    at J (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:42:18)
+    at App @ http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:520
+[     994ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/favicon.ico:0
+[   24657ms] [ERROR] Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?%s%s 
+
+Check the render method of `SlotClone`. 
+    at SheetOverlay (http://localhost:5173/src/app/components/ui/sheet.tsx:60:3)
+    at http://localhost:5173/node_modules/.vite/deps/chunk-UIBJWPTM.js?v=f40e0179:73:11
+    at http://localhost:5173/node_modules/.vite/deps/chunk-UIBJWPTM.js?v=f40e0179:54:11
+    at http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:150:13
+    at http://localhost:5173/node_modules/.vite/deps/chunk-AIU6725S.js?v=f40e0179:254:22
+    at Presence (http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:232:11)
+    at Provider (http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:55:15)
+    at DialogPortal (http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:101:11)
+    at SheetPortal (http://localhost:5173/src/app/components/ui/sheet.tsx:50:6)
+    at SheetContent (http://localhost:5173/src/app/components/ui/sheet.tsx:85:3)
+    at Provider (http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:55:15)
+    at Dialog (http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:42:5)
+    at Sheet (http://localhost:5173/src/app/components/ui/sheet.tsx:21:21)
+    at div
+    at header
+    at div
+    at DndProvider2 (http://localhost:5173/node_modules/.vite/deps/react-dnd.js?v=f40e0179:1482:9)
+    at AppContent (http://localhost:5173/src/app/App.tsx?t=1778985979279:147:36)
+    at AppGate (http://localhost:5173/src/app/App.tsx?t=1778985979279:111:29)
+    at AuthProvider (http://localhost:5173/src/app/AuthContext.tsx?t=1778985663171:21:32)
+    at V (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:44:25)
+    at J (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:42:18)
+    at App @ http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:520
+[   24717ms] [WARNING] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. @ http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:327
+[   53358ms] [ERROR] Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?%s%s 
+
+Check the render method of `SlotClone`. 
+    at DrawerOverlay (http://localhost:5173/src/app/components/ui/drawer.tsx:61:3)
+    at http://localhost:5173/node_modules/.vite/deps/chunk-UIBJWPTM.js?v=f40e0179:73:11
+    at http://localhost:5173/node_modules/.vite/deps/chunk-UIBJWPTM.js?v=f40e0179:54:11
+    at http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:150:13
+    at http://localhost:5173/node_modules/.vite/deps/chunk-AIU6725S.js?v=f40e0179:254:22
+    at Presence (http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:232:11)
+    at Provider (http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:55:15)
+    at DialogPortal (http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:101:11)
+    at Portal2 (http://localhost:5173/node_modules/.vite/deps/vaul.js?v=f40e0179:1503:19)
+    at DrawerPortal (http://localhost:5173/src/app/components/ui/drawer.tsx:41:6)
+    at DrawerContent (http://localhost:5173/src/app/components/ui/drawer.tsx:86:3)
+    at Provider (http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:55:15)
+    at Dialog (http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:42:5)
+    at Root2 (http://localhost:5173/node_modules/.vite/deps/vaul.js?v=f40e0179:787:24)
+    at Drawer (http://localhost:5173/src/app/components/ui/drawer.tsx:21:6)
+    at main
+    at div
+    at DndProvider2 (http://localhost:5173/node_modules/.vite/deps/react-dnd.js?v=f40e0179:1482:9)
+    at AppContent (http://localhost:5173/src/app/App.tsx?t=1778985979279:147:36)
+    at AppGate (http://localhost:5173/src/app/App.tsx?t=1778985979279:111:29)
+    at AuthProvider (http://localhost:5173/src/app/AuthContext.tsx?t=1778985663171:21:32)
+    at V (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:44:25)
+    at J (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:42:18)
+    at App @ http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:520
+[   53370ms] [ERROR] `DialogContent` requires a `DialogTitle` for the component to be accessible for screen reader users.
+
+If you want to hide the `DialogTitle`, you can wrap it with our VisuallyHidden component.
+
+For more information, see https://radix-ui.com/primitives/docs/components/dialog @ http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:313
+[   53370ms] [WARNING] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. @ http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:327
+[  307886ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:21608
+[  308066ms] [ERROR] Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?%s%s 
+
+Check the render method of `SlotClone`. 
+    at Button (http://localhost:5173/src/app/components/ui/button.tsx:46:3)
+    at http://localhost:5173/node_modules/.vite/deps/chunk-UIBJWPTM.js?v=f40e0179:73:11
+    at http://localhost:5173/node_modules/.vite/deps/chunk-UIBJWPTM.js?v=f40e0179:54:11
+    at http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:150:13
+    at http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:77:13
+    at SheetTrigger (http://localhost:5173/src/app/components/ui/sheet.tsx:30:6)
+    at Provider (http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:55:15)
+    at Dialog (http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:42:5)
+    at Sheet (http://localhost:5173/src/app/components/ui/sheet.tsx:21:21)
+    at div
+    at header
+    at div
+    at DndProvider2 (http://localhost:5173/node_modules/.vite/deps/react-dnd.js?v=f40e0179:1482:9)
+    at AppContent (http://localhost:5173/src/app/App.tsx?t=1778986337750:147:36)
+    at AppGate (http://localhost:5173/src/app/App.tsx?t=1778986337750:111:29)
+    at AuthProvider (http://localhost:5173/src/app/AuthContext.tsx?t=1778986282587:21:32)
+    at V (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:44:25)
+    at J (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:42:18)
+    at App @ http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:520
+[  376802ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:21608
+[  376890ms] [ERROR] Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?%s%s 
+
+Check the render method of `SlotClone`. 
+    at Button (http://localhost:5173/src/app/components/ui/button.tsx:46:3)
+    at http://localhost:5173/node_modules/.vite/deps/chunk-UIBJWPTM.js?v=f40e0179:73:11
+    at http://localhost:5173/node_modules/.vite/deps/chunk-UIBJWPTM.js?v=f40e0179:54:11
+    at http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:150:13
+    at http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:77:13
+    at SheetTrigger (http://localhost:5173/src/app/components/ui/sheet.tsx:30:6)
+    at Provider (http://localhost:5173/node_modules/.vite/deps/chunk-GOH4OMGN.js?v=f40e0179:55:15)
+    at Dialog (http://localhost:5173/node_modules/.vite/deps/chunk-YJ2LWPLE.js?v=f40e0179:42:5)
+    at Sheet (http://localhost:5173/src/app/components/ui/sheet.tsx:21:21)
+    at div
+    at header
+    at div
+    at DndProvider2 (http://localhost:5173/node_modules/.vite/deps/react-dnd.js?v=f40e0179:1482:9)
+    at AppContent (http://localhost:5173/src/app/App.tsx?t=1778986367726:147:36)
+    at AppGate (http://localhost:5173/src/app/App.tsx?t=1778986367726:111:29)
+    at AuthProvider (http://localhost:5173/src/app/AuthContext.tsx?t=1778986282587:21:32)
+    at V (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:44:25)
+    at J (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:42:18)
+    at App @ http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:520
+[ 2812642ms] ReferenceError: row1Items is not defined
+    at UpperOpenStorage (http://localhost:5173/@fs/E:/Desktop/IndividualProject/RefrigeratorManagement/src/app/components/UpperOpenStorage.tsx?t=1778988843965:156:24)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:11596:26)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:14630:28)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:15972:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:3680:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:3705:24)
+    at invokeGuardedCallback (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:3739:39)
+    at beginWork$1 (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19818:15)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19251:20)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19190:13)
+[ 2812651ms] ReferenceError: row1Items is not defined
+    at UpperOpenStorage (http://localhost:5173/@fs/E:/Desktop/IndividualProject/RefrigeratorManagement/src/app/components/UpperOpenStorage.tsx?t=1778988843965:156:24)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:11596:26)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:14630:28)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:15972:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:3680:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:3705:24)
+    at invokeGuardedCallback (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:3739:39)
+    at beginWork$1 (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19818:15)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19251:20)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19190:13)
+[ 2812654ms] [ERROR] The above error occurred in the <UpperOpenStorage> component:
+
+    at UpperOpenStorage (http://localhost:5173/@fs/E:/Desktop/IndividualProject/RefrigeratorManagement/src/app/components/UpperOpenStorage.tsx?t=1778988843965:25:3)
+    at div
+    at MotionDOMComponent (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8882:40)
+    at PopChildMeasure (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8021:23)
+    at PopChild (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8048:21)
+    at PresenceChild (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8098:24)
+    at AnimatePresence (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8175:26)
+    at div
+    at MotionDOMComponent (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8882:40)
+    at PopChildMeasure (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8021:23)
+    at PopChild (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8048:21)
+    at PresenceChild (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8098:24)
+    at AnimatePresence (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8175:26)
+    at div
+    at DrawerFridgeView (http://localhost:5173/src/app/components/DrawerFridgeView.tsx?t=1778986282587:62:3)
+    at main
+    at div
+    at DndProvider2 (http://localhost:5173/node_modules/.vite/deps/react-dnd.js?v=f40e0179:1482:9)
+    at AppContent (http://localhost:5173/src/app/App.tsx?t=1778988620073:147:36)
+    at AppGate (http://localhost:5173/src/app/App.tsx?t=1778988620073:111:29)
+    at AuthProvider (http://localhost:5173/src/app/AuthContext.tsx?t=1778986282587:21:32)
+    at V (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:44:25)
+    at J (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:42:18)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:14079
+[ 2812656ms] ReferenceError: row1Items is not defined
+    at UpperOpenStorage (http://localhost:5173/@fs/E:/Desktop/IndividualProject/RefrigeratorManagement/src/app/components/UpperOpenStorage.tsx?t=1778988843965:156:24)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:11596:26)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:14630:28)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:15972:22)
+    at beginWork$1 (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19806:22)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19251:20)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19190:13)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19169:15)
+    at recoverFromConcurrentError (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:18786:28)
+    at performSyncWorkOnRoot (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:18932:28)
+[ 2820970ms] ReferenceError: row1Items is not defined
+    at UpperOpenStorage (http://localhost:5173/@fs/E:/Desktop/IndividualProject/RefrigeratorManagement/src/app/components/UpperOpenStorage.tsx?t=1778988852259:156:24)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:11596:26)
+    at mountIndeterminateComponent (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:14974:21)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:15962:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:3680:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:3705:24)
+    at invokeGuardedCallback (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:3739:39)
+    at beginWork$1 (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19818:15)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19251:20)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19190:13)
+[ 2820976ms] ReferenceError: row1Items is not defined
+    at UpperOpenStorage (http://localhost:5173/@fs/E:/Desktop/IndividualProject/RefrigeratorManagement/src/app/components/UpperOpenStorage.tsx?t=1778988852259:156:24)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:11596:26)
+    at mountIndeterminateComponent (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:14974:21)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:15962:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:3680:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:3705:24)
+    at invokeGuardedCallback (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:3739:39)
+    at beginWork$1 (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19818:15)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19251:20)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19190:13)
+[ 2820982ms] [ERROR] The above error occurred in the <UpperOpenStorage> component:
+
+    at UpperOpenStorage (http://localhost:5173/@fs/E:/Desktop/IndividualProject/RefrigeratorManagement/src/app/components/UpperOpenStorage.tsx?t=1778988852259:25:3)
+    at div
+    at MotionDOMComponent (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8882:40)
+    at PopChildMeasure (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8021:23)
+    at PopChild (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8048:21)
+    at PresenceChild (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8098:24)
+    at AnimatePresence (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8175:26)
+    at div
+    at MotionDOMComponent (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8882:40)
+    at PopChildMeasure (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8021:23)
+    at PopChild (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8048:21)
+    at PresenceChild (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8098:24)
+    at AnimatePresence (http://localhost:5173/node_modules/.vite/deps/motion_react.js?v=f40e0179:8175:26)
+    at div
+    at DrawerFridgeView (http://localhost:5173/src/app/components/DrawerFridgeView.tsx?t=1778986282587:62:3)
+    at main
+    at div
+    at DndProvider2 (http://localhost:5173/node_modules/.vite/deps/react-dnd.js?v=f40e0179:1482:9)
+    at AppContent (http://localhost:5173/src/app/App.tsx?t=1778988620073:147:36)
+    at AppGate (http://localhost:5173/src/app/App.tsx?t=1778988620073:111:29)
+    at AuthProvider (http://localhost:5173/src/app/AuthContext.tsx?t=1778986282587:21:32)
+    at V (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:44:25)
+    at J (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=f40e0179:42:18)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:14079
+[ 2820987ms] ReferenceError: row1Items is not defined
+    at UpperOpenStorage (http://localhost:5173/@fs/E:/Desktop/IndividualProject/RefrigeratorManagement/src/app/components/UpperOpenStorage.tsx?t=1778988852259:156:24)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:11596:26)
+    at mountIndeterminateComponent (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:14974:21)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:15962:22)
+    at beginWork$1 (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19806:22)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19251:20)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19190:13)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:19169:15)
+    at recoverFromConcurrentError (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:18786:28)
+    at performConcurrentWorkOnRoot (http://localhost:5173/node_modules/.vite/deps/chunk-FD5SMSK5.js?v=f40e0179:18734:30)
+[ 2830140ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/@fs/E:/Desktop/IndividualProject/RefrigeratorManagement/src/app/components/UpperOpenStorage.tsx?t=1778988861802:0
+[ 2830141ms] [ERROR] [vite] Failed to reload /@fs/E:\Desktop\IndividualProject\RefrigeratorManagement\src\app\components\UpperOpenStorage.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:881

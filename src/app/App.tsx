@@ -987,7 +987,7 @@ function AppContent() {
 
   // ── Stats ──
 
-  const usedSlots = isDrawerFridge ? drawerBoxCount : samples.length;
+  const usedSlots = isDrawerFridge ? drawerBoxCount : upperItemsCount;
   const criticalCount = samples.filter((s) => s.status === 'critical').length;
   const warningCount = samples.filter((s) => s.status === 'warning').length;
 
@@ -1028,6 +1028,41 @@ function AppContent() {
 
   const displayedUpperItemTypeStats = upperItemTypeStats.slice(0, 8);
   const displayedSampleTypeStats = sampleTypeStats.slice(0, 8);
+  const shelfStatsCards = React.useMemo(
+    () =>
+      Array.from({ length: 4 }, (_, index) => {
+        const layer = index + 1;
+        const count = upperItems.filter((item) => item.row_number === layer).length;
+        const colors = ['#818cf8', '#38bdf8', '#34d399', '#f59e0b'];
+        return {
+          label: `第${layer}层`,
+          value: `${count} 件`,
+          sub: '物品',
+          color: colors[index],
+        };
+      }),
+    [upperItems],
+  );
+  const drawerStatsCards = React.useMemo(
+    () => [
+      {
+        label: '上层',
+        value: `${upperItemsCount} 件`,
+        sub: '物品',
+        color: '#818cf8',
+      },
+      {
+        label: '下层',
+        value: `${drawerBoxCount}/${drawerMaxBoxes} 盒`,
+        sub: `${drawerLayers.map((l) => `${drawerLayerCounts[l] || 0}屉`).join(' + ')} · ${drawerCount}总计`,
+        color: '#34d399',
+      },
+    ],
+    [upperItemsCount, drawerBoxCount, drawerMaxBoxes, drawerLayers, drawerLayerCounts, drawerCount],
+  );
+  const homepageStatsCards = isDrawerFridge ? drawerStatsCards : shelfStatsCards;
+  const upperItemTypeTitle = isDrawerFridge ? '上层物品类型' : '物品类型';
+  const upperItemTypeOverflowText = isDrawerFridge ? '上层物品类型' : '物品类型';
 
   const itemTypeStats = React.useMemo(() => {
     const counts = new Map<string, number>();
@@ -1567,24 +1602,15 @@ function AppContent() {
             <DrawerContent className="max-h-[85vh]">
               <div className="px-4 pb-8 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-3 mb-4">
-                  <StatsCard
-                    label="上层"
-                    value={selectedFridge?.fridge_type === 'drawer'
-                      ? `${upperItemsCount} 件`
-                      : `${samples.filter((s) => s.compartment === 'upper').length}/${upperCapacity}`}
-                    sub="物品"
-                    color="#818cf8"
-                  />
-                  <StatsCard
-                    label="下层"
-                    value={selectedFridge?.fridge_type === 'drawer'
-                      ? `${drawerBoxCount}/${drawerMaxBoxes} 盒`
-                      : `${samples.filter((s) => s.compartment === 'lower').length}/${lowerCapacity}`}
-                    sub={selectedFridge?.fridge_type === 'drawer'
-                      ? drawerLayers.map(l => `${drawerLayerCounts[l] || 0}屉`).join(' + ') + ` · ${drawerCount}总计`
-                      : '下层存储'}
-                    color="#34d399"
-                  />
+                  {homepageStatsCards.map((card) => (
+                    <StatsCard
+                      key={card.label}
+                      label={card.label}
+                      value={card.value}
+                      sub={card.sub}
+                      color={card.color}
+                    />
+                  ))}
                 </div>
 
                 {boxViewTubes.length === 0 ? (
@@ -1599,7 +1625,7 @@ function AppContent() {
                       <div className="flex items-center justify-between gap-3 mb-3">
                         <div className="flex items-center gap-2">
                           <Tags size={15} color="#38bdf8" />
-                          <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>上层物品类型</span>
+                          <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>{upperItemTypeTitle}</span>
                         </div>
                         <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>{upperItemTypeStats.length} 类</span>
                       </div>
@@ -2012,24 +2038,15 @@ function AppContent() {
           >
             {/* Stats cards */}
             <div className="grid grid-cols-2 gap-3">
-              <StatsCard
-                label="上层"
-                value={selectedFridge?.fridge_type === 'drawer'
-                  ? `${upperItemsCount} 件`
-                  : `${samples.filter((s) => s.compartment === 'upper').length}/${upperCapacity}`}
-                sub="物品"
-                color="#818cf8"
-              />
-              <StatsCard
-                label="下层"
-                value={selectedFridge?.fridge_type === 'drawer'
-                  ? `${drawerBoxCount}/${drawerMaxBoxes} 盒`
-                  : `${samples.filter((s) => s.compartment === 'lower').length}/${lowerCapacity}`}
-                sub={selectedFridge?.fridge_type === 'drawer'
-                  ? drawerLayers.map(l => `${drawerLayerCounts[l] || 0}屉`).join(' + ') + ` · ${drawerCount}总计`
-                  : '下层存储'}
-                color="#34d399"
-              />
+              {homepageStatsCards.map((card) => (
+                <StatsCard
+                  key={card.label}
+                  label={card.label}
+                  value={card.value}
+                  sub={card.sub}
+                  color={card.color}
+                />
+              ))}
             </div>
 
             {boxViewTubes.length === 0 ? (
@@ -2046,7 +2063,7 @@ function AppContent() {
                     <div className="flex items-center gap-2">
                       <Tags size={15} color="#38bdf8" />
                       <span className="text-[14px]" style={{ color: 'var(--app-text)' }}>
-                        上层物品类型
+                        {upperItemTypeTitle}
                       </span>
                     </div>
                     <span className="text-[12px] font-mono" style={{ color: 'var(--app-muted)' }}>
@@ -2079,7 +2096,7 @@ function AppContent() {
                       })}
                       {remainingUpperItemTypeCount > 0 && (
                         <div className="pt-1 text-right text-[12px]" style={{ color: 'var(--app-muted)' }}>
-                          另有 {remainingUpperItemTypeCount} 类上层物品类型
+                          另有 {remainingUpperItemTypeCount} 类{upperItemTypeOverflowText}
                         </div>
                       )}
                     </div>

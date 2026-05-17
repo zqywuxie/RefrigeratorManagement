@@ -246,6 +246,22 @@ router.get('/summary', async (_req, res) => {
     for (const row of typeRows) mergedTypes.set(row.type || '未分类', (mergedTypes.get(row.type || '未分类') || 0) + Number(row.count || 0));
     for (const row of srTypeRows) mergedTypes.set(row.type || '未分类', (mergedTypes.get(row.type || '未分类') || 0) + Number(row.count || 0));
 
+    // Per-fridge sample type distribution from sample_records via tubes
+    const [fridgeTypeRows] = await pool.query(
+      `SELECT COALESCE(d.refrigerator_id, ui.refrigerator_id) AS fridge_id, sr.sample_type AS type, COUNT(*) AS cnt
+       FROM tubes t JOIN sample_records sr ON sr.id = t.sample_id AND sr.deleted_at IS NULL
+       LEFT JOIN boxes b ON b.id = t.box_id
+       LEFT JOIN drawers d ON d.id = b.drawer_id
+       LEFT JOIN upper_items ui ON ui.id = b.id AND ui.deleted_at IS NULL
+       WHERE COALESCE(d.refrigerator_id, ui.refrigerator_id) IS NOT NULL AND sr.sample_type IS NOT NULL
+       GROUP BY fridge_id, type ORDER BY fridge_id, cnt DESC`
+    );
+    const fridgeTypeMap = new Map();
+    for (const row of fridgeTypeRows) {
+      if (!fridgeTypeMap.has(row.fridge_id)) fridgeTypeMap.set(row.fridge_id, []);
+      fridgeTypeMap.get(row.fridge_id).push({ type: row.type, count: Number(row.cnt) });
+    }
+
     res.json({
       totals: {
         refrigerators: Number(refrigeratorTotals.refrigerator_count || 0),
@@ -271,6 +287,7 @@ router.get('/summary', async (_req, res) => {
         upperItemCount: Number(row.upper_item_count || 0),
         boxCount: Number(row.box_count || 0),
         tubeCount: Number(row.tube_count || 0),
+        typeDistribution: fridgeTypeMap.get(row.id) || [],
         usageRate: Number(row.capacity || 0) > 0
           ? Math.round(((Number(row.sample_count || 0) + Number(row.tube_count || 0) + Number(row.upper_item_count || 0)) / Number(row.capacity || 0)) * 100)
           : 0,

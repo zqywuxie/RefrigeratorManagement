@@ -49,10 +49,10 @@ function ResponsiveDialogContent({
   if (isMobile) {
     return (
       <DrawerContent
-        className={cn("max-h-[88vh] overflow-hidden flex flex-col", className)}
+        className={cn("max-h-[88dvh] min-h-0 overflow-hidden flex flex-col", className)}
         {...(props as any)}
       >
-        <div className="overflow-y-auto flex-1 px-4 pt-4 pb-2">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
           {children}
         </div>
       </DrawerContent>

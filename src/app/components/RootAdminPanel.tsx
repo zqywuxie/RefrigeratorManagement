@@ -864,6 +864,21 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                     <AdminMiniStat label="格位样本 / 副样本" value={`${fridge.sampleCount} / ${fridge.subSampleCount}`} />
                     <AdminMiniStat label="样本记录" value={fridge.sampleRecordCount || 0} />
                   </div>
+                  {fridge.typeDistribution && fridge.typeDistribution.length > 0 && (
+                    <div className="mt-2 pt-2 border-t" style={{ borderColor: 'var(--app-border)' }}>
+                      <div className="text-[10px] mb-1" style={{ color: 'var(--app-muted)' }}>样本类型分布</div>
+                      <div className="flex flex-wrap gap-1">
+                        {fridge.typeDistribution.slice(0, 6).map((t) => {
+                          const tc = getSampleTypeColor(t.type);
+                          return (
+                            <span key={t.type} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: tc + '20', color: tc, border: '1px solid ' + tc + '40' }}>
+                              {t.type} ×{t.count}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

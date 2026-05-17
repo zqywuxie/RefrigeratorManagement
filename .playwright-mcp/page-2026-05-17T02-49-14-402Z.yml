@@ -1,0 +1,133 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - img
+          - heading [level=1]: 冰箱管理系统
+        - generic:
+          - button:
+            - img
+      - main:
+        - generic:
+          - img
+          - textbox:
+            - /placeholder: 搜索...
+        - generic:
+          - navigation:
+            - img
+            - img
+            - generic: 主冰箱
+            - img
+            - button: 抽屉 A1
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - button:
+                    - img
+                    - text: 返回
+                  - generic: 抽屉 A1 · 1/6
+                - generic:
+                  - button:
+                    - img
+                    - text: 新增内部位置
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=3]: 抽屉内部
+                    - paragraph: 一列盒位 · 从上到下排列，点击空位添加盒子
+                  - generic: 1/6
+                - generic:
+                  - generic:
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - img
+                          - generic: "123"
+                          - generic:
+                            - img
+                            - text: 9×9
+                        - button:
+                          - img
+                      - generic:
+                        - generic:
+                          - generic: 类型
+                          - generic: DNA
+                        - generic:
+                          - generic: 项目
+                          - generic: "123"
+                        - generic:
+                          - img
+                          - generic: root
+                        - generic:
+                          - img
+                          - generic: 26/05/15
+                        - generic:
+                          - img
+                          - generic: 内部位置 1
+                      - paragraph: "123"
+                  - generic:
+                    - button:
+                      - generic: 内部位置 2
+                      - generic:
+                        - img
+                        - text: 添加盒子
+                  - generic:
+                    - button:
+                      - generic: 内部位置 3
+                      - generic:
+                        - img
+                        - text: 添加盒子
+                  - generic:
+                    - button:
+                      - generic: 内部位置 4
+                      - generic:
+                        - img
+                        - text: 添加盒子
+                  - generic:
+                    - button:
+                      - generic: 内部位置 5
+                      - generic:
+                        - img
+                        - text: 添加盒子
+                  - generic:
+                    - button:
+                      - generic: 内部位置 6
+                      - generic:
+                        - img
+                        - text: 添加盒子
+              - generic:
+                - generic:
+                  - img
+                  - generic:
+                    - generic: 抽屉外部位置
+                    - generic: 下层第一层 · A1
+                - generic: 固定位置
+        - generic:
+          - button:
+            - img
+          - button:
+            - img
+  - dialog "添加盒子" [ref=e340]:
+    - generic [ref=e343]:
+      - generic [ref=e344]:
+        - heading "添加盒子" [level=2] [ref=e345]
+        - paragraph [ref=e346]: 抽屉外部：A1 · 抽屉内部：内部位置 2
+      - textbox "盒子名称" [ref=e347]
+      - generic [ref=e348]:
+        - button "简略模式" [ref=e349]
+        - button "精细样本" [ref=e350]
+      - generic [ref=e351]:
+        - generic [ref=e353]:
+          - textbox "新样本类型" [active] [ref=e364]
+          - button "添加" [ref=e365]
+        - textbox "项目名称（选填）" [ref=e357]
+      - textbox "负责人" [ref=e358]: root
+      - textbox "备注（选填）" [ref=e359]
+      - textbox "数据路径（选填，如 /data/project/sample/、s3://bucket/）" [ref=e360]
+      - generic [ref=e361]:
+        - button "取消" [ref=e362]
+        - button "保存" [ref=e363]

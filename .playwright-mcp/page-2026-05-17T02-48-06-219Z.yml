@@ -1,0 +1,135 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - img
+          - heading [level=1]: 冰箱管理系统
+        - generic:
+          - button:
+            - img
+      - main:
+        - generic:
+          - img
+          - textbox:
+            - /placeholder: 搜索...
+        - generic:
+          - navigation:
+            - img
+            - img
+            - generic: 主冰箱
+          - generic:
+            - generic:
+              - button: 上层
+              - button: 下层第一层
+              - button: 下层第二层
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=3]: 上层开放存储
+                  - generic:
+                    - button: 全部
+                    - button: 样本
+                    - button: 临时
+                    - button: ����
+                - generic:
+                  - img
+                  - textbox:
+                    - /placeholder: 搜索上层物品...
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: 第 1 行 · 3 件
+                    - button:
+                      - img
+                      - text: 添加
+                  - generic:
+                    - button:
+                      - button:
+                        - img
+                      - generic:
+                        - img
+                        - generic: "13123"
+                      - generic:
+                        - generic: 样本
+                        - generic: ×3
+                      - generic:
+                        - img
+                        - generic: root
+                    - button:
+                      - button:
+                        - img
+                      - generic:
+                        - img
+                        - generic: dada
+                      - generic:
+                        - generic: 临时
+                        - generic: ×1
+                      - generic:
+                        - img
+                        - generic: root
+                    - button:
+                      - button:
+                        - img
+                      - generic:
+                        - img
+                        - generic: dada
+                      - generic:
+                        - generic: ����
+                        - generic: ×1
+                      - generic:
+                        - img
+                        - generic: root
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: 第 2 行 · 0 件
+                    - button:
+                      - img
+                      - text: 添加
+                  - generic:
+                    - button:
+                      - img
+                      - generic: 添加物品
+        - generic:
+          - button:
+            - img
+          - button [active]:
+            - img
+  - dialog [ref=e131]:
+    - generic [ref=e133]:
+      - generic [ref=e134]:
+        - generic [ref=e135]:
+          - generic [ref=e136]: 上层
+          - generic [ref=e137]: 3 件
+          - generic [ref=e138]: 物品
+        - generic [ref=e139]:
+          - generic [ref=e140]: 下层
+          - generic [ref=e141]: 1/106 盒
+          - generic [ref=e142]: 6屉 + 15屉 · 21总计
+      - generic [ref=e143]:
+        - generic [ref=e144]:
+          - generic [ref=e145]:
+            - img [ref=e146]
+            - generic [ref=e150]: 上层物品类型
+          - generic [ref=e151]: 3 类
+        - generic [ref=e152]:
+          - generic [ref=e153]:
+            - generic "临时物品" [ref=e155]: 临时
+            - generic [ref=e156]: "1"
+          - generic [ref=e157]:
+            - generic "样本" [ref=e159]
+            - generic [ref=e160]: "1"
+          - generic [ref=e161]:
+            - generic "����" [ref=e163]
+            - generic [ref=e164]: "1"
+      - generic [ref=e165]:
+        - generic [ref=e166]:
+          - generic [ref=e167]:
+            - img [ref=e168]
+            - generic [ref=e172]: 样本类型
+          - generic [ref=e173]: 1 类
+        - generic [ref=e175]:
+          - generic "外周血" [ref=e177]
+          - generic [ref=e178]: "1"

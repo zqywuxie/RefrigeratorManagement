@@ -274,7 +274,10 @@ export function AddBoxModal({
               {error}
             </div>
           )}
-          <ResponsiveDialogFooter>
+          <ResponsiveDialogFooter className="sticky bottom-0 z-10 -mx-4 mt-2 border-t px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] md:static md:mx-0 md:mt-0 md:border-t-0 md:p-0" style={{
+            background: 'var(--app-card-bg)',
+            borderColor: 'var(--app-border)',
+          }}>
             <button
               type="button"
               onClick={onClose}
