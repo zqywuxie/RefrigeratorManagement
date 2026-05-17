@@ -275,20 +275,16 @@ export function DrawerFridgeView({
     setSelectedPositions(new Set());
   }, [currentBoxPage]);
 
+  // Navigate to the specific tube positions of a sample record and highlight them
+  // (called from user menu → "定位" on uploaded sample records)
   useEffect(() => {
     if (!pendingSampleNavigation || viewLevel !== 'box' || selectedBox?.id !== pendingSampleNavigation.boxId) return;
-    fetchSampleRecord(pendingSampleNavigation.sampleId)
-      .then((record) => {
-        setEditSampleRecord(record);
-        setPreselectedWells([]);
-        setShowSampleModal(true);
-      })
-      .catch((err) => {
-        console.error('Failed to open navigated sample record:', err);
-      })
-      .finally(() => {
-        setPendingSampleNavigation(null);
-      });
+    // Highlight the tube positions in the grid without opening the modal
+    setHoveredSampleId(pendingSampleNavigation.sampleId);
+    // Clear after 4.5s (same as upper item highlight duration)
+    const timer = window.setTimeout(() => setHoveredSampleId(null), 4500);
+    setPendingSampleNavigation(null);
+    return () => window.clearTimeout(timer);
   }, [pendingSampleNavigation, viewLevel, selectedBox]);
 
   // Notify parent when box view state changes
