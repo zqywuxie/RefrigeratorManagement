@@ -250,8 +250,8 @@ function AppContent() {
             lowerRows: r.lower_rows,
             lowerCols: r.lower_cols,
             fridge_type: (r.fridge_type as FridgeType) || 'drawer',
-            upperTemperature: Number(r.upper_temperature ?? -80),
-            lowerTemperature: Number(r.lower_temperature ?? -80),
+            upperTemperature: Number(r.upper_temperature ?? -20),
+            lowerTemperature: Number(r.lower_temperature ?? 4),
           })),
         );
         setLoading(false);
@@ -1465,8 +1465,8 @@ function AppContent() {
                 matchedIds={matchedIds}
                 searchQuery={searchQuery}
                 compartmentGrids={compartmentGrids}
-                upperTemperature={selectedFridge?.upperTemperature ?? -80}
-                lowerTemperature={selectedFridge?.lowerTemperature ?? -80}
+                upperTemperature={selectedFridge?.upperTemperature ?? -20}
+                lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
                 canManageFridge={isRoot}
                 viewingContainer={viewingContainer}
                 onDropSample={handleDrop}
@@ -1973,8 +1973,8 @@ function AppContent() {
                   matchedIds={matchedIds}
                   searchQuery={searchQuery}
                   compartmentGrids={compartmentGrids}
-                  upperTemperature={selectedFridge?.upperTemperature ?? -80}
-                  lowerTemperature={selectedFridge?.lowerTemperature ?? -80}
+                  upperTemperature={selectedFridge?.upperTemperature ?? -20}
+                  lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
                   canManageFridge={isRoot}
                   viewingContainer={viewingContainer}
                   onDropSample={handleDrop}
@@ -2293,8 +2293,8 @@ function AppContent() {
           onAddSubSample={handleAddSubSample}
           existingIds={samples.map((s) => s.id)}
           containers={samples}
-          upperTemperature={selectedFridge?.upperTemperature ?? -80}
-          lowerTemperature={selectedFridge?.lowerTemperature ?? -80}
+          upperTemperature={selectedFridge?.upperTemperature ?? -20}
+          lowerTemperature={selectedFridge?.lowerTemperature ?? 4}
           currentUsername={user!.username}
           isSubSampleMode={addTarget?.isSubSample ?? false}
           parentContainerId={
