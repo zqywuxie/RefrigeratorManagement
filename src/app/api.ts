@@ -19,8 +19,6 @@ export interface RefrigeratorResponse {
 export interface AdminSummary {
   totals: {
     refrigerators: number;
-    samples: number;
-    subSamples: number;
     sampleRecords: number;
     upperItems: number;
     boxes: number;
@@ -35,23 +33,22 @@ export interface AdminSummary {
     id: string;
     name: string;
     capacity: number;
-    sampleCount: number;
-    subSampleCount: number;
-    sampleRecordCount?: number;
-    upperItemCount?: number;
-    boxCount?: number;
-    tubeCount?: number;
-    usageRate?: number;
+    sampleRecordCount: number;
+    upperItemCount: number;
+    boxCount: number;
+    tubeCount: number;
+    usageRate: number;
+    typeDistribution?: Array<{ type: string; count: number }>;
   }>;
-  owners: Array<{ username: string; sampleCount: number; subSampleCount: number }>;
+  owners: Array<{ username: string; recordCount: number }>;
 }
 
 export interface AdminUser {
   username: string;
   role: AuthUser['role'];
   createdAt: string;
-  sampleCount: number;
-  subSampleCount: number;
+  recordCount: number;
+  tubeCount: number;
 }
 
 const BASE = '/api';

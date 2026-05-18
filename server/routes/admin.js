@@ -241,8 +241,26 @@ router.get('/summary', async (_req, res) => {
 router.get('/users', async (_req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT u.username, u.role, u.created_at
+      `SELECT
+         u.username,
+         u.role,
+         u.created_at,
+         COALESCE(sr.record_count, 0) AS record_count,
+         COALESCE(t.tube_count, 0) AS tube_count
        FROM users u
+       LEFT JOIN (
+         SELECT uploader, COUNT(*) AS record_count
+         FROM sample_records
+         WHERE deleted_at IS NULL
+         GROUP BY uploader
+       ) sr ON sr.uploader = u.username
+       LEFT JOIN (
+         SELECT sr.uploader, COUNT(t.id) AS tube_count
+         FROM sample_records sr
+         LEFT JOIN tubes t ON t.sample_id = sr.id AND t.deleted_at IS NULL
+         WHERE sr.deleted_at IS NULL
+         GROUP BY sr.uploader
+       ) t ON t.uploader = u.username
        ORDER BY CASE WHEN u.role = 'root' THEN 0 ELSE 1 END, u.username ASC`,
     );
     res.json(
@@ -250,6 +268,8 @@ router.get('/users', async (_req, res) => {
         username: row.username,
         role: row.role,
         createdAt: row.created_at,
+        recordCount: Number(row.record_count || 0),
+        tubeCount: Number(row.tube_count || 0),
       })),
     );
   } catch (err) {
@@ -511,6 +531,8 @@ router.get('/sample-types', async (_req, res) => {
       const boxCount = boxCountMap.get(t.name) || 0;
       return {
         name: t.name,
+        sampleCount: 0,
+        subSampleCount: 0,
         recordCount,
         boxCount,
         total: recordCount + boxCount,

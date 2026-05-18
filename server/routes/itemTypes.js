@@ -60,7 +60,6 @@ router.delete('/:name', authenticate, requireRoot, async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    await conn.query("UPDATE upper_items SET item_type = '样本' WHERE item_type = ?", [name]);
     await conn.query('DELETE FROM item_types WHERE name = ?', [name]);
 
     await conn.commit();

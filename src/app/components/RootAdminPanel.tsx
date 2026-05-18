@@ -67,7 +67,7 @@ import {
 import type { UpperItem } from '../types';
 import { useIsMobile } from './ui/use-mobile';
 import { AddItemModal } from './AddItemModal';
-import { DEFAULT_ITEM_TYPES, DEFAULT_SAMPLE_TYPES } from '../types';
+import { DEFAULT_ITEM_TYPES } from '../types';
 
 type NotifyType = 'info' | 'warn' | 'success' | 'error';
 
@@ -859,7 +859,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                         </select>
                       </td>
                       <td className="px-3 py-3 text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
-                        格位样本 {user.sampleCount} · 副样本 {user.subSampleCount}
+                        样本记录 {user.recordCount ?? 0} · 试管 {user.tubeCount ?? 0}
                       </td>
                       <td className="px-3 py-3 text-[12px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
                         {formatDate(user.createdAt)}
@@ -996,7 +996,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                       <div className="flex min-h-[60px] items-center justify-center rounded-md text-[12px]" style={{ background: 'var(--app-card-bg)', color: 'var(--app-muted)' }}>该冰箱暂无样本类型数据</div>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
-                        {types.map((t) => <TypeStatChip key={t.type} title={t.type} count={t.count} color={getSampleTypeColor(t.type)} bgColor={`${getSampleTypeColor(t.type)}18`} onRename={(newName) => handleRenameSampleType(t.type, newName)} onDelete={() => handleDeleteSampleType(t.type)} disabled={t.type === '未分类'} />)}
+                        {types.map((t) => <TypeStatChip key={t.type} title={t.type} count={t.count} color={getSampleTypeColor(t.type)} bgColor={`${getSampleTypeColor(t.type)}18`} onRename={(newName) => handleRenameSampleType(t.type, newName)} onDelete={() => handleDeleteSampleType(t.type)} />)}
                       </div>
                     );
                   }
@@ -1015,7 +1015,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                     <div className="flex flex-wrap gap-1.5">
                       {sorted.map((item) => {
                         const cfg = getItemTypeConfig(item.type);
-                        return <TypeStatChip key={item.type} title={cfg.label} count={item.count} color={cfg.color} bgColor={cfg.bgColor} tooltipTitle={item.type} onRename={(newName) => handleRenameItemType(item.type, newName)} onDelete={() => handleDeleteItemType(item.type)} disabled={item.type === '未分类'} />;
+                        return <TypeStatChip key={item.type} title={cfg.label} count={item.count} color={cfg.color} bgColor={cfg.bgColor} tooltipTitle={item.type} onRename={(newName) => handleRenameItemType(item.type, newName)} onDelete={() => handleDeleteItemType(item.type)} />;
                       })}
                     </div>
                   );
@@ -1083,8 +1083,6 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                   <th className="rounded-l-lg px-3 py-2.5" style={{ color: 'var(--app-muted)' }}>类型名称</th>
                   {typeMgmtTab === 'samples' ? (
                     <>
-                      <th className="px-3 py-2.5 text-right" style={{ color: 'var(--app-muted)' }}>格位样本</th>
-                      <th className="px-3 py-2.5 text-right" style={{ color: 'var(--app-muted)' }}>副样本</th>
                       <th className="px-3 py-2.5 text-right" style={{ color: 'var(--app-muted)' }}>样本记录</th>
                       <th className="px-3 py-2.5 text-right" style={{ color: 'var(--app-muted)' }}>盒子</th>
                     </>
@@ -1097,12 +1095,6 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
               </thead>
               <tbody>
                 {(typeMgmtTab === 'samples' ? adminSampleTypeInfos : adminItemTypeInfos).map((info) => {
-                  const isDefault =
-                    typeMgmtTab === 'samples'
-                      ? DEFAULT_SAMPLE_TYPES.includes(info.name)
-                      : DEFAULT_ITEM_TYPES.includes(info.name);
-                  const isUncategorized = info.name === '未分类';
-                  const protectDelete = isDefault || isUncategorized;
                   const busy = typeMgmtBusy === info.name;
                   const rowBg = { background: 'var(--app-panel-bg)' };
                   const cellMuted = { color: 'var(--app-muted)' };
@@ -1121,8 +1113,6 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                       </td>
                       {typeMgmtTab === 'samples' ? (
                         <>
-                          <td className="px-3 py-2.5 text-right text-[13px] tabular-nums" style={{ ...rowBg, ...(info.total === 0 ? cellMuted : cellText) }}>{(info as AdminSampleTypeInfo).sampleCount}</td>
-                          <td className="px-3 py-2.5 text-right text-[13px] tabular-nums" style={{ ...rowBg, ...(info.total === 0 ? cellMuted : cellText) }}>{(info as AdminSampleTypeInfo).subSampleCount}</td>
                           <td className="px-3 py-2.5 text-right text-[13px] tabular-nums" style={{ ...rowBg, ...(info.total === 0 ? cellMuted : cellText) }}>{(info as AdminSampleTypeInfo).recordCount}</td>
                           <td className="px-3 py-2.5 text-right text-[13px] tabular-nums" style={{ ...rowBg, ...(info.total === 0 ? cellMuted : cellText) }}>{(info as AdminSampleTypeInfo).boxCount}</td>
                         </>
@@ -1135,7 +1125,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                       <td className="rounded-r-lg px-3 py-2.5 text-right" style={rowBg}>
                         <div className="flex items-center justify-end gap-1">
                           <button
-                            disabled={busy || isUncategorized}
+                            disabled={busy}
                             onClick={() => {
                               const newName = window.prompt(`重命名类型 "${info.name}" 为：`, info.name);
                               if (newName && newName.trim() && newName.trim() !== info.name) {
@@ -1146,22 +1136,22 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                             }}
                             className="rounded-md p-2 disabled:opacity-30 min-h-[36px] min-w-[36px] hover:scale-110 transition-transform"
                             style={{ color: '#2563eb' }}
-                            title={isUncategorized ? '不可重命名默认类型' : '重命名'}
+                            title="重命名"
                           >
                             <Pencil size={13} />
                           </button>
                           <button
-                            disabled={busy || protectDelete}
+                            disabled={busy}
                             onClick={() => {
-                              if (window.confirm(`确认删除类型 "${info.name}"？\n${info.total > 0 ? `当前有 ${info.total} 条数据使用了该类型，将被设为默认值。` : '该类型未被任何数据使用。'}`)) {
+                              if (window.confirm(`确认删除类型 "${info.name}"？\n${info.total > 0 ? `当前有 ${info.total} 条历史数据使用了该类型，已有数据会保留该类型。` : '该类型未被任何数据使用。'}\n删除后仅后续新增时不再出现在可选列表。`)) {
                                 typeMgmtTab === 'samples'
                                   ? handleTypeMgmtDeleteSampleType(info.name)
                                   : handleTypeMgmtDeleteItemType(info.name);
                               }
                             }}
                             className="rounded-md p-2 disabled:opacity-30 min-h-[36px] min-w-[36px] hover:scale-110 transition-transform"
-                            style={{ color: protectDelete ? 'var(--app-muted)' : '#ef4444' }}
-                            title={protectDelete ? '默认类型不可删除' : '删除'}
+                            style={{ color: '#ef4444' }}
+                            title="删除"
                           >
                             <Trash2 size={13} />
                           </button>
@@ -1172,7 +1162,7 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                 })}
                 {(typeMgmtTab === 'samples' ? adminSampleTypeInfos : adminItemTypeInfos).length === 0 && (
                   <tr>
-                    <td colSpan={typeMgmtTab === 'samples' ? 7 : 4} className="rounded-lg px-3 py-8 text-center text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
+                    <td colSpan={typeMgmtTab === 'samples' ? 5 : 4} className="rounded-lg px-3 py-8 text-center text-[13px]" style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)' }}>
                       暂无类型
                     </td>
                   </tr>
@@ -1197,8 +1187,16 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
           </div>
           <div className="grid gap-2 sm:gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {summary?.refrigerators.map((fridge) => {
-              const used = fridge.sampleCount + (fridge.tubeCount || 0) + (fridge.upperItemCount || 0);
-              const usage = fridge.usageRate ?? (fridge.capacity > 0 ? Math.round((used / fridge.capacity) * 100) : 0);
+              const capacity = Number(fridge.capacity || 0);
+              const tubeCount = Number(fridge.tubeCount || 0);
+              const upperItemCount = Number(fridge.upperItemCount || 0);
+              const sampleRecordCount = Number(fridge.sampleRecordCount || 0);
+              const used = tubeCount + upperItemCount;
+              const usage = Number.isFinite(Number(fridge.usageRate))
+                ? Number(fridge.usageRate)
+                : capacity > 0
+                  ? Math.round((used / capacity) * 100)
+                  : 0;
               return (
                 <div key={fridge.id} className="rounded-xl p-4" style={{ background: 'var(--app-panel-bg)', border: '1px solid var(--app-border)' }}>
                   <div className="flex items-start justify-between gap-3">
@@ -1218,11 +1216,10 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
                     }} />
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
-                    <AdminMiniStat label="占用" value={`${used}/${fridge.capacity}`} />
-                    <AdminMiniStat label="上层物品" value={fridge.upperItemCount || 0} />
-                    <AdminMiniStat label="盒子 / 试管" value={`${fridge.boxCount || 0} / ${fridge.tubeCount || 0}`} />
-                    <AdminMiniStat label="格位样本 / 副样本" value={`${fridge.sampleCount} / ${fridge.subSampleCount}`} />
-                    <AdminMiniStat label="样本记录" value={fridge.sampleRecordCount || 0} />
+                    <AdminMiniStat label="占用" value={`${used}/${capacity}`} />
+                    <AdminMiniStat label="上层物品" value={upperItemCount} />
+                    <AdminMiniStat label="盒子 / 试管" value={`${fridge.boxCount || 0} / ${tubeCount}`} />
+                    <AdminMiniStat label="样本记录" value={sampleRecordCount} />
                   </div>
                 </div>
               );
@@ -1926,7 +1923,7 @@ function TypeStatChip({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (window.confirm(`确认删除类型 "${title}"？\n所有关联记录的类型将被清空或设为默认值。`)) {
+              if (window.confirm(`确认删除类型 "${title}"？\n已有数据会保留该类型；删除后仅后续新增时不再出现在可选列表。`)) {
                 onDelete?.();
               }
             }}

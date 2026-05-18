@@ -62,9 +62,6 @@ router.delete('/:name', authenticate, requireRoot, async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    await conn.query('UPDATE sample_records SET sample_type = NULL WHERE sample_type = ?', [name]);
-    await conn.query('UPDATE boxes SET sample_type = NULL WHERE sample_type = ?', [name]);
-
     await conn.query('DELETE FROM sample_types WHERE name = ?', [name]);
 
     await conn.commit();
