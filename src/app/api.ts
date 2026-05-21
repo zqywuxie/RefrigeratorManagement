@@ -375,6 +375,23 @@ export async function updateDrawer(drawerId: string, data: Partial<Drawer>): Pro
 
 // ── Boxes ──
 
+export interface FridgeBoxInfo {
+  id: string;
+  drawer_id: string;
+  name: string;
+  mode: string;
+  grid_rows: number | null;
+  grid_cols: number | null;
+  position: number | null;
+  drawer_label: string;
+  fridge_id: string;
+}
+
+export async function fetchFridgeBoxes(fridgeId?: string): Promise<FridgeBoxInfo[]> {
+  const qs = fridgeId ? `?fridge_id=${encodeURIComponent(fridgeId)}` : '';
+  return fetchJSON(`${BASE}/boxes${qs}`);
+}
+
 export async function fetchBoxes(drawerId: string): Promise<Box[]> {
   return fetchJSON(`${BASE}/drawers/${encodeURIComponent(drawerId)}/boxes`);
 }

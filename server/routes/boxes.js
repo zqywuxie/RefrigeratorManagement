@@ -4,6 +4,28 @@ import { authenticate, requireResourceOwner } from '../middleware/auth.js';
 
 const router = Router();
 
+// GET /api/boxes?fridge_id=X — list boxes for a fridge with drawer info
+router.get('/', async (req, res) => {
+  try {
+    let query = `SELECT b.*, d.label as drawer_label, d.refrigerator_id as fridge_id
+     FROM boxes b
+     JOIN drawers d ON d.id = b.drawer_id
+     WHERE b.deleted_at IS NULL`;
+    const params = [];
+
+    if (req.query.fridge_id) {
+      query += ' AND d.refrigerator_id = ?';
+      params.push(req.query.fridge_id);
+    }
+
+    query += ' ORDER BY d.layer, d.row_pos, d.col_pos, b.position';
+    const [rows] = await pool.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/boxes — create box without drawer (for upper item boxes)
 router.post('/', authenticate, async (req, res) => {
   try {

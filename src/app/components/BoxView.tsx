@@ -13,6 +13,7 @@ interface BoxPositionSlotProps {
   onDeleteBox: (boxId: string) => void;
   onDropBox: (boxId: string, targetPosition: number) => void;
   canDelete?: boolean;
+  isHighlighted?: boolean;
 }
 
 function BoxPositionSlot({
@@ -23,6 +24,7 @@ function BoxPositionSlot({
   onDeleteBox,
   onDropBox,
   canDelete = true,
+  isHighlighted = false,
 }: BoxPositionSlotProps) {
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: 'BOX',
@@ -54,6 +56,7 @@ function BoxPositionSlot({
           onClick={() => onBoxClick(box.id)}
           onDelete={onDeleteBox}
           canDelete={canDelete}
+          isHighlighted={isHighlighted}
         />
       ) : (
         <motion.button
@@ -89,6 +92,7 @@ interface BoxViewProps {
   onAddPosition: (insertAt: number) => void;
   onMoveBox: (boxId: string, targetPosition: number) => void;
   onDeleteBox: (boxId: string) => void;
+  highlightedBoxId?: string | null;
 }
 
 export function BoxView({
@@ -102,6 +106,7 @@ export function BoxView({
   onAddPosition,
   onMoveBox,
   onDeleteBox,
+  highlightedBoxId,
 }: BoxViewProps) {
   const capacity = Math.max(5, drawer.max_boxes || 5);
   const getBoxAt = (position: number) => boxes.find((box) => box.position === position);
@@ -201,6 +206,7 @@ export function BoxView({
                 onDeleteBox={onDeleteBox}
                 onDropBox={onMoveBox}
                 canDelete={!box || !box.owner || box.owner === currentUser}
+                isHighlighted={!!highlightedBoxId && box?.id === highlightedBoxId}
               />
             );
           })}

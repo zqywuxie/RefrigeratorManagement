@@ -9,9 +9,10 @@ interface BoxCardProps {
   onClick: () => void;
   onDelete: (id: string) => void;
   canDelete?: boolean;
+  isHighlighted?: boolean;
 }
 
-export function BoxCard({ box, onClick, onDelete, canDelete = true }: BoxCardProps) {
+export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighted = false }: BoxCardProps) {
   const isPrecise = box.mode === 'precise';
   const gridLabel = isPrecise && box.grid_rows && box.grid_cols
     ? `${box.grid_rows}×${box.grid_cols}`
@@ -38,10 +39,12 @@ export function BoxCard({ box, onClick, onDelete, canDelete = true }: BoxCardPro
         }
       }}
       className="relative w-full rounded-xl px-5 py-4 cursor-pointer"
+      animate={isHighlighted ? { boxShadow: ['0 0 12px rgba(34,211,238,0.25)', '0 0 22px rgba(34,211,238,0.45)', '0 0 12px rgba(34,211,238,0.25)'] } : undefined}
+      transition={isHighlighted ? { repeat: Infinity, duration: 1.2 } : undefined}
       style={{
         background: 'var(--app-card-bg)',
-        border: '1.5px solid var(--app-border)',
-        boxShadow: '0 4px 16px rgba(15,23,42,0.06)',
+        border: isHighlighted ? '2px solid #22d3ee' : '1.5px solid var(--app-border)',
+        boxShadow: isHighlighted ? '0 0 18px rgba(34,211,238,0.35)' : '0 4px 16px rgba(15,23,42,0.06)',
         opacity: isDragging ? 0.45 : 1,
       }}
     >

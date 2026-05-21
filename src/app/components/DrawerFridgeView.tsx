@@ -60,6 +60,8 @@ interface DrawerFridgeViewProps {
   } | null) => void;
   onFridgeDataChange?: (items: UpperItem[]) => void;
   onActiveDrawerChange?: (drawerId: string | null) => void;
+  highlightedBoxId?: string | null;
+  onClearBoxHighlight?: () => void;
 }
 
 export function DrawerFridgeView({
@@ -83,6 +85,8 @@ export function DrawerFridgeView({
   onBoxSamplePanelChange,
   onFridgeDataChange,
   onActiveDrawerChange,
+  highlightedBoxId,
+  onClearBoxHighlight,
 }: DrawerFridgeViewProps) {
   const [viewLevel, setViewLevel] = useState<ViewLevel>('fridge');
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('upper');
@@ -342,7 +346,8 @@ export function DrawerFridgeView({
     setSelectedBoxId(boxId);
     setSelectedBox(box);
     setViewLevel('box');
-  }, [boxes]);
+    onClearBoxHighlight?.();
+  }, [boxes, onClearBoxHighlight]);
 
   const handleBackToFridge = useCallback(() => {
     setViewLevel('fridge');
@@ -354,7 +359,8 @@ export function DrawerFridgeView({
     setMultiSelectMode(false);
     setSelectedPositions(new Set());
     setHoveredSampleId(null);
-  }, []);
+    onClearBoxHighlight?.();
+  }, [onClearBoxHighlight]);
 
   const handleBackToDrawer = useCallback(() => {
     // If we came from an upper item box, go back to fridge level
@@ -949,6 +955,7 @@ export function DrawerFridgeView({
                 onAddPosition={handleAddInternalPosition}
                 onMoveBox={handleMoveBox}
                 onDeleteBox={handleDeleteBox}
+                highlightedBoxId={highlightedBoxId}
               />
             )}
           </motion.div>

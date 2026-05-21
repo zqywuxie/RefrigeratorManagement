@@ -30,6 +30,7 @@ import {
   Package,
   ChevronLeft,
   ChevronRight,
+  CircleHelp,
 } from 'lucide-react';
 
 import {
@@ -53,11 +54,13 @@ import {
   fetchItemTypes,
   createItemType,
   fetchSampleRecords,
+  fetchFridgeBoxes,
   fetchSampleTypes,
   createSampleType,
   fetchDrawers,
   fetchUpperItems,
 } from './api';
+import type { FridgeBoxInfo } from './api';
 import { FridgeSelector } from './components/FridgeSelector';
 import { RootAdminPanel } from './components/RootAdminPanel';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -72,6 +75,7 @@ import { Button } from './components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './components/ui/sheet';
 import { Drawer, DrawerContent } from './components/ui/drawer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
 
 type UploadedRecordItem = {
   id: string;
@@ -155,6 +159,7 @@ function AppContent() {
   const [itemTypes, setItemTypes] = useState<string[]>(DEFAULT_ITEM_TYPES);
   const [sampleTypes, setSampleTypes] = useState<string[]>([]);
   const [sampleRecords, setSampleRecords] = useState<SampleRecord[]>([]);
+  const [fridgeBoxes, setFridgeBoxes] = useState<FridgeBoxInfo[]>([]);
   const [drawerCount, setDrawerCount] = useState(0);
   const [drawerBoxCount, setDrawerBoxCount] = useState(0);
   const [drawerMaxBoxes, setDrawerMaxBoxes] = useState(0);
@@ -173,6 +178,7 @@ function AppContent() {
   const [drawerSampleNavTarget, setDrawerSampleNavTarget] = useState<DrawerSampleNavTarget | null>(null);
   const [upperItemNavTarget, setUpperItemNavTarget] = useState<{ fridgeId: string; itemId: string } | null>(null);
   const [activeDrawerId, setActiveDrawerId] = useState<string | null>(null);
+  const [highlightedBoxId, setHighlightedBoxId] = useState<string | null>(null);
 
   // Pending imported samples (shared with DrawerFridgeView)
   const [pendingSamples, setPendingSamples] = useState<PendingImportSample[]>([]);
@@ -183,6 +189,39 @@ function AppContent() {
   const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
   const [mobileSideMapOpen, setMobileSideMapOpen] = useState(false);
 
+  // Range-aware box name matching: "MLP 12" matches box "MLP 11-20"
+  const matchesBoxName = (query: string, boxName: string): boolean => {
+    if (!boxName) return false;
+    if (boxName.toLowerCase().includes(query.toLowerCase())) return true;
+    const searchMatch = query.match(/^(.+?)\s+(\d+)$/i);
+    if (!searchMatch) return false;
+    const searchPrefix = searchMatch[1].toLowerCase();
+    const searchNum = parseInt(searchMatch[2], 10);
+    const boxMatch = boxName.match(/^(.+?)\s+(\d+)\s*-\s*(\d+)$/i);
+    if (!boxMatch) return false;
+    const boxPrefix = boxMatch[1].toLowerCase();
+    const boxStart = parseInt(boxMatch[2], 10);
+    const boxEnd = parseInt(boxMatch[3], 10);
+    return searchPrefix === boxPrefix && searchNum >= boxStart && searchNum <= boxEnd;
+  };
+
+  // Find first tube whose box_name matched the search query, for box highlighting
+  const getMatchedBoxId = (sr: SampleRecord): string | null => {
+    if (!sr.tubes?.length) return null;
+    const q = searchQuery.trim();
+    if (!q) return null;
+    const matchedTube = sr.tubes.find(t => t.box_name && matchesBoxName(q, t.box_name));
+    return matchedTube?.box_id || null;
+  };
+
+  const getMatchedBoxName = (sr: SampleRecord): string | null => {
+    if (!sr.tubes?.length) return null;
+    const q = searchQuery.trim();
+    if (!q) return null;
+    const matchedTube = sr.tubes.find(t => t.box_name && matchesBoxName(q, t.box_name));
+    return matchedTube?.box_name || null;
+  };
+
   // Global sample records filtered by searchQuery (for dropdown below search bar)
   const globalFilteredRecords = React.useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -190,9 +229,17 @@ function AppContent() {
     return sampleRecords.filter((sr) =>
       sr.patient_name.toLowerCase().includes(q) ||
       sr.sample_code.toLowerCase().includes(q) ||
-      (sr.sample_type || '').toLowerCase().includes(q)
+      (sr.sample_type || '').toLowerCase().includes(q) ||
+      (sr.tubes && sr.tubes.some(t => matchesBoxName(searchQuery.trim(), t.box_name || '')))
     );
   }, [sampleRecords, searchQuery]);
+
+  // Global boxes filtered by searchQuery (for dropdown below search bar)
+  const globalFilteredBoxes = React.useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.trim();
+    return fridgeBoxes.filter((b) => b.name && matchesBoxName(q, b.name));
+  }, [fridgeBoxes, searchQuery]);
 
   const handleImportComplete = useCallback((newSamples: PendingImportSample[]) => {
     setPendingSamples((prev) => [...prev, ...newSamples]);
@@ -202,6 +249,7 @@ function AppContent() {
     const t = setInterval(() => setTick((n) => n + 1), 5000);
     return () => clearInterval(t);
   }, []);
+
 
   // Load refrigerators and sample types on mount
   useEffect(() => {
@@ -237,8 +285,9 @@ function AppContent() {
     fetchItemTypes()
       .then((data) => setItemTypes(data.length > 0 ? data : DEFAULT_ITEM_TYPES))
       .catch(() => {});
-    // Load all sample records globally for search
+    // Load all sample records and boxes globally for search
     fetchSampleRecords({}).then(setSampleRecords).catch(() => {});
+    fetchFridgeBoxes().then(setFridgeBoxes).catch(() => {});
   }, []);
 
   // Load sample records, drawers, upper items when fridge changes
@@ -249,8 +298,10 @@ function AppContent() {
       fetchSampleRecords({}).catch(() => []),
       fetchDrawers(selectedFridgeId).catch(() => []),
       fetchUpperItems(selectedFridgeId).catch(() => []),
-    ]).then(([srData, drawerData, upperItemsData]) => {
+      fetchFridgeBoxes(selectedFridgeId).catch(() => []),
+    ]).then(([srData, drawerData, upperItemsData, boxData]) => {
       setSampleRecords(srData);
+      setFridgeBoxes(boxData);
       setDrawerCount(drawerData.length);
       setDrawerBoxCount(drawerData.reduce((s: number, d: any) => s + (d.box_count ?? 0), 0));
       setDrawerMaxBoxes(drawerData.reduce((s: number, d: any) => s + (d.max_boxes ?? 5), 0));
@@ -839,17 +890,36 @@ function AppContent() {
               type="text"
               placeholder="搜索..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); setHighlightedBoxId(null); }}
               className="flex-1 bg-transparent outline-none text-[16px] placeholder:text-slate-600"
               style={{ color: 'var(--app-text)' }}
             />
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors"
+                  style={{ color: 'var(--app-muted)' }}
+                  title="搜索帮助"
+                >
+                  <CircleHelp size={16} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-72 p-4 text-[13px] leading-relaxed" style={{ background: 'var(--app-header-bg)', border: '1px solid var(--app-border)', color: 'var(--app-text)' }}>
+                <div className="font-medium text-[14px] mb-2">搜索规则</div>
+                <ul className="space-y-1.5 list-disc list-inside">
+                  <li>搜索范围：<b>患者姓名</b>、<b>样本编号</b>、<b>样本类型</b>、<b>盒子名称</b></li>
+                  <li>盒子范围匹配：搜索 <code className="px-1 rounded text-[11px]" style={{ background: 'var(--app-input-bg)', color: '#2563eb' }}>MLP 12</code> 可匹配盒子 <code className="px-1 rounded text-[11px]" style={{ background: 'var(--app-input-bg)', color: '#2563eb' }}>MLP 11-20</code></li>
+                  <li>结果排序：<b>样本记录优先</b>，盒子其次</li>
+                </ul>
+              </PopoverContent>
+            </Popover>
             {searchQuery && (
               <div className="flex items-center gap-1">
                 <span className="text-[14px]" style={{ color: '#2563eb' }}>
-                  {globalFilteredRecords.length} 个
+                  {globalFilteredRecords.length + globalFilteredBoxes.length} 个
                 </span>
                 <button
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => { setSearchQuery(''); setHighlightedBoxId(null); }}
                   className="text-[14px] px-2 py-1 rounded"
                   style={{ color: 'var(--app-muted)' }}
                 >
@@ -860,7 +930,7 @@ function AppContent() {
           </div>
 
           {/* Global search results dropdown */}
-          {searchQuery.trim() && globalFilteredRecords.length > 0 && (
+          {searchQuery.trim() && (globalFilteredRecords.length > 0 || globalFilteredBoxes.length > 0) && (
             <div
               className="rounded-xl p-3 space-y-1 max-h-56 overflow-y-auto"
               style={{
@@ -869,42 +939,88 @@ function AppContent() {
                 boxShadow: '0 12px 34px rgba(15,23,42,0.06)',
               }}
             >
-              <div className="text-[11px] px-1 mb-1" style={{ color: 'var(--app-muted)' }}>
-                全局匹配 · {globalFilteredRecords.length} 条
-              </div>
-              {globalFilteredRecords.slice(0, 15).map((sr) => (
-                <div
-                  key={sr.id}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:brightness-95"
-                  style={{
-                    background: sr.group_color + '12',
-                    border: `1px solid ${sr.group_color}20`,
-                  }}
-                  onClick={() => {
-                    setSearchQuery('');
-                    if (sr.tubes && sr.tubes.length > 0) {
-                      const locTube = sr.tubes.find(t => t.fridge_id && t.drawer_id);
-                      if (locTube?.fridge_id) {
-                        setSelectedFridgeId(locTube.fridge_id);
-                        if (locTube.drawer_id) {
-                          setSideMapNavTarget({ drawerId: locTube.drawer_id, drawerLabel: '' });
-                        }
-                      }
-                    }
-                  }}
-                >
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>{sr.patient_name}</span>
-                    <span className="text-[11px] ml-2" style={{ color: 'var(--app-muted)' }}>{sr.sample_code}</span>
+              {globalFilteredRecords.length > 0 && (
+                <>
+                  <div className="text-[11px] px-1 mb-1" style={{ color: 'var(--app-muted)' }}>
+                    全局匹配 · {globalFilteredRecords.length} 条
                   </div>
-                  {sr.sample_type && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--app-subtle-bg)', color: 'var(--app-subtle-text)' }}>
-                      {sr.sample_type}
-                    </span>
-                  )}
-                </div>
-              ))}
+                  {globalFilteredRecords.slice(0, 15).map((sr) => (
+                    <div
+                      key={sr.id}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:brightness-95"
+                      style={{
+                        background: sr.group_color + '12',
+                        border: `1px solid ${sr.group_color}20`,
+                      }}
+                      onClick={() => {
+                        const matchedBoxId = getMatchedBoxId(sr);
+                        setSearchQuery('');
+                        if (matchedBoxId) setHighlightedBoxId(matchedBoxId);
+                        if (sr.tubes && sr.tubes.length > 0) {
+                          const matchedTube = matchedBoxId ? sr.tubes.find(t => t.box_id === matchedBoxId) : null;
+                          const locTube = matchedTube || sr.tubes.find(t => t.fridge_id && t.drawer_id);
+                          if (locTube?.fridge_id) {
+                            setSelectedFridgeId(locTube.fridge_id);
+                            if (locTube.drawer_id) {
+                              setSideMapNavTarget({ drawerId: locTube.drawer_id, drawerLabel: '' });
+                            }
+                          }
+                        }
+                      }}
+                    >
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>{sr.patient_name}</span>
+                        <span className="text-[11px] ml-2" style={{ color: 'var(--app-muted)' }}>{sr.sample_code}</span>
+                      </div>
+                      {sr.sample_type && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--app-subtle-bg)', color: 'var(--app-subtle-text)' }}>
+                          {sr.sample_type}
+                        </span>
+                      )}
+                      {getMatchedBoxName(sr) && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(34,211,238,0.15)', color: '#0891b2', border: '1px solid rgba(34,211,238,0.3)' }}>
+                          {getMatchedBoxName(sr)}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </>
+              )}
+              {globalFilteredBoxes.length > 0 && (
+                <>
+                  <div className="text-[11px] px-1 mb-1 mt-1" style={{ color: 'var(--app-muted)' }}>
+                    盒子匹配 · {globalFilteredBoxes.length} 个
+                  </div>
+                  {globalFilteredBoxes.slice(0, 8).map((b) => (
+                    <div
+                      key={b.id}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:brightness-95"
+                      style={{
+                        background: 'rgba(34,211,238,0.08)',
+                        border: '1px solid rgba(34,211,238,0.2)',
+                      }}
+                      onClick={() => {
+                        setSearchQuery('');
+                        setHighlightedBoxId(b.id);
+                        if (b.fridge_id) setSelectedFridgeId(b.fridge_id);
+                        if (b.drawer_id) {
+                          setSideMapNavTarget({ drawerId: b.drawer_id, drawerLabel: b.drawer_label || '' });
+                        }
+                      }}
+                    >
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#22d3ee' }} />
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>{b.name}</span>
+                        <span className="text-[11px] ml-2" style={{ color: 'var(--app-muted)' }}>{b.drawer_label}</span>
+                      </div>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(34,211,238,0.15)', color: '#0891b2', border: '1px solid rgba(34,211,238,0.3)' }}>
+                        盒子
+                      </span>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           )}
           </div>
@@ -951,14 +1067,18 @@ function AppContent() {
                 onBoxSamplePanelChange={setBoxSamplePanel}
                 onFridgeDataChange={setFridgeItems}
                 onActiveDrawerChange={setActiveDrawerId}
+                highlightedBoxId={highlightedBoxId}
+                onClearBoxHighlight={() => setHighlightedBoxId(null)}
                 onDataChanged={() => {
                   setSideMapRefreshKey((k) => k + 1);
                   Promise.all([
                     fetchSampleRecords({}).catch(() => []),
                     fetchDrawers(selectedFridge!.id).catch(() => []),
                     fetchUpperItems(selectedFridge!.id).catch(() => []),
-                  ]).then(([srData, drawerData, upperItemsData]) => {
+                    fetchFridgeBoxes(selectedFridge!.id).catch(() => []),
+                  ]).then(([srData, drawerData, upperItemsData, boxData]) => {
                     setSampleRecords(srData);
+                    setFridgeBoxes(boxData);
                     setDrawerCount(drawerData.length);
                     setDrawerBoxCount(drawerData.reduce((s: number, d: any) => s + (d.box_count ?? 0), 0));
                     setDrawerMaxBoxes(drawerData.reduce((s: number, d: any) => s + (d.max_boxes ?? 5), 0));
@@ -1276,19 +1396,38 @@ function AppContent() {
               <Search size={20} color={searchQuery ? '#2563eb' : 'var(--app-muted)'} />
               <input
                 type="text"
-                placeholder="搜索样本、类型、患者、标签..."
+                placeholder="搜索样本、类型、患者、盒子..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setHighlightedBoxId(null); }}
                 className="flex-1 bg-transparent outline-none text-[16px] placeholder:text-slate-600"
                 style={{ color: 'var(--app-text)' }}
               />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors"
+                    style={{ color: 'var(--app-muted)' }}
+                    title="搜索帮助"
+                  >
+                    <CircleHelp size={16} />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 p-4 text-[13px] leading-relaxed" style={{ background: 'var(--app-header-bg)', border: '1px solid var(--app-border)', color: 'var(--app-text)' }}>
+                  <div className="font-medium text-[14px] mb-2">搜索规则</div>
+                  <ul className="space-y-1.5 list-disc list-inside">
+                    <li>搜索范围：<b>患者姓名</b>、<b>样本编号</b>、<b>样本类型</b>、<b>盒子名称</b></li>
+                    <li>盒子范围匹配：搜索 <code className="px-1 rounded text-[11px]" style={{ background: 'var(--app-input-bg)', color: '#2563eb' }}>MLP 12</code> 可匹配盒子 <code className="px-1 rounded text-[11px]" style={{ background: 'var(--app-input-bg)', color: '#2563eb' }}>MLP 11-20</code></li>
+                    <li>结果排序：<b>样本记录优先</b>，盒子其次</li>
+                  </ul>
+                </PopoverContent>
+              </Popover>
               {searchQuery && (
                 <div className="flex items-center gap-1">
                   <span className="text-[14px]" style={{ color: '#2563eb' }}>
-                    {globalFilteredRecords.length} 个匹配
+                    {globalFilteredRecords.length + globalFilteredBoxes.length} 个匹配
                   </span>
                   <button
-                    onClick={() => setSearchQuery('')}
+                    onClick={() => { setSearchQuery(''); setHighlightedBoxId(null); }}
                     className="text-[14px] px-2 py-1 rounded"
                     style={{ color: 'var(--app-muted)' }}
                   >
@@ -1299,7 +1438,7 @@ function AppContent() {
             </div>
 
             {/* Global search results dropdown */}
-            {searchQuery.trim() && globalFilteredRecords.length > 0 && (
+            {searchQuery.trim() && (globalFilteredRecords.length > 0 || globalFilteredBoxes.length > 0) && (
               <div
                 className="rounded-xl p-3 space-y-1 max-h-56 overflow-y-auto"
                 style={{
@@ -1308,47 +1447,93 @@ function AppContent() {
                   boxShadow: '0 12px 34px rgba(15,23,42,0.06)',
                 }}
               >
-                <div className="text-[11px] px-1 mb-1" style={{ color: 'var(--app-muted)' }}>
-                  全局样本记录匹配 · {globalFilteredRecords.length} 条
-                </div>
-                {globalFilteredRecords.slice(0, 15).map((sr) => (
-                  <div
-                    key={sr.id}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:brightness-95"
-                    style={{
-                      background: sr.group_color + '12',
-                      border: `1px solid ${sr.group_color}20`,
-                    }}
-                    onClick={() => {
-                      setSearchQuery('');
-                      if (sr.tubes && sr.tubes.length > 0) {
-                        const locTube = sr.tubes.find(t => t.fridge_id && t.drawer_id);
-                        if (locTube?.fridge_id) {
-                          setSelectedFridgeId(locTube.fridge_id);
-                          if (locTube.drawer_id) {
-                            setSideMapNavTarget({ drawerId: locTube.drawer_id, drawerLabel: '' });
-                          }
-                        }
-                      }
-                    }}
-                  >
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>{sr.patient_name}</span>
-                      <span className="text-[11px] ml-2" style={{ color: 'var(--app-muted)' }}>{sr.sample_code}</span>
+                {globalFilteredRecords.length > 0 && (
+                  <>
+                    <div className="text-[11px] px-1 mb-1" style={{ color: 'var(--app-muted)' }}>
+                      全局样本记录匹配 · {globalFilteredRecords.length} 条
                     </div>
-                    {sr.sample_type && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--app-subtle-bg)', color: 'var(--app-subtle-text)' }}>
-                        {sr.sample_type}
-                      </span>
+                    {globalFilteredRecords.slice(0, 15).map((sr) => (
+                      <div
+                        key={sr.id}
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:brightness-95"
+                        style={{
+                          background: sr.group_color + '12',
+                          border: `1px solid ${sr.group_color}20`,
+                        }}
+                        onClick={() => {
+                          const matchedBoxId = getMatchedBoxId(sr);
+                          setSearchQuery('');
+                          if (matchedBoxId) setHighlightedBoxId(matchedBoxId);
+                          if (sr.tubes && sr.tubes.length > 0) {
+                            const matchedTube = matchedBoxId ? sr.tubes.find(t => t.box_id === matchedBoxId) : null;
+                            const locTube = matchedTube || sr.tubes.find(t => t.fridge_id && t.drawer_id);
+                            if (locTube?.fridge_id) {
+                              setSelectedFridgeId(locTube.fridge_id);
+                              if (locTube.drawer_id) {
+                                setSideMapNavTarget({ drawerId: locTube.drawer_id, drawerLabel: '' });
+                              }
+                            }
+                          }
+                        }}
+                      >
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sr.group_color }} />
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>{sr.patient_name}</span>
+                          <span className="text-[11px] ml-2" style={{ color: 'var(--app-muted)' }}>{sr.sample_code}</span>
+                        </div>
+                        {sr.sample_type && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--app-subtle-bg)', color: 'var(--app-subtle-text)' }}>
+                            {sr.sample_type}
+                          </span>
+                        )}
+                        {getMatchedBoxName(sr) && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(34,211,238,0.15)', color: '#0891b2', border: '1px solid rgba(34,211,238,0.3)' }}>
+                            {getMatchedBoxName(sr)}
+                          </span>
+                        )}
+                        <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--app-muted)' }}>{sr.tube_count || 0} 管</span>
+                      </div>
+                    ))}
+                    {globalFilteredRecords.length > 15 && (
+                      <div className="text-center pt-1 text-[11px]" style={{ color: 'var(--app-muted)' }}>
+                        还有 {globalFilteredRecords.length - 15} 条...
+                      </div>
                     )}
-                    <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--app-muted)' }}>{sr.tube_count || 0} 管</span>
-                  </div>
-                ))}
-                {globalFilteredRecords.length > 15 && (
-                  <div className="text-center pt-1 text-[11px]" style={{ color: 'var(--app-muted)' }}>
-                    还有 {globalFilteredRecords.length - 15} 条...
-                  </div>
+                  </>
+                )}
+                {globalFilteredBoxes.length > 0 && (
+                  <>
+                    <div className="text-[11px] px-1 mb-1 mt-1" style={{ color: 'var(--app-muted)' }}>
+                      盒子匹配 · {globalFilteredBoxes.length} 个
+                    </div>
+                    {globalFilteredBoxes.slice(0, 8).map((b) => (
+                      <div
+                        key={b.id}
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:brightness-95"
+                        style={{
+                          background: 'rgba(34,211,238,0.08)',
+                          border: '1px solid rgba(34,211,238,0.2)',
+                        }}
+                        onClick={() => {
+                          setSearchQuery('');
+                          setHighlightedBoxId(b.id);
+                          if (b.fridge_id) setSelectedFridgeId(b.fridge_id);
+                          if (b.drawer_id) {
+                            setSideMapNavTarget({ drawerId: b.drawer_id, drawerLabel: b.drawer_label || '' });
+                          }
+                        }}
+                      >
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#22d3ee' }} />
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>{b.name}</span>
+                          <span className="text-[11px] ml-2" style={{ color: 'var(--app-muted)' }}>{b.drawer_label}</span>
+                        </div>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(34,211,238,0.15)', color: '#0891b2', border: '1px solid rgba(34,211,238,0.3)' }}>
+                          盒子
+                        </span>
+                      </div>
+                    ))}
+                  </>
                 )}
               </div>
             )}
@@ -1395,14 +1580,18 @@ function AppContent() {
                   onBoxSamplePanelChange={setBoxSamplePanel}
                   onFridgeDataChange={setFridgeItems}
                   onActiveDrawerChange={setActiveDrawerId}
+                  highlightedBoxId={highlightedBoxId}
+                  onClearBoxHighlight={() => setHighlightedBoxId(null)}
                   onDataChanged={() => {
                     setSideMapRefreshKey((k) => k + 1);
                     Promise.all([
                       fetchSampleRecords({}).catch(() => []),
                       fetchDrawers(selectedFridge.id).catch(() => []),
                       fetchUpperItems(selectedFridge.id).catch(() => []),
-                    ]).then(([srData, drawerData, upperItemsData]) => {
+                      fetchFridgeBoxes(selectedFridge.id).catch(() => []),
+                    ]).then(([srData, drawerData, upperItemsData, boxData]) => {
                       setSampleRecords(srData);
+                      setFridgeBoxes(boxData);
                       setDrawerCount(drawerData.length);
                       setDrawerBoxCount(drawerData.reduce((s: number, d: any) => s + (d.box_count ?? 0), 0));
                       setDrawerMaxBoxes(drawerData.reduce((s: number, d: any) => s + (d.max_boxes ?? 5), 0));
