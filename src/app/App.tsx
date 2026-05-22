@@ -1062,6 +1062,7 @@ function AppContent() {
               <DrawerFridgeView
                 fridge={selectedFridge}
                 currentUser={user!.username}
+                isRoot={isRoot}
                 sampleTypes={sampleTypes}
                 onAddSampleType={handleAddSampleType}
                 itemTypes={itemTypes}
@@ -1575,6 +1576,7 @@ function AppContent() {
                 <DrawerFridgeView
                   fridge={selectedFridge}
                   currentUser={user!.username}
+                  isRoot={isRoot}
                   sampleTypes={sampleTypes}
                   onAddSampleType={handleAddSampleType}
                   itemTypes={itemTypes}

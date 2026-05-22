@@ -33,6 +33,7 @@ const BOX_GRID_PAGE_ROWS = 5;
 interface DrawerFridgeViewProps {
   fridge: Refrigerator;
   currentUser: string;
+  isRoot: boolean;
   sampleTypes: string[];
   onAddSampleType: (name: string) => void;
   itemTypes: string[];
@@ -68,6 +69,7 @@ interface DrawerFridgeViewProps {
 export function DrawerFridgeView({
   fridge,
   currentUser,
+  isRoot,
   sampleTypes,
   onAddSampleType,
   itemTypes,
@@ -500,15 +502,6 @@ export function DrawerFridgeView({
       console.error('Failed to delete box:', err);
     }
   }, [fridge.id, onDataChanged]);
-
-  const handleEditBox = useCallback((boxId: string) => {
-    const box = boxes.find((b) => b.id === boxId);
-    if (box) {
-      setEditBox(box);
-      setTargetBoxPosition(null);
-      setShowBoxModal(true);
-    }
-  }, [boxes]);
 
   const handleEditSelectedBox = useCallback(() => {
     if (!selectedBox || !selectedDrawerId) return;
@@ -1039,9 +1032,9 @@ export function DrawerFridgeView({
                 drawerZoneLabel={selectedDrawerZoneLabel}
                 boxes={boxes}
                 currentUser={currentUser}
+                isRoot={isRoot}
                 onBack={handleBackToFridge}
                 onBoxClick={handleBoxClick}
-                onEditBox={handleEditBox}
                 onAddBox={handleAddBoxAtPosition}
                 onAddPosition={handleAddInternalPosition}
                 onMoveBox={handleMoveBox}

@@ -1,20 +1,19 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { useDrag } from 'react-dnd';
-import { Box as BoxIcon, User, Calendar, Grid3X3, FolderOpen, Copy, Trash2, MapPinned, Pencil } from 'lucide-react';
+import { Box as BoxIcon, User, Calendar, Grid3X3, FolderOpen, Copy, Trash2, MapPinned } from 'lucide-react';
 import { Box, BoxImage, boxPositionToLabel, formatChineseShortDate } from '../types';
 
 interface BoxCardProps {
   box: Box;
   onClick: () => void;
   onDelete: (id: string) => void;
-  onEdit?: (id: string) => void;
   canDelete?: boolean;
   isHighlighted?: boolean;
   images?: BoxImage[];
 }
 
-export function BoxCard({ box, onClick, onDelete, onEdit, canDelete = true, isHighlighted = false, images }: BoxCardProps) {
+export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighted = false, images }: BoxCardProps) {
   const isPrecise = box.mode === 'precise';
   const gridLabel = isPrecise && box.grid_rows && box.grid_cols
     ? `${box.grid_rows}×${box.grid_cols}`
@@ -77,16 +76,6 @@ export function BoxCard({ box, onClick, onDelete, onEdit, canDelete = true, isHi
         </div>
         {canDelete && (
           <div className="flex gap-0.5 flex-shrink-0">
-            {onEdit && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onEdit(box.id); }}
-                className="w-7 h-7 min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center hover:bg-blue-50 transition-colors"
-                style={{ color: '#60a5fa' }}
-                title="编辑盒子"
-              >
-                <Pencil size={14} />
-              </button>
-            )}
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(box.id); }}
               className="w-7 h-7 min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors"

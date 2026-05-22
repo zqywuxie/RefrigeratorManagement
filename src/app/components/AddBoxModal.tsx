@@ -53,8 +53,6 @@ export function AddBoxModal({
   const [customCols, setCustomCols] = useState(10);
   const [sampleType, setSampleType] = useState('');
   const [projectName, setProjectName] = useState('');
-  const [owner, setOwner] = useState('');
-  const [rootAdmin, setRootAdmin] = useState('');
   const [createdBy, setCreatedBy] = useState('');
   const [note, setNote] = useState('');
   const [dataPath, setDataPath] = useState('');
@@ -64,7 +62,6 @@ export function AddBoxModal({
   const [images, setImages] = useState<BoxImage[]>([]);
   const [pendingImages, setPendingImages] = useState<PendingBoxImage[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [savedBoxId, setSavedBoxId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
 
   const clearPendingImages = () => {
@@ -90,9 +87,7 @@ export function AddBoxModal({
     setCustomCols(editBox?.grid_cols || 10);
     setSampleType(editBox?.sample_type || sampleTypes[0] || '');
     setProjectName(editBox?.project_name || '');
-    setOwner(editBox?.owner || (editBox ? '' : currentUsername));
-    setRootAdmin(editBox?.root_admin || '');
-    setCreatedBy(editBox?.created_by || (editBox ? '' : currentUsername));
+    setCreatedBy(editBox?.created_by || editBox?.owner || currentUsername);
     setNote(editBox?.note || '');
     setDataPath(editBox?.data_path || '');
     setShowNewType(false);
@@ -102,7 +97,6 @@ export function AddBoxModal({
       (preset) => preset.rows === editBox?.grid_rows && preset.cols === editBox?.grid_cols,
     );
     setGridPreset(presetIndex >= 0 ? presetIndex : 0);
-    setSavedBoxId(null);
     // Load images when editing
     if (editBox?.id) {
       fetchBoxImages(editBox.id).then(setImages).catch(() => setImages([]));
@@ -122,9 +116,9 @@ export function AddBoxModal({
     const preset = BOX_GRID_PRESETS[gridPreset];
     const finalRows = isPrecise ? (preset.rows || customRows) : null;
     const finalCols = isPrecise ? (preset.cols || customCols) : null;
-    const persistedBoxId = editBox?.id || savedBoxId;
+    const finalCreator = (createdBy || currentUsername).trim() || currentUsername;
     const saved = await onSave({
-      id: persistedBoxId,
+      id: editBox?.id,
       name: name.trim(),
       mode,
       grid_rows: finalRows,
@@ -133,26 +127,18 @@ export function AddBoxModal({
       sample_type: sampleType || null,
       project_name: projectName || null,
       quantity: 0,
-      owner: owner || null,
-      root_admin: rootAdmin || null,
-      created_by: createdBy || null,
+      owner: finalCreator,
+      created_by: finalCreator,
       note: note || null,
       data_path: dataPath || null,
       tags: editBox?.tags || [],
     });
-    if (!editBox?.id && !savedBoxId && saved?.id) {
-      setSavedBoxId(saved.id);
+    if (!editBox?.id && saved?.id) {
+      handleClose();
       if (pendingImages.length > 0) {
-        setUploading(true);
-        try {
-          const uploaded = await Promise.all(pendingImages.map((img) => uploadBoxImage(saved.id, img.file)));
-          setImages((prev) => [...prev, ...uploaded]);
-          clearPendingImages();
-        } catch (err: any) {
-          setError(err.message || '盒子已保存，但图片上传失败，请重试');
-        } finally {
-          setUploading(false);
-        }
+        void Promise.all(pendingImages.map((img) => uploadBoxImage(saved.id, img.file))).catch((err: any) => {
+          console.error('Box image upload failed after save:', err);
+        });
       }
     } else if (editBox?.id) {
       // Editing existing — close as before
@@ -162,7 +148,7 @@ export function AddBoxModal({
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
-    const boxId = editBox?.id || savedBoxId;
+    const boxId = editBox?.id;
     if (selectedFiles.length === 0) return;
     if (!boxId) {
       setPendingImages((prev) => [
@@ -215,7 +201,6 @@ export function AddBoxModal({
 
   const title = editBox ? '编辑盒子' : '添加盒子';
   const subtitle = `抽屉外部：${drawerLabel || '—'} · 抽屉内部：${targetPosition != null ? boxPositionToLabel(targetPosition) : '—'}`;
-  const persistedBoxId = editBox?.id || savedBoxId;
 
   return (
     <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
@@ -384,28 +369,12 @@ export function AddBoxModal({
           </div>
 
           <input
-            value={owner}
-            onChange={(e) => setOwner(e.target.value)}
-            placeholder="负责人"
+            value={createdBy}
+            onChange={(e) => setCreatedBy(e.target.value)}
+            placeholder="创建者"
             className="w-full px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
             style={fieldStyle}
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input
-              value={rootAdmin}
-              onChange={(e) => setRootAdmin(e.target.value)}
-              placeholder="Root 管理员（选填）"
-              className="px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
-              style={fieldStyle}
-            />
-            <input
-              value={createdBy}
-              onChange={(e) => setCreatedBy(e.target.value)}
-              placeholder="创建者"
-              className="px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
-              style={fieldStyle}
-            />
-          </div>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -431,7 +400,7 @@ export function AddBoxModal({
                 {uploading ? '上传中...' : '上传图片'}
                 <input type="file" accept="image/*" multiple onChange={handleImageUpload} disabled={uploading} className="hidden" />
               </label>
-              {!persistedBoxId && pendingImages.length > 0 && (
+              {!editBox?.id && pendingImages.length > 0 && (
                 <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
                   保存后自动上传
                 </span>
@@ -500,7 +469,7 @@ export function AddBoxModal({
             ) : (
               <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--app-card-bg)', border: '1px dashed var(--app-border)', color: 'var(--app-muted)' }}>
                 <ImageIcon size={16} />
-                <span className="text-[12px]">{persistedBoxId ? '可上传并查看缩略图' : '可先选择图片，保存盒子后自动上传'}</span>
+                <span className="text-[12px]">{editBox?.id ? '可上传并查看缩略图' : '可先选择图片，保存盒子后自动上传'}</span>
               </div>
             )}
           </div>
@@ -519,7 +488,7 @@ export function AddBoxModal({
               className="px-4 py-2 rounded-lg text-[14px] min-h-[44px]"
               style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)', border: '1px solid var(--app-border)' }}
             >
-              {savedBoxId ? '完成' : '取消'}
+              取消
             </button>
             <button
               type="submit"
@@ -527,7 +496,7 @@ export function AddBoxModal({
               className="px-4 py-2 rounded-lg text-[14px] min-h-[44px]"
               style={{ background: uploading ? '#94a3b8' : '#2563eb', color: '#fff' }}
             >
-              {uploading ? '处理中...' : savedBoxId ? '更新信息' : '保存'}
+              {uploading ? '处理中...' : editBox ? '更新信息' : '保存'}
             </button>
           </ResponsiveDialogFooter>
         </form>

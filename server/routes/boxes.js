@@ -132,8 +132,9 @@ router.put('/:boxId', authenticate, requireResourceOwner('boxes', 'boxId', 'owne
     const finalSampleType = sampleType ?? sample_type ?? null;
     const finalProjectName = projectName ?? project_name ?? null;
     const finalDataPath = dataPath ?? data_path ?? null;
-    const finalRootAdmin = rootAdmin ?? root_admin ?? null;
-    const finalCreatedBy = createdBy ?? created_by ?? null;
+    const finalOwner = owner ?? existing.owner ?? null;
+    const finalRootAdmin = rootAdmin ?? root_admin ?? existing.root_admin ?? null;
+    const finalCreatedBy = createdBy ?? created_by ?? existing.created_by ?? finalOwner ?? null;
     await pool.query(
       `UPDATE boxes SET name=?, mode=?, grid_rows=?, grid_cols=?, position=?, sample_type=?, project_name=?, quantity=?, owner=?, tags=?, note=?, data_path=?, root_admin=?, created_by=? WHERE id=?`,
       [
@@ -145,7 +146,7 @@ router.put('/:boxId', authenticate, requireResourceOwner('boxes', 'boxId', 'owne
         finalSampleType || null,
         finalProjectName || null,
         quantity,
-        owner || null,
+        finalOwner,
         JSON.stringify(tags || []),
         note || null,
         finalDataPath,
