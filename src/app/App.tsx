@@ -25,6 +25,7 @@ import {
   Menu,
   Map as MapIcon,
   BarChart3,
+  Box,
   Eye,
   EyeOff,
   Package,
@@ -100,7 +101,19 @@ type UploadedUpperItem = {
   updatedAt: string;
 };
 
-type UploadedPanelItem = UploadedRecordItem | UploadedUpperItem;
+type UploadedBoxItem = {
+  kind: 'box';
+  id: string;
+  name: string;
+  drawerId: string;
+  drawerLabel: string;
+  fridgeId: string;
+  owner: string | null;
+  createdBy: string | null;
+  createdAt: string;
+};
+
+type UploadedPanelItem = UploadedRecordItem | UploadedUpperItem | UploadedBoxItem;
 
 type BoxSamplePanelState = {
   tubes: Tube[];
@@ -392,6 +405,28 @@ function AppContent() {
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [upperItems, user]);
 
+  const myUploadedBoxes = React.useMemo<UploadedBoxItem[]>(() => {
+    const username = user!.username;
+    return fridgeBoxes
+      .filter((b) => {
+        const matchesUser = b.owner === username || b.created_by === username;
+        const matchesFridge = !selectedFridgeId || b.fridge_id === selectedFridgeId;
+        return matchesUser && matchesFridge;
+      })
+      .map((b) => ({
+        kind: 'box' as const,
+        id: b.id,
+        name: b.name,
+        drawerId: b.drawer_id,
+        drawerLabel: b.drawer_label || '',
+        fridgeId: b.fridge_id,
+        owner: b.owner ?? null,
+        createdBy: b.created_by ?? null,
+        createdAt: b.created_at || '',
+      }))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }, [fridgeBoxes, selectedFridgeId, user]);
+
   const handleUpperItemsChange = useCallback((items: UpperItem[]) => {
     setUpperItems(items);
     setUpperItemsCount(items.length);
@@ -406,6 +441,22 @@ function AppContent() {
         setSelectedFridgeId(item.refrigeratorId);
       }
       setUpperItemNavTarget({ fridgeId: item.refrigeratorId, itemId: item.id });
+      return;
+    }
+
+    if (item.kind === 'box') {
+      setActiveView('fridge');
+      setSelectedSampleId(null);
+      if (selectedFridgeId !== item.fridgeId) {
+        setSelectedFridgeId(item.fridgeId);
+      }
+      setDrawerSampleNavTarget({
+        fridgeId: item.fridgeId,
+        drawerId: item.drawerId,
+        drawerLabel: item.drawerLabel,
+        boxId: item.id,
+        sampleId: '',
+      });
       return;
     }
 
@@ -771,6 +822,7 @@ function AppContent() {
                       role={user!.role}
                       uploadedItems={myUploadedItems}
                       uploadedUpperItems={myUploadedUpperItems}
+                      uploadedBoxes={myUploadedBoxes}
                       hasBoxViewTubes={boxViewTubes.length > 0}
                       onOpenSample={(item) => { handleOpenUploadedItem(item); setMobileMenuOpen(false); }}
                       onLogout={logout}
@@ -853,6 +905,7 @@ function AppContent() {
               role={user!.role}
               uploadedItems={myUploadedItems}
               uploadedUpperItems={myUploadedUpperItems}
+              uploadedBoxes={myUploadedBoxes}
               hasBoxViewTubes={boxViewTubes.length > 0}
               onOpenSample={handleOpenUploadedItem}
               onLogout={logout}
@@ -1969,6 +2022,7 @@ function UserMenu({
   role,
   uploadedItems,
   uploadedUpperItems,
+  uploadedBoxes,
   hasBoxViewTubes,
   onOpenSample,
   onLogout,
@@ -1977,6 +2031,7 @@ function UserMenu({
   role: string;
   uploadedItems: UploadedRecordItem[];
   uploadedUpperItems: UploadedUpperItem[];
+  uploadedBoxes: UploadedBoxItem[];
   hasBoxViewTubes: boolean;
   onOpenSample: (item: UploadedPanelItem) => void;
   onLogout: () => void;
@@ -1993,8 +2048,8 @@ function UserMenu({
   const [message, setMessage] = useState('');
   const [registering, setRegistering] = useState(false);
   const [showUploads, setShowUploads] = useState(false);
-  const [uploadTab, setUploadTab] = useState<'samples' | 'items'>('samples');
-  const [uploadPages, setUploadPages] = useState({ samples: 0, items: 0 });
+  const [uploadTab, setUploadTab] = useState<'samples' | 'items' | 'boxes'>('samples');
+  const [uploadPages, setUploadPages] = useState({ samples: 0, items: 0, boxes: 0 });
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -2011,13 +2066,20 @@ function UserMenu({
     currentItemUploadPage * uploadPageSize,
     currentItemUploadPage * uploadPageSize + uploadPageSize,
   );
+  const boxPageCount = Math.max(1, Math.ceil(uploadedBoxes.length / uploadPageSize));
+  const currentBoxUploadPage = Math.min(uploadPages.boxes, boxPageCount - 1);
+  const pagedUploadedBoxes = uploadedBoxes.slice(
+    currentBoxUploadPage * uploadPageSize,
+    currentBoxUploadPage * uploadPageSize + uploadPageSize,
+  );
 
   useEffect(() => {
     setUploadPages((prev) => ({
       samples: Math.min(prev.samples, samplePageCount - 1),
       items: Math.min(prev.items, itemPageCount - 1),
+      boxes: Math.min(prev.boxes, boxPageCount - 1),
     }));
-  }, [samplePageCount, itemPageCount]);
+  }, [samplePageCount, itemPageCount, boxPageCount]);
 
   useEffect(() => {
     if (isMobile || (!showUploads && !showRegister)) return;
@@ -2074,9 +2136,9 @@ function UserMenu({
     }
   };
 
-  const renderUploadPager = (tab: 'samples' | 'items', total: number) => {
-    const pageCount = tab === 'samples' ? samplePageCount : itemPageCount;
-    const page = tab === 'samples' ? Math.min(uploadPages.samples, pageCount - 1) : Math.min(uploadPages.items, pageCount - 1);
+  const renderUploadPager = (tab: 'samples' | 'items' | 'boxes', total: number) => {
+    const pageCount = tab === 'samples' ? samplePageCount : tab === 'items' ? itemPageCount : boxPageCount;
+    const page = tab === 'samples' ? Math.min(uploadPages.samples, pageCount - 1) : tab === 'items' ? Math.min(uploadPages.items, pageCount - 1) : Math.min(uploadPages.boxes, pageCount - 1);
     if (total <= uploadPageSize) return null;
 
     return (
@@ -2196,30 +2258,79 @@ function UserMenu({
     );
   };
 
+  const renderUploadedBoxList = () => {
+    if (uploadedBoxes.length === 0) {
+      return (
+        <div className="rounded-lg px-3 py-5 text-center text-[13px]" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', color: 'var(--app-muted)' }}>
+          当前冰箱暂无你创建的盒子
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="space-y-2">
+          {pagedUploadedBoxes.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                onOpenSample(item);
+                setShowUploads(false);
+              }}
+              className="w-full rounded-lg px-3 py-2.5 text-left transition-all hover:brightness-95"
+              style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', color: 'var(--app-text)' }}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#f59e0b' }} />
+                    <span className="text-[13px] truncate">{item.name}</span>
+                  </div>
+                  <div className="mt-1 text-[11px] truncate" style={{ color: 'var(--app-muted)' }}>
+                    抽屉 {item.drawerLabel} · {item.owner || item.createdBy || '—'}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>定位</div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+        {renderUploadPager('boxes', uploadedBoxes.length)}
+      </>
+    );
+  };
+
   const uploadsPanelContent = (
     <>
       <div className="flex items-center justify-between mb-3">
         <div className="min-w-0">
           <div className="text-[13px]" style={{ color: 'var(--app-text)' }}>我的上传</div>
           <div className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
-            当前冰箱 · 样本 {uploadedItems.length} · 物品 {uploadedUpperItems.length}
+            当前冰箱 · 样本 {uploadedItems.length} · 物品 {uploadedUpperItems.length} · 盒子 {uploadedBoxes.length}
           </div>
         </div>
         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--app-card-bg)', border: '1px solid var(--app-border)', color: '#2563eb' }}>
-          {uploadTab === 'samples' ? <FlaskConical size={16} /> : <Package size={16} />}
+          {uploadTab === 'samples' ? <FlaskConical size={16} /> : uploadTab === 'items' ? <Package size={16} /> : <Box size={16} />}
         </div>
       </div>
 
-      <Tabs value={uploadTab} onValueChange={(value) => setUploadTab(value as 'samples' | 'items')} className="w-full">
-        <TabsList className="mb-3 grid w-full grid-cols-2">
+      <Tabs value={uploadTab} onValueChange={(value) => setUploadTab(value as 'samples' | 'items' | 'boxes')} className="w-full">
+        <TabsList className="mb-3 grid w-full grid-cols-3">
           <TabsTrigger value="samples">样本 {uploadedItems.length}</TabsTrigger>
           <TabsTrigger value="items">物品 {uploadedUpperItems.length}</TabsTrigger>
+          <TabsTrigger value="boxes">盒子 {uploadedBoxes.length}</TabsTrigger>
         </TabsList>
         <TabsContent value="samples" className="mt-0 outline-none">
           {renderUploadedSampleList()}
         </TabsContent>
         <TabsContent value="items" className="mt-0 outline-none">
           {renderUploadedItemList()}
+        </TabsContent>
+        <TabsContent value="boxes" className="mt-0 outline-none">
+          {renderUploadedBoxList()}
         </TabsContent>
       </Tabs>
     </>

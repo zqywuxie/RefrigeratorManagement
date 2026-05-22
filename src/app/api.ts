@@ -385,6 +385,10 @@ export interface FridgeBoxInfo {
   position: number | null;
   drawer_label: string;
   fridge_id: string;
+  owner: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export async function fetchFridgeBoxes(fridgeId?: string): Promise<FridgeBoxInfo[]> {
