@@ -21,6 +21,7 @@ interface AddBoxModalProps {
   onClose: () => void;
   onAddSampleType: (name: string) => void;
   onSave: (data: Partial<Box>) => Promise<Box | undefined>;
+  onImagesChanged?: (boxId: string) => void;
 }
 
 type PendingBoxImage = {
@@ -35,6 +36,13 @@ type PreviewImage = {
   alt: string;
 };
 
+const generateTempId = (prefix: string) => {
+  const cryptoObj = globalThis.crypto as Crypto | undefined;
+  const uuid = cryptoObj?.randomUUID?.();
+  if (uuid) return `${prefix}-${uuid}`;
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
 export function AddBoxModal({
   isOpen,
   editBox,
@@ -45,6 +53,7 @@ export function AddBoxModal({
   onClose,
   onAddSampleType,
   onSave,
+  onImagesChanged,
 }: AddBoxModalProps) {
   const [name, setName] = useState('');
   const [mode, setMode] = useState<BoxMode>('simple');
@@ -136,9 +145,14 @@ export function AddBoxModal({
     if (!editBox?.id && saved?.id) {
       handleClose();
       if (pendingImages.length > 0) {
-        void Promise.all(pendingImages.map((img) => uploadBoxImage(saved.id, img.file))).catch((err: any) => {
-          console.error('Box image upload failed after save:', err);
-        });
+        void (async () => {
+          try {
+            await Promise.all(pendingImages.map((img) => uploadBoxImage(saved.id, img.file)));
+            onImagesChanged?.(saved.id);
+          } catch (err: any) {
+            console.error('Box image upload failed after save:', err);
+          }
+        })();
       }
     } else if (editBox?.id) {
       // Editing existing — close as before
@@ -154,7 +168,7 @@ export function AddBoxModal({
       setPendingImages((prev) => [
         ...prev,
         ...selectedFiles.map((file) => ({
-          id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`,
+          id: generateTempId(`${file.name}-${file.lastModified}`),
           file,
           previewUrl: URL.createObjectURL(file),
           originalName: file.name,
@@ -168,6 +182,7 @@ export function AddBoxModal({
     try {
       const uploaded = await Promise.all(selectedFiles.map((file) => uploadBoxImage(boxId, file)));
       setImages((prev) => [...prev, ...uploaded]);
+      onImagesChanged?.(boxId);
     } catch (err: any) {
       setError(err.message || '图片上传失败');
     } finally {
@@ -177,15 +192,18 @@ export function AddBoxModal({
   };
 
   const handleImageDelete = async (imageId: string) => {
+    if (!window.confirm('确认删除这张图片吗？')) return;
     try {
       await deleteBoxImage(imageId);
       setImages((prev) => prev.filter((img) => img.id !== imageId));
+      if (editBox?.id) onImagesChanged?.(editBox.id);
     } catch (err: any) {
       setError(err.message || '图片删除失败');
     }
   };
 
   const handlePendingImageDelete = (imageId: string) => {
+    if (!window.confirm('确认删除这张待上传图片吗？')) return;
     setPendingImages((prev) => {
       const target = prev.find((img) => img.id === imageId);
       if (target) URL.revokeObjectURL(target.previewUrl);

@@ -76,6 +76,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './co
 import { Drawer, DrawerContent } from './components/ui/drawer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
+import { Toaster } from './components/ui/sonner';
 
 type UploadedRecordItem = {
   id: string;
@@ -120,6 +121,7 @@ export default function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <AuthProvider>
+        <Toaster />
         <AppGate />
       </AuthProvider>
     </ThemeProvider>

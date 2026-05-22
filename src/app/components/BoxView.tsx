@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Plus, ArrowLeft, MapPinned } from 'lucide-react';
 import { useDrop } from 'react-dnd';
-import { Box, Drawer, boxPositionToLabel } from '../types';
+import { Box, BoxImage, Drawer, boxPositionToLabel } from '../types';
 import { BoxCard } from './BoxCard';
 
 interface BoxPositionSlotProps {
@@ -12,6 +12,7 @@ interface BoxPositionSlotProps {
   onBoxClick: (boxId: string) => void;
   onDeleteBox: (boxId: string) => void;
   onDropBox: (boxId: string, targetPosition: number) => void;
+  images?: BoxImage[];
   canDelete?: boolean;
   isHighlighted?: boolean;
 }
@@ -23,6 +24,7 @@ function BoxPositionSlot({
   onBoxClick,
   onDeleteBox,
   onDropBox,
+  images,
   canDelete = true,
   isHighlighted = false,
 }: BoxPositionSlotProps) {
@@ -55,6 +57,7 @@ function BoxPositionSlot({
           box={box}
           onClick={() => onBoxClick(box.id)}
           onDelete={onDeleteBox}
+          images={images}
           canDelete={canDelete}
           isHighlighted={isHighlighted}
         />
@@ -93,6 +96,7 @@ interface BoxViewProps {
   onAddPosition: (insertAt: number) => void;
   onMoveBox: (boxId: string, targetPosition: number) => void;
   onDeleteBox: (boxId: string) => void;
+  boxImagesById?: Record<string, BoxImage[]>;
   highlightedBoxId?: string | null;
 }
 
@@ -108,6 +112,7 @@ export function BoxView({
   onAddPosition,
   onMoveBox,
   onDeleteBox,
+  boxImagesById,
   highlightedBoxId,
 }: BoxViewProps) {
   const capacity = Math.max(5, drawer.max_boxes || 5);
@@ -207,6 +212,7 @@ export function BoxView({
                 onBoxClick={onBoxClick}
                 onDeleteBox={onDeleteBox}
                 onDropBox={onMoveBox}
+                images={box ? boxImagesById?.[box.id] : undefined}
                 canDelete={!box || !box.owner || box.owner === currentUser || isRoot}
                 isHighlighted={!!highlightedBoxId && box?.id === highlightedBoxId}
               />

@@ -1,7 +1,9 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import { useDrag } from 'react-dnd';
-import { Box as BoxIcon, User, Calendar, Grid3X3, FolderOpen, Copy, Trash2, MapPinned } from 'lucide-react';
+import { toast } from 'sonner';
+import { Box as BoxIcon, User, Calendar, Grid3X3, FolderOpen, Copy, Trash2, MapPinned, Maximize2, X } from 'lucide-react';
 import { Box, BoxImage, boxPositionToLabel, formatChineseShortDate } from '../types';
 
 interface BoxCardProps {
@@ -19,6 +21,8 @@ export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighte
     ? `${box.grid_rows}×${box.grid_cols}`
     : null;
   const tags = Array.isArray(box.tags) ? box.tags : [];
+  const [previewImage, setPreviewImage] = React.useState<BoxImage | null>(null);
+  const ignoreNextCardClickRef = React.useRef(false);
   const [{ isDragging }, drag] = useDrag({
     type: 'BOX',
     item: { id: box.id, position: box.position },
@@ -32,7 +36,13 @@ export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighte
       tabIndex={0}
       whileHover={{ scale: 1.01, y: -2 }}
       whileTap={{ scale: 0.98 }}
-      onClick={onClick}
+      onClick={() => {
+        if (ignoreNextCardClickRef.current) {
+          ignoreNextCardClickRef.current = false;
+          return;
+        }
+        onClick();
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -157,7 +167,27 @@ export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighte
           }}
           onClick={(e) => {
             e.stopPropagation();
-            navigator.clipboard.writeText(box.data_path!);
+            navigator.clipboard.writeText(box.data_path!).then(() => {
+              toast.custom(
+                () => (
+                  <div
+                    data-testid="copy-toast"
+                    className="min-w-[360px] max-w-[520px] rounded-xl px-5 py-4 shadow-2xl"
+                    style={{
+                      background: 'var(--popover)',
+                      color: 'var(--popover-foreground)',
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <div className="text-[16px] font-semibold">数据路径已复制</div>
+                    <div className="mt-1 text-[13px] leading-5 opacity-80 break-all">
+                      {box.data_path}
+                    </div>
+                  </div>
+                ),
+                { duration: 1800 },
+              );
+            });
           }}
           title="点击复制路径"
         >
@@ -167,12 +197,85 @@ export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighte
         </div>
       )}
 
-      {/* First image thumbnail */}
+      {/* Image thumbnails */}
       {images && images.length > 0 && (
-        <div className="mt-2 rounded-md overflow-hidden w-full h-24"
-          style={{ border: '1px solid var(--app-border)' }}>
-          <img src={`/${images[0].image_path}`} alt={images[0].original_name || ''} className="w-full h-full object-cover" />
-        </div>
+        <>
+          <div className="mt-2">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+              {images.slice(0, 6).map((img) => (
+                <button
+                  key={img.id}
+                  type="button"
+                  className="relative flex-shrink-0 w-14 h-14 rounded-md overflow-hidden text-left"
+                  style={{ border: '1px solid var(--app-border)' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewImage(img);
+                  }}
+                  title="点击放大查看"
+                >
+                  <img src={`/${img.image_path}`} alt={img.original_name || ''} className="w-full h-full object-cover" />
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-all hover:bg-black/25 hover:opacity-100">
+                    <Maximize2 size={14} />
+                  </span>
+                </button>
+              ))}
+              {images.length > 6 && (
+                <div
+                  className="flex-shrink-0 w-14 h-14 rounded-md flex items-center justify-center text-[11px] font-medium"
+                  style={{
+                    border: '1px solid var(--app-border)',
+                    background: 'var(--app-input-bg)',
+                    color: 'var(--app-muted)',
+                  }}
+                >
+                  +{images.length - 6}
+                </div>
+              )}
+            </div>
+          </div>
+          {previewImage && (
+            createPortal(
+              <div
+                className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  ignoreNextCardClickRef.current = true;
+                  window.setTimeout(() => {
+                    ignoreNextCardClickRef.current = false;
+                  }, 0);
+                  setPreviewImage(null);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  aria-label="关闭图片预览"
+                  className="absolute right-4 top-4 rounded-full p-2 text-white"
+                  style={{ background: 'rgba(15,23,42,0.72)' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    ignoreNextCardClickRef.current = true;
+                    window.setTimeout(() => {
+                      ignoreNextCardClickRef.current = false;
+                    }, 0);
+                    setPreviewImage(null);
+                  }}
+                >
+                  <X size={20} />
+                </button>
+                <img
+                  src={`/${previewImage.image_path}`}
+                  alt={previewImage.original_name || '盒子图片'}
+                  className="max-h-[88vh] max-w-[92vw] rounded-xl object-contain"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>,
+              document.body,
+            )
+          )}
+        </>
       )}
     </motion.div>
   );

@@ -99,6 +99,7 @@ export function DrawerFridgeView({
   const [selectedBox, setSelectedBox] = useState<Box | null>(null);
   const [boxImages, setBoxImages] = useState<BoxImage[]>([]);
   const [previewBoxImage, setPreviewBoxImage] = useState<BoxImage | null>(null);
+  const [boxImagesById, setBoxImagesById] = useState<Record<string, BoxImage[]>>({});
 
   const [upperItems, setUpperItems] = useState<UpperItem[]>([]);
   const [drawers, setDrawers] = useState<Drawer[]>([]);
@@ -224,6 +225,30 @@ export function DrawerFridgeView({
       .catch(() => setBoxes([]))
       .finally(() => setLoading(false));
   }, [selectedDrawerId]);
+
+  useEffect(() => {
+    if (boxes.length === 0) {
+      setBoxImagesById({});
+      return;
+    }
+    let alive = true;
+    Promise.all(
+      boxes.map(async (box) => {
+        try {
+          const images = await fetchBoxImages(box.id);
+          return [box.id, images] as const;
+        } catch {
+          return [box.id, [] as BoxImage[]] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (!alive) return;
+      setBoxImagesById(Object.fromEntries(entries));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [boxes]);
 
   useEffect(() => {
     if (!pendingSampleNavigation || selectedDrawerId !== pendingSampleNavigation.drawerId) return;
@@ -511,6 +536,18 @@ export function DrawerFridgeView({
     setShowBoxModal(true);
   }, [boxes, selectedBox, selectedDrawerId]);
 
+  const handleBoxImagesChanged = useCallback(async (boxId: string) => {
+    try {
+      const images = await fetchBoxImages(boxId);
+      setBoxImagesById((prev) => ({ ...prev, [boxId]: images }));
+      if (selectedBox?.id === boxId) {
+        setBoxImages(images);
+      }
+    } catch {
+      // ignore refresh failures
+    }
+  }, [selectedBox?.id]);
+
   const renderBoxImageStrip = (compact = false) => {
     if (boxImages.length === 0) return null;
 
@@ -548,6 +585,7 @@ export function DrawerFridgeView({
                 type="button"
                 onClick={async (e) => {
                   e.stopPropagation();
+                  if (!window.confirm('确认删除这张图片吗？')) return;
                   try {
                     await deleteBoxImage(img.id);
                     setBoxImages((prev) => prev.filter((x) => x.id !== img.id));
@@ -1033,6 +1071,7 @@ export function DrawerFridgeView({
                 boxes={boxes}
                 currentUser={currentUser}
                 isRoot={isRoot}
+                boxImagesById={boxImagesById}
                 onBack={handleBackToFridge}
                 onBoxClick={handleBoxClick}
                 onAddBox={handleAddBoxAtPosition}
@@ -1438,6 +1477,7 @@ export function DrawerFridgeView({
         onAddSampleType={onAddSampleType}
         onClose={() => { setShowBoxModal(false); setEditBox(null); setTargetBoxPosition(null); }}
         onSave={handleSaveBox}
+        onImagesChanged={handleBoxImagesChanged}
       />
       <AddBoxCellModal
         isOpen={showCellModal}
