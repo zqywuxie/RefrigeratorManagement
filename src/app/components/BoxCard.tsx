@@ -29,6 +29,31 @@ export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighte
     collect: (monitor) => ({ isDragging: monitor.isDragging() }),
   });
 
+  const copyText = React.useCallback(async (text: string) => {
+    if (window.isSecureContext && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    let copied = false;
+    try {
+      copied = document.execCommand('copy');
+    } finally {
+      document.body.removeChild(textarea);
+    }
+    return copied;
+  }, []);
+
   return (
     <motion.div
       ref={drag}
@@ -167,27 +192,51 @@ export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighte
           }}
           onClick={(e) => {
             e.stopPropagation();
-            navigator.clipboard.writeText(box.data_path!).then(() => {
-              toast.custom(
-                () => (
-                  <div
-                    data-testid="copy-toast"
-                    className="min-w-[360px] max-w-[520px] rounded-xl px-5 py-4 shadow-2xl"
-                    style={{
-                      background: 'var(--popover)',
-                      color: 'var(--popover-foreground)',
-                      border: '1px solid var(--border)',
-                    }}
-                  >
-                    <div className="text-[16px] font-semibold">数据路径已复制</div>
-                    <div className="mt-1 text-[13px] leading-5 opacity-80 break-all">
-                      {box.data_path}
+            void (async () => {
+              try {
+                const ok = await copyText(box.data_path!);
+                toast.custom(
+                  () => (
+                    <div
+                      data-testid="copy-toast"
+                      className="min-w-[360px] max-w-[520px] rounded-xl px-5 py-4 shadow-2xl"
+                      style={{
+                        background: 'var(--popover)',
+                        color: 'var(--popover-foreground)',
+                        border: '1px solid var(--border)',
+                      }}
+                    >
+                      <div className="text-[16px] font-semibold">
+                        {ok ? '数据路径已复制' : '复制失败'}
+                      </div>
+                      <div className="mt-1 text-[13px] leading-5 opacity-80 break-all">
+                        {box.data_path}
+                      </div>
                     </div>
-                  </div>
-                ),
-                { duration: 1800 },
-              );
-            });
+                  ),
+                  { duration: 1800 },
+                );
+              } catch {
+                toast.custom(
+                  () => (
+                    <div
+                      className="min-w-[360px] max-w-[520px] rounded-xl px-5 py-4 shadow-2xl"
+                      style={{
+                        background: 'var(--popover)',
+                        color: 'var(--popover-foreground)',
+                        border: '1px solid var(--border)',
+                      }}
+                    >
+                      <div className="text-[16px] font-semibold">复制失败</div>
+                      <div className="mt-1 text-[13px] leading-5 opacity-80 break-all">
+                        浏览器当前环境不支持自动复制，请手动选中路径
+                      </div>
+                    </div>
+                  ),
+                  { duration: 2200 },
+                );
+              }
+            })();
           }}
           title="点击复制路径"
         >
