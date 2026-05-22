@@ -422,9 +422,11 @@ curl http://localhost:${FRONTEND_PORT:-80}/healthz
 docker compose exec backend node -e "fetch('http://127.0.0.1:3001/api/health').then(r => r.text().then(t => console.log(r.status, t)))"
 ```
 
-### 数据库备份
+### 数据库与图片备份
 
 Docker 部署会启动 `mysql-backup` 容器，默认每天凌晨 3:00 自动备份，并在容器启动时立即备份一次。备份文件保存在 `backups/mysql/`。
+
+上传的盒子图片保存在宿主机 `uploads/`，并由 `uploads-backup` 容器独立备份到 `backups/uploads/`。MySQL 中只保存图片元数据和相对路径，恢复图片时需要同时恢复 `uploads/` 文件。
 
 可在 `.env` 中调整：
 
@@ -432,12 +434,16 @@ Docker 部署会启动 `mysql-backup` 容器，默认每天凌晨 3:00 自动备
 BACKUP_AT_HOUR=3
 BACKUP_RETENTION_DAYS=14
 BACKUP_RUN_ON_START=true
+UPLOADS_BACKUP_AT_HOUR=3
+UPLOADS_BACKUP_RETENTION_DAYS=14
+UPLOADS_BACKUP_RUN_ON_START=true
 ```
 
 查看备份日志：
 
 ```bash
 docker compose logs mysql-backup --tail 80
+docker compose logs uploads-backup --tail 80
 ```
 
 从备份恢复数据库：
@@ -446,6 +452,15 @@ docker compose logs mysql-backup --tail 80
 gunzip -c backups/mysql/biofridge_YYYYMMDD_HHMMSS.sql.gz \
   | docker compose exec -T mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" biofridge
 ```
+
+从备份恢复上传图片：
+
+```bash
+mkdir -p uploads
+tar -xzf backups/uploads/uploads_YYYYMMDD_HHMMSS.tar.gz -C uploads
+```
+
+完整恢复时，先恢复数据库，再恢复 `uploads/`，确保 `box_images.image_path` 能对应到实际图片文件。
 
 ### 运行测试
 

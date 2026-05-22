@@ -39,6 +39,8 @@ services:
       timeout: 5s
       retries: 10
       start_period: 25s
+    volumes:
+      - ./uploads:/app/uploads
     expose:
       - "3001"
 
@@ -63,6 +65,26 @@ services:
       - ./backups/mysql:/backups
     depends_on:
       mysql:
+        condition: service_healthy
+
+  uploads-backup:
+    image: alpine:3.20
+    container_name: biofridge-uploads-backup
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/scripts/uploads-backup.sh"]
+    environment:
+      UPLOADS_DIR: /uploads
+      BACKUP_DIR: /backups
+      BACKUP_AT_HOUR: ${UPLOADS_BACKUP_AT_HOUR:-3}
+      BACKUP_RETENTION_DAYS: ${UPLOADS_BACKUP_RETENTION_DAYS:-14}
+      RUN_ON_START: ${UPLOADS_BACKUP_RUN_ON_START:-true}
+      TZ: Asia/Shanghai
+    volumes:
+      - ./scripts/uploads-backup.sh:/scripts/uploads-backup.sh:ro
+      - ./uploads:/uploads:ro
+      - ./backups/uploads:/backups
+    depends_on:
+      backend:
         condition: service_healthy
 
   frontend:

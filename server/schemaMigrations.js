@@ -291,6 +291,22 @@ export async function runSchemaMigrations() {
   // Add missing deleted_by tracking columns
   await ensureColumn('upper_items', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
   await ensureColumn('boxes', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
+  await ensureColumn('boxes', 'root_admin', '`root_admin` VARCHAR(100) NULL AFTER `owner`');
+  await ensureColumn('boxes', 'created_by', '`created_by` VARCHAR(100) NULL AFTER `root_admin`');
+
+  // ── Box Images table ──
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS box_images (
+      id VARCHAR(36) PRIMARY KEY,
+      box_id VARCHAR(36) NOT NULL,
+      image_path VARCHAR(500) NOT NULL,
+      original_name VARCHAR(255),
+      mime_type VARCHAR(50),
+      file_size INT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (box_id) REFERENCES boxes(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB
+  `);
   await ensureColumn('drawers', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `created_at`');
   await ensureColumn('drawers', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
   await ensureColumn('tubes', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `updated_at`');

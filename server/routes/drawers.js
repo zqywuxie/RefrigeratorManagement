@@ -132,6 +132,10 @@ router.post('/:drawerId/boxes', async (req, res) => {
       note,
       dataPath,
       data_path,
+      rootAdmin,
+      root_admin,
+      createdBy,
+      created_by,
     } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     const finalPosition = Number(position);
@@ -154,9 +158,11 @@ router.post('/:drawerId/boxes', async (req, res) => {
     const finalSampleType = sampleType ?? sample_type ?? null;
     const finalProjectName = projectName ?? project_name ?? null;
     const finalDataPath = dataPath ?? data_path ?? null;
+    const finalRootAdmin = rootAdmin ?? root_admin ?? null;
+    const finalCreatedBy = createdBy ?? created_by ?? null;
     await pool.query(
-      `INSERT INTO boxes (id, drawer_id, name, mode, grid_rows, grid_cols, position, sample_type, project_name, quantity, owner, tags, note, data_path)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO boxes (id, drawer_id, name, mode, grid_rows, grid_cols, position, sample_type, project_name, quantity, owner, tags, note, data_path, root_admin, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         boxId,
         req.params.drawerId,
@@ -172,6 +178,8 @@ router.post('/:drawerId/boxes', async (req, res) => {
         JSON.stringify(tags || []),
         note || null,
         finalDataPath,
+        finalRootAdmin,
+        finalCreatedBy,
       ]
     );
     const [[box]] = await pool.query('SELECT * FROM boxes WHERE id = ?', [boxId]);

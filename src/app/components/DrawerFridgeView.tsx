@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Refrigerator, UpperItem, Drawer, Box, BoxCell, Tube, SampleRecord, PendingImportSample, DRAWER_LAYER1, DRAWER_LAYER2, boxPositionToLabel, cellPositionToLabel } from '../types';
+import { Refrigerator, UpperItem, Drawer, Box, BoxImage, BoxCell, Tube, SampleRecord, PendingImportSample, DRAWER_LAYER1, DRAWER_LAYER2, boxPositionToLabel, cellPositionToLabel } from '../types';
 import {
   fetchUpperItems, createUpperItem, updateUpperItem, deleteUpperItem,
   fetchDrawers, updateDrawer,
@@ -9,8 +9,9 @@ import {
   fetchBoxTubes, createSampleRecord, updateSampleRecord, deleteSampleRecord,
   addTubesToSample, deleteTube, updateTube, batchUpdateSampleRecords,
   fetchSampleRecord,
+  fetchBoxImages, deleteBoxImage,
 } from '../api';
-import { CircleHelp, FolderOpen, FileSpreadsheet, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { CircleHelp, FolderOpen, FileSpreadsheet, ChevronLeft, ChevronRight, Search, X, Maximize2, Pencil } from 'lucide-react';
 import { BreadcrumbNav, BreadcrumbNode } from './BreadcrumbNav';
 import { UpperOpenStorage } from './UpperOpenStorage';
 import { DrawerLayer } from './DrawerLayer';
@@ -94,6 +95,8 @@ export function DrawerFridgeView({
   const [selectedDrawerLabel, setSelectedDrawerLabel] = useState('');
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [selectedBox, setSelectedBox] = useState<Box | null>(null);
+  const [boxImages, setBoxImages] = useState<BoxImage[]>([]);
+  const [previewBoxImage, setPreviewBoxImage] = useState<BoxImage | null>(null);
 
   const [upperItems, setUpperItems] = useState<UpperItem[]>([]);
   const [drawers, setDrawers] = useState<Drawer[]>([]);
@@ -143,18 +146,15 @@ export function DrawerFridgeView({
   useEffect(() => {
     if (!navigateToDrawer) return;
     const drawer = drawers.find((d) => d.id === navigateToDrawer.drawerId);
-    if (drawer) {
-      setSelectedDrawerId(navigateToDrawer.drawerId);
-      setSelectedDrawerLabel(navigateToDrawer.drawerLabel);
-      setSelectedBoxId(null);
-      setSelectedBox(null);
-      setViewLevel('drawer');
-      setSearchCellQuery('');
-      setTargetBoxPosition(null);
-      // Switch to the correct tab
-      const layer = drawer.layer;
-      setActiveMainTab(layer === 1 ? 'lowerTop' : 'lowerBottom');
-    }
+    if (!drawer) return;
+    setSelectedDrawerId(navigateToDrawer.drawerId);
+    setSelectedDrawerLabel(drawer.label || navigateToDrawer.drawerLabel);
+    setSelectedBoxId(null);
+    setSelectedBox(null);
+    setViewLevel('drawer');
+    setSearchCellQuery('');
+    setTargetBoxPosition(null);
+    setActiveMainTab(drawer.layer === 1 ? 'lowerTop' : 'lowerBottom');
     onNavigated?.();
   }, [navigateToDrawer, drawers, onNavigated]);
 
@@ -262,6 +262,16 @@ export function DrawerFridgeView({
     setSelectedPositions(new Set());
     setHoveredSampleId(null);
   }, [selectedBox]);
+
+  // Fetch images when box selection changes
+  useEffect(() => {
+    if (selectedBox?.id) {
+      fetchBoxImages(selectedBox.id).then(setBoxImages).catch(() => setBoxImages([]));
+    } else {
+      setBoxImages([]);
+    }
+    setPreviewBoxImage(null);
+  }, [selectedBox?.id]);
 
   const preciseBoxRows = selectedBox?.mode === 'precise' ? selectedBox.grid_rows || 10 : 0;
   const boxPageCount = preciseBoxRows > 0 ? Math.max(1, Math.ceil(preciseBoxRows / BOX_GRID_PAGE_ROWS)) : 1;
@@ -451,23 +461,32 @@ export function DrawerFridgeView({
     setShowItemModal(true);
   }, [upperItems]);
 
-  const handleSaveBox = useCallback(async (data: Partial<Box>) => {
+  const handleSaveBox = useCallback(async (data: Partial<Box>): Promise<Box | undefined> => {
     if (!selectedDrawerId) return;
     try {
-      if (data.id && editBox) {
-        await updateBox(data.id, data);
+      let result: Box;
+      const shouldSyncSelectedBox = Boolean(data.id && selectedBox?.id === data.id);
+      if (data.id) {
+        result = await updateBox(data.id, data);
       } else {
-        await createBox(selectedDrawerId, data);
+        result = await createBox(selectedDrawerId, data);
       }
       const updatedBoxes = await fetchBoxes(selectedDrawerId);
       setBoxes(updatedBoxes);
+      if (shouldSyncSelectedBox) {
+        const updatedSelectedBox = updatedBoxes.find((box) => box.id === data.id) || result;
+        setSelectedBox(updatedSelectedBox);
+        setSelectedBoxId(updatedSelectedBox.id);
+        fetchBoxImages(updatedSelectedBox.id).then(setBoxImages).catch(() => setBoxImages([]));
+      }
       const drawerData = await fetchDrawers(fridge.id);
       setDrawers(drawerData);
       onDataChanged?.();
+      return result;
     } catch (err) {
       console.error('Failed to save box:', err);
     }
-  }, [selectedDrawerId, editBox, fridge.id, onDataChanged]);
+  }, [selectedDrawerId, selectedBox?.id, fridge.id, onDataChanged]);
 
   const handleDeleteBox = useCallback(async (boxId: string) => {
     if (!window.confirm('确定删除此盒子？关联试管不会被删除。')) return;
@@ -481,6 +500,77 @@ export function DrawerFridgeView({
       console.error('Failed to delete box:', err);
     }
   }, [fridge.id, onDataChanged]);
+
+  const handleEditBox = useCallback((boxId: string) => {
+    const box = boxes.find((b) => b.id === boxId);
+    if (box) {
+      setEditBox(box);
+      setTargetBoxPosition(null);
+      setShowBoxModal(true);
+    }
+  }, [boxes]);
+
+  const handleEditSelectedBox = useCallback(() => {
+    if (!selectedBox || !selectedDrawerId) return;
+    const latestBox = boxes.find((box) => box.id === selectedBox.id) || selectedBox;
+    setEditBox(latestBox);
+    setTargetBoxPosition(null);
+    setShowBoxModal(true);
+  }, [boxes, selectedBox, selectedDrawerId]);
+
+  const renderBoxImageStrip = (compact = false) => {
+    if (boxImages.length === 0) return null;
+
+    return (
+      <div
+        className={compact ? 'rounded-xl px-4 py-3' : 'mt-3'}
+        style={compact ? {
+          background: 'var(--app-card-bg)',
+          border: '1px solid var(--app-border)',
+          boxShadow: '0 12px 34px rgba(15,23,42,0.06)',
+        } : undefined}
+      >
+        <p className="text-[11px] mb-2" style={{ color: 'var(--app-muted)' }}>盒子图片 · 点击缩略图放大</p>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {boxImages.map((img) => (
+            <div
+              key={img.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => setPreviewBoxImage(img)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setPreviewBoxImage(img);
+                }
+              }}
+              className={`${compact ? 'w-16 h-16' : 'w-24 h-24'} relative group rounded-lg overflow-hidden flex-shrink-0 cursor-pointer`}
+              style={{ border: '1px solid var(--app-border)' }}
+            >
+              <img src={`/${img.image_path}`} alt={img.original_name || ''} className="w-full h-full object-cover" />
+              <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
+                <Maximize2 size={compact ? 16 : 18} />
+              </span>
+              <button
+                type="button"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    await deleteBoxImage(img.id);
+                    setBoxImages((prev) => prev.filter((x) => x.id !== img.id));
+                    if (previewBoxImage?.id === img.id) setPreviewBoxImage(null);
+                  } catch { /* ignore */ }
+                }}
+                className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   // Handle clicking a position in box grid
   const handleCellClick = useCallback((position: number) => {
@@ -951,6 +1041,7 @@ export function DrawerFridgeView({
                 currentUser={currentUser}
                 onBack={handleBackToFridge}
                 onBoxClick={handleBoxClick}
+                onEditBox={handleEditBox}
                 onAddBox={handleAddBoxAtPosition}
                 onAddPosition={handleAddInternalPosition}
                 onMoveBox={handleMoveBox}
@@ -994,6 +1085,21 @@ export function DrawerFridgeView({
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+                    {selectedDrawerId && (
+                      <button
+                        type="button"
+                        onClick={handleEditSelectedBox}
+                        className="flex items-center justify-center gap-1.5 rounded-lg px-2 sm:px-3 py-2 text-[13px] transition-all min-h-[44px]"
+                        style={{
+                          background: 'var(--app-panel-bg)',
+                          border: '1px solid var(--app-border)',
+                          color: '#2563eb',
+                        }}
+                      >
+                        <Pencil size={15} />
+                        编辑盒子
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
@@ -1173,6 +1279,7 @@ export function DrawerFridgeView({
                     </div>
                   </div>
                 )}
+                {renderBoxImageStrip(true)}
                 <BoxGrid
                   box={selectedBox}
                   cells={cells}
@@ -1220,16 +1327,34 @@ export function DrawerFridgeView({
                         简略模式盒子
                       </p>
                     </div>
-                    <span
-                      className="rounded-full px-3 py-1 text-[12px]"
-                      style={{
-                        background: 'var(--app-subtle-bg)',
-                        color: 'var(--app-subtle-text)',
-                        border: '1px solid var(--app-subtle-border)',
-                      }}
-                    >
-                      {selectedBox.position != null ? boxPositionToLabel(selectedBox.position) : '未定位'}
-                    </span>
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                      <span
+                        className="rounded-full px-3 py-1 text-[12px]"
+                        style={{
+                          background: 'var(--app-subtle-bg)',
+                          color: 'var(--app-subtle-text)',
+                          border: '1px solid var(--app-subtle-border)',
+                        }}
+                      >
+                        {selectedBox.position != null ? boxPositionToLabel(selectedBox.position) : '未定位'}
+                      </span>
+                      {selectedDrawerId && (
+                        <button
+                          type="button"
+                          onClick={handleEditSelectedBox}
+                          className="flex h-9 w-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg transition-colors"
+                          style={{
+                            background: 'var(--app-panel-bg)',
+                            border: '1px solid var(--app-border)',
+                            color: '#2563eb',
+                          }}
+                          title="编辑盒子"
+                          aria-label="编辑盒子"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1291,6 +1416,8 @@ export function DrawerFridgeView({
                       <span className="text-[11px]" style={{ color: '#2563eb' }}>复制</span>
                     </div>
                   )}
+
+                  {renderBoxImageStrip()}
                 </div>
               </div>
             )}
@@ -1328,6 +1455,28 @@ export function DrawerFridgeView({
         onSave={handleSaveCell}
         onDelete={handleDeleteCell}
       />
+      {previewBoxImage && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setPreviewBoxImage(null)}
+        >
+          <button
+            type="button"
+            aria-label="关闭图片预览"
+            className="absolute right-4 top-4 rounded-full p-2 text-white"
+            style={{ background: 'rgba(15,23,42,0.72)' }}
+            onClick={() => setPreviewBoxImage(null)}
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={`/${previewBoxImage.image_path}`}
+            alt={previewBoxImage.original_name || '盒子图片'}
+            className="max-h-[88vh] max-w-[92vw] rounded-xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
       {selectedBox && (
         <AddSampleRecordModal
           isOpen={showSampleModal}

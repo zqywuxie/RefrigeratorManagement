@@ -130,11 +130,23 @@ export interface Box {
   project_name: string | null;
   quantity: number;
   owner: string | null;
+  root_admin?: string | null;
+  created_by?: string | null;
   tags: string[];
   note: string | null;
   data_path: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface BoxImage {
+  id: string;
+  box_id: string;
+  image_path: string;
+  original_name: string | null;
+  mime_type: string | null;
+  file_size: number | null;
+  created_at: string;
 }
 
 export interface BoxCell {

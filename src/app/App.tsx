@@ -189,20 +189,38 @@ function AppContent() {
   const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
   const [mobileSideMapOpen, setMobileSideMapOpen] = useState(false);
 
-  // Range-aware box name matching: "MLP 12" matches box "MLP 11-20"
+  // Range-aware box name matching: "MLP12" matches "（住）MLP 1-21".
   const matchesBoxName = (query: string, boxName: string): boolean => {
-    if (!boxName) return false;
-    if (boxName.toLowerCase().includes(query.toLowerCase())) return true;
-    const searchMatch = query.match(/^(.+?)\s+(\d+)$/i);
+    const normalizedQuery = query.trim().normalize('NFKC');
+    const normalizedBoxName = boxName.normalize('NFKC');
+    if (!normalizedQuery || !normalizedBoxName) return false;
+    if (normalizedBoxName.toLowerCase().includes(normalizedQuery.toLowerCase())) return true;
+    if (normalizedBoxName.replace(/\s+/g, '').toLowerCase().includes(normalizedQuery.replace(/\s+/g, '').toLowerCase())) return true;
+
+    const compactQuery = normalizedQuery.replace(/\s+/g, '');
+    const searchMatch = compactQuery.match(/^([a-z]+)(\d+)$/i);
     if (!searchMatch) return false;
     const searchPrefix = searchMatch[1].toLowerCase();
     const searchNum = parseInt(searchMatch[2], 10);
-    const boxMatch = boxName.match(/^(.+?)\s+(\d+)\s*-\s*(\d+)$/i);
-    if (!boxMatch) return false;
-    const boxPrefix = boxMatch[1].toLowerCase();
-    const boxStart = parseInt(boxMatch[2], 10);
-    const boxEnd = parseInt(boxMatch[3], 10);
-    return searchPrefix === boxPrefix && searchNum >= boxStart && searchNum <= boxEnd;
+
+    // Split by slash for multi-range names, then bind each numeric range to the
+    // closest English prefix before it so labels such as "（住）" do not block MLP12.
+    const segments = normalizedBoxName.split(/[\/／]/);
+    for (const seg of segments) {
+      const rangePattern = /(\d+)\s*(?:-|–|—|~|～|至)\s*(\d+)/g;
+      let rangeMatch: RegExpExecArray | null;
+      while ((rangeMatch = rangePattern.exec(seg)) !== null) {
+        const prefixMatch = seg.slice(0, rangeMatch.index).match(/[a-z]+(?=[^a-z]*$)/i);
+        if (!prefixMatch) continue;
+        const boxPrefix = prefixMatch[0].toLowerCase();
+        const start = parseInt(rangeMatch[1], 10);
+        const end = parseInt(rangeMatch[2], 10);
+        const boxStart = Math.min(start, end);
+        const boxEnd = Math.max(start, end);
+        if (searchPrefix === boxPrefix && searchNum >= boxStart && searchNum <= boxEnd) return true;
+      }
+    }
+    return false;
   };
 
   // Find first tube whose box_name matched the search query, for box highlighting

@@ -1,18 +1,20 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { useDrag } from 'react-dnd';
-import { Box as BoxIcon, User, Calendar, Grid3X3, FolderOpen, Copy, Trash2, MapPinned } from 'lucide-react';
-import { Box, boxPositionToLabel, formatChineseShortDate } from '../types';
+import { Box as BoxIcon, User, Calendar, Grid3X3, FolderOpen, Copy, Trash2, MapPinned, Pencil } from 'lucide-react';
+import { Box, BoxImage, boxPositionToLabel, formatChineseShortDate } from '../types';
 
 interface BoxCardProps {
   box: Box;
   onClick: () => void;
   onDelete: (id: string) => void;
+  onEdit?: (id: string) => void;
   canDelete?: boolean;
   isHighlighted?: boolean;
+  images?: BoxImage[];
 }
 
-export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighted = false }: BoxCardProps) {
+export function BoxCard({ box, onClick, onDelete, onEdit, canDelete = true, isHighlighted = false, images }: BoxCardProps) {
   const isPrecise = box.mode === 'precise';
   const gridLabel = isPrecise && box.grid_rows && box.grid_cols
     ? `${box.grid_rows}×${box.grid_cols}`
@@ -74,14 +76,26 @@ export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighte
           )}
         </div>
         {canDelete && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(box.id); }}
-            className="flex-shrink-0 w-7 h-7 min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors"
-            style={{ color: '#f87171' }}
-            title="删除盒子"
-          >
-            <Trash2 size={14} />
-          </button>
+          <div className="flex gap-0.5 flex-shrink-0">
+            {onEdit && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(box.id); }}
+                className="w-7 h-7 min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center hover:bg-blue-50 transition-colors"
+                style={{ color: '#60a5fa' }}
+                title="编辑盒子"
+              >
+                <Pencil size={14} />
+              </button>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(box.id); }}
+              className="w-7 h-7 min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors"
+              style={{ color: '#f87171' }}
+              title="删除盒子"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
         )}
       </div>
 
@@ -161,6 +175,14 @@ export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighte
           <FolderOpen size={11} color="#60a5fa" />
           <span className="truncate flex-1">{box.data_path}</span>
           <Copy size={10} />
+        </div>
+      )}
+
+      {/* First image thumbnail */}
+      {images && images.length > 0 && (
+        <div className="mt-2 rounded-md overflow-hidden w-full h-24"
+          style={{ border: '1px solid var(--app-border)' }}>
+          <img src={`/${images[0].image_path}`} alt={images[0].original_name || ''} className="w-full h-full object-cover" />
         </div>
       )}
     </motion.div>

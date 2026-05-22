@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
-import { Box, BoxMode, BOX_GRID_PRESETS, boxPositionToLabel } from '../types';
+import { Plus, Upload, X, ImageIcon, Maximize2 } from 'lucide-react';
+import { Box, BoxMode, BoxImage, BOX_GRID_PRESETS, boxPositionToLabel } from '../types';
+import { fetchBoxImages, uploadBoxImage, deleteBoxImage } from '../api';
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -19,8 +20,20 @@ interface AddBoxModalProps {
   currentUsername: string;
   onClose: () => void;
   onAddSampleType: (name: string) => void;
-  onSave: (data: Partial<Box>) => void;
+  onSave: (data: Partial<Box>) => Promise<Box | undefined>;
 }
+
+type PendingBoxImage = {
+  id: string;
+  file: File;
+  previewUrl: string;
+  originalName: string;
+};
+
+type PreviewImage = {
+  src: string;
+  alt: string;
+};
 
 export function AddBoxModal({
   isOpen,
@@ -41,14 +54,36 @@ export function AddBoxModal({
   const [sampleType, setSampleType] = useState('');
   const [projectName, setProjectName] = useState('');
   const [owner, setOwner] = useState('');
+  const [rootAdmin, setRootAdmin] = useState('');
+  const [createdBy, setCreatedBy] = useState('');
   const [note, setNote] = useState('');
   const [dataPath, setDataPath] = useState('');
   const [showNewType, setShowNewType] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
   const [error, setError] = useState('');
+  const [images, setImages] = useState<BoxImage[]>([]);
+  const [pendingImages, setPendingImages] = useState<PendingBoxImage[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [savedBoxId, setSavedBoxId] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
+
+  const clearPendingImages = () => {
+    setPendingImages((prev) => {
+      prev.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+      return [];
+    });
+  };
+
+  const handleClose = () => {
+    setError('');
+    setPreviewImage(null);
+    clearPendingImages();
+    onClose();
+  };
 
   useEffect(() => {
     if (!isOpen) return;
+    clearPendingImages();
     setName(editBox?.name || '');
     setMode(editBox?.mode || 'simple');
     setCustomRows(editBox?.grid_rows || 10);
@@ -56,17 +91,27 @@ export function AddBoxModal({
     setSampleType(editBox?.sample_type || sampleTypes[0] || '');
     setProjectName(editBox?.project_name || '');
     setOwner(editBox?.owner || (editBox ? '' : currentUsername));
+    setRootAdmin(editBox?.root_admin || '');
+    setCreatedBy(editBox?.created_by || (editBox ? '' : currentUsername));
     setNote(editBox?.note || '');
     setDataPath(editBox?.data_path || '');
     setShowNewType(false);
     setNewTypeName('');
+    setPreviewImage(null);
     const presetIndex = BOX_GRID_PRESETS.findIndex(
       (preset) => preset.rows === editBox?.grid_rows && preset.cols === editBox?.grid_cols,
     );
     setGridPreset(presetIndex >= 0 ? presetIndex : 0);
+    setSavedBoxId(null);
+    // Load images when editing
+    if (editBox?.id) {
+      fetchBoxImages(editBox.id).then(setImages).catch(() => setImages([]));
+    } else {
+      setImages([]);
+    }
   }, [isOpen, editBox]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('请输入盒子名称');
@@ -77,8 +122,9 @@ export function AddBoxModal({
     const preset = BOX_GRID_PRESETS[gridPreset];
     const finalRows = isPrecise ? (preset.rows || customRows) : null;
     const finalCols = isPrecise ? (preset.cols || customCols) : null;
-    onSave({
-      id: editBox?.id,
+    const persistedBoxId = editBox?.id || savedBoxId;
+    const saved = await onSave({
+      id: persistedBoxId,
       name: name.trim(),
       mode,
       grid_rows: finalRows,
@@ -88,11 +134,77 @@ export function AddBoxModal({
       project_name: projectName || null,
       quantity: 0,
       owner: owner || null,
+      root_admin: rootAdmin || null,
+      created_by: createdBy || null,
       note: note || null,
       data_path: dataPath || null,
       tags: editBox?.tags || [],
     });
-    onClose();
+    if (!editBox?.id && !savedBoxId && saved?.id) {
+      setSavedBoxId(saved.id);
+      if (pendingImages.length > 0) {
+        setUploading(true);
+        try {
+          const uploaded = await Promise.all(pendingImages.map((img) => uploadBoxImage(saved.id, img.file)));
+          setImages((prev) => [...prev, ...uploaded]);
+          clearPendingImages();
+        } catch (err: any) {
+          setError(err.message || '盒子已保存，但图片上传失败，请重试');
+        } finally {
+          setUploading(false);
+        }
+      }
+    } else if (editBox?.id) {
+      // Editing existing — close as before
+      handleClose();
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    const boxId = editBox?.id || savedBoxId;
+    if (selectedFiles.length === 0) return;
+    if (!boxId) {
+      setPendingImages((prev) => [
+        ...prev,
+        ...selectedFiles.map((file) => ({
+          id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`,
+          file,
+          previewUrl: URL.createObjectURL(file),
+          originalName: file.name,
+        })),
+      ]);
+      e.target.value = '';
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const uploaded = await Promise.all(selectedFiles.map((file) => uploadBoxImage(boxId, file)));
+      setImages((prev) => [...prev, ...uploaded]);
+    } catch (err: any) {
+      setError(err.message || '图片上传失败');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleImageDelete = async (imageId: string) => {
+    try {
+      await deleteBoxImage(imageId);
+      setImages((prev) => prev.filter((img) => img.id !== imageId));
+    } catch (err: any) {
+      setError(err.message || '图片删除失败');
+    }
+  };
+
+  const handlePendingImageDelete = (imageId: string) => {
+    setPendingImages((prev) => {
+      const target = prev.find((img) => img.id === imageId);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((img) => img.id !== imageId);
+    });
   };
 
   const fieldStyle: React.CSSProperties = {
@@ -103,9 +215,10 @@ export function AddBoxModal({
 
   const title = editBox ? '编辑盒子' : '添加盒子';
   const subtitle = `抽屉外部：${drawerLabel || '—'} · 抽屉内部：${targetPosition != null ? boxPositionToLabel(targetPosition) : '—'}`;
+  const persistedBoxId = editBox?.id || savedBoxId;
 
   return (
-    <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) { setError(''); onClose(); } }}>
+    <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <ResponsiveDialogContent className="max-w-md">
         <form onSubmit={handleSubmit} className="space-y-4">
           <ResponsiveDialogHeader>
@@ -121,6 +234,9 @@ export function AddBoxModal({
             className="w-full px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
             style={fieldStyle}
           />
+          <p className="text-[11px] -mt-2" style={{ color: 'var(--app-muted)' }}>
+            命名建议：MLP 12-23 / TLP 23-33（使用 / 分割不同编号范围），支持多样本混合存储
+          </p>
 
           <div className="flex gap-2">
             {(['simple', 'precise'] as BoxMode[]).map((m) => (
@@ -274,6 +390,22 @@ export function AddBoxModal({
             className="w-full px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
             style={fieldStyle}
           />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input
+              value={rootAdmin}
+              onChange={(e) => setRootAdmin(e.target.value)}
+              placeholder="Root 管理员（选填）"
+              className="px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
+              style={fieldStyle}
+            />
+            <input
+              value={createdBy}
+              onChange={(e) => setCreatedBy(e.target.value)}
+              placeholder="创建者"
+              className="px-3 py-2 rounded-lg text-[16px] sm:text-[14px] outline-none min-h-[44px]"
+              style={fieldStyle}
+            />
+          </div>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -290,6 +422,88 @@ export function AddBoxModal({
             style={fieldStyle}
           />
 
+          <div className="space-y-2 rounded-xl p-3" style={{ background: 'var(--app-input-bg)', border: '1px solid var(--app-input-border)' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-[13px]" style={{ color: 'var(--app-muted)' }}>盒子图片</span>
+              <label className="cursor-pointer inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] min-h-[36px]"
+                style={{ background: '#2563eb', color: '#fff' }}>
+                <Upload size={14} />
+                {uploading ? '上传中...' : '上传图片'}
+                <input type="file" accept="image/*" multiple onChange={handleImageUpload} disabled={uploading} className="hidden" />
+              </label>
+              {!persistedBoxId && pendingImages.length > 0 && (
+                <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
+                  保存后自动上传
+                </span>
+              )}
+            </div>
+            {images.length > 0 || pendingImages.length > 0 ? (
+              <div className="flex gap-2 flex-wrap">
+                {pendingImages.map((img) => (
+                  <div
+                    key={img.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setPreviewImage({ src: img.previewUrl, alt: img.originalName })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setPreviewImage({ src: img.previewUrl, alt: img.originalName });
+                      }
+                    }}
+                    className="relative group w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
+                    style={{ border: '1px solid var(--app-border)' }}>
+                    <img src={img.previewUrl} alt={img.originalName} className="w-full h-full object-cover" />
+                    <span className="absolute bottom-0 left-0 right-0 px-1 py-0.5 text-center text-[10px] text-white" style={{ background: 'rgba(15,23,42,0.72)' }}>
+                      待上传
+                    </span>
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
+                      <Maximize2 size={18} />
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handlePendingImageDelete(img.id); }}
+                      className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+                {images.map((img) => (
+                  <div
+                    key={img.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setPreviewImage({ src: `/${img.image_path}`, alt: img.original_name || '盒子图片' })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setPreviewImage({ src: `/${img.image_path}`, alt: img.original_name || '盒子图片' });
+                      }
+                    }}
+                    className="relative group w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
+                    style={{ border: '1px solid var(--app-border)' }}>
+                    <img src={`/${img.image_path}`} alt={img.original_name || ''} className="w-full h-full object-cover" />
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
+                      <Maximize2 size={18} />
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleImageDelete(img.id); }}
+                      className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--app-card-bg)', border: '1px dashed var(--app-border)', color: 'var(--app-muted)' }}>
+                <ImageIcon size={16} />
+                <span className="text-[12px]">{persistedBoxId ? '可上传并查看缩略图' : '可先选择图片，保存盒子后自动上传'}</span>
+              </div>
+            )}
+          </div>
           {error && (
             <div className="text-[13px] px-3 py-2 rounded-lg" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
               {error}
@@ -301,21 +515,44 @@ export function AddBoxModal({
           }}>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 rounded-lg text-[14px] min-h-[44px]"
               style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)', border: '1px solid var(--app-border)' }}
             >
-              取消
+              {savedBoxId ? '完成' : '取消'}
             </button>
             <button
               type="submit"
+              disabled={uploading}
               className="px-4 py-2 rounded-lg text-[14px] min-h-[44px]"
-              style={{ background: '#2563eb', color: '#fff' }}
+              style={{ background: uploading ? '#94a3b8' : '#2563eb', color: '#fff' }}
             >
-              保存
+              {uploading ? '处理中...' : savedBoxId ? '更新信息' : '保存'}
             </button>
           </ResponsiveDialogFooter>
         </form>
+        {previewImage && (
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4"
+            onClick={() => setPreviewImage(null)}
+          >
+            <button
+              type="button"
+              aria-label="关闭图片预览"
+              className="absolute right-4 top-4 rounded-full p-2 text-white"
+              style={{ background: 'rgba(15,23,42,0.72)' }}
+              onClick={() => setPreviewImage(null)}
+            >
+              <X size={20} />
+            </button>
+            <img
+              src={previewImage.src}
+              alt={previewImage.alt}
+              className="max-h-[88vh] max-w-[92vw] rounded-xl object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
       </ResponsiveDialogContent>
     </ResponsiveDialog>
   );

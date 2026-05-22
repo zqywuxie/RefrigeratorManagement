@@ -10,6 +10,7 @@ interface BoxPositionSlotProps {
   box?: Box;
   onAddBox: (position: number) => void;
   onBoxClick: (boxId: string) => void;
+  onEditBox: (boxId: string) => void;
   onDeleteBox: (boxId: string) => void;
   onDropBox: (boxId: string, targetPosition: number) => void;
   canDelete?: boolean;
@@ -21,6 +22,7 @@ function BoxPositionSlot({
   box,
   onAddBox,
   onBoxClick,
+  onEditBox,
   onDeleteBox,
   onDropBox,
   canDelete = true,
@@ -54,6 +56,7 @@ function BoxPositionSlot({
         <BoxCard
           box={box}
           onClick={() => onBoxClick(box.id)}
+          onEdit={(id) => onEditBox(id)}
           onDelete={onDeleteBox}
           canDelete={canDelete}
           isHighlighted={isHighlighted}
@@ -88,6 +91,7 @@ interface BoxViewProps {
   currentUser: string;
   onBack: () => void;
   onBoxClick: (boxId: string) => void;
+  onEditBox: (boxId: string) => void;
   onAddBox: (position: number) => void;
   onAddPosition: (insertAt: number) => void;
   onMoveBox: (boxId: string, targetPosition: number) => void;
@@ -102,6 +106,7 @@ export function BoxView({
   currentUser,
   onBack,
   onBoxClick,
+  onEditBox,
   onAddBox,
   onAddPosition,
   onMoveBox,
@@ -203,6 +208,7 @@ export function BoxView({
                 box={box}
                 onAddBox={onAddBox}
                 onBoxClick={onBoxClick}
+                onEditBox={onEditBox}
                 onDeleteBox={onDeleteBox}
                 onDropBox={onMoveBox}
                 canDelete={!box || !box.owner || box.owner === currentUser}

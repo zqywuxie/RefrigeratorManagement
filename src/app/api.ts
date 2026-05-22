@@ -1,5 +1,5 @@
 import type { AuthUser } from './AuthContext';
-import type { UpperItem, Drawer, Box, BoxCell, SampleRecord, Tube } from './types';
+import type { UpperItem, Drawer, Box, BoxImage, BoxCell, SampleRecord, Tube } from './types';
 
 export interface RefrigeratorResponse {
   id: string;
@@ -419,6 +419,32 @@ export async function updateBox(boxId: string, data: Partial<Box>): Promise<Box>
 
 export async function deleteBox(boxId: string): Promise<void> {
   await fetchJSON(`${BASE}/boxes/${encodeURIComponent(boxId)}`, { method: 'DELETE' });
+}
+
+// ── Box Images ──
+
+export async function fetchBoxImages(boxId: string): Promise<BoxImage[]> {
+  return fetchJSON(`${BASE}/boxes/${encodeURIComponent(boxId)}/images`);
+}
+
+export async function uploadBoxImage(boxId: string, file: File): Promise<BoxImage> {
+  const formData = new FormData();
+  formData.append('image', file);
+  const token = localStorage.getItem('biofridge_token');
+  const res = await fetch(`${BASE}/boxes/${encodeURIComponent(boxId)}/images`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deleteBoxImage(imageId: string): Promise<void> {
+  await fetchJSON(`${BASE}/boxes/images/${encodeURIComponent(imageId)}`, { method: 'DELETE' });
 }
 
 // ── Box Cells ──
