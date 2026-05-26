@@ -1125,6 +1125,7 @@ function AppContent() {
                       onClick={() => {
                         setSearchQuery('');
                         setSelectedFridgeId(item.refrigerator_id);
+                        setUpperItemNavTarget({ fridgeId: item.refrigerator_id, itemId: item.id });
                       }}
                     >
                       <Package size={14} style={{ color: '#22c55e' }} />
