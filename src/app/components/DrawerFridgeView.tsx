@@ -118,6 +118,7 @@ export function DrawerFridgeView({
   const [showItemModal, setShowItemModal] = useState(false);
   const [editItem, setEditItem] = useState<UpperItem | null>(null);
   const [defaultItemRow, setDefaultItemRow] = useState(1);
+  const [imagesVersion, setImagesVersion] = useState(0);
   const [showBoxModal, setShowBoxModal] = useState(false);
   const [editBox, setEditBox] = useState<Box | null>(null);
   const [targetBoxPosition, setTargetBoxPosition] = useState<number | null>(null);
@@ -1006,6 +1007,7 @@ export function DrawerFridgeView({
                     onSearchChange={setSearchQuery}
                     onItemClick={handleItemClick}
                     onAddItem={(row) => { setEditItem(null); setDefaultItemRow(row); setShowItemModal(true); }}
+                    imagesVersion={imagesVersion}
                     onDeleteItem={async (id) => {
                       if (!window.confirm('确定删除此物品？')) return;
                       try {
@@ -1470,6 +1472,7 @@ export function DrawerFridgeView({
         onAddItemType={onAddItemType}
         onClose={() => { setShowItemModal(false); setEditItem(null); }}
         onSave={handleSaveItem}
+        onImagesChanged={() => setImagesVersion((v) => v + 1)}
       />
       <AddBoxModal
         isOpen={showBoxModal}

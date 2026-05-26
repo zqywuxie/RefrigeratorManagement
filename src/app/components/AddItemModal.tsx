@@ -40,6 +40,7 @@ interface AddItemModalProps {
   onAddItemType: (name: string) => void;
   onClose: () => void;
   onSave: (data: Partial<UpperItem>) => Promise<UpperItem | undefined>;
+  onImagesChanged?: (itemId: string) => void;
 }
 
 export function AddItemModal({
@@ -51,6 +52,7 @@ export function AddItemModal({
   onAddItemType,
   onClose,
   onSave,
+  onImagesChanged,
 }: AddItemModalProps) {
   const [name, setName] = useState('');
   const [itemType, setItemType] = useState<ItemType>('样本');
@@ -127,7 +129,10 @@ export function AddItemModal({
 
     setUploading(true);
     Promise.all(files.map((file) => uploadUpperItemImage(itemId, file)))
-      .then((uploaded) => setImages((prev) => [...prev, ...uploaded]))
+      .then((uploaded) => {
+        setImages((prev) => [...prev, ...uploaded]);
+        onImagesChanged?.(itemId!);
+      })
       .catch((err: any) => setError(err.message || '图片上传失败'))
       .finally(() => setUploading(false));
   };
@@ -143,6 +148,7 @@ export function AddItemModal({
     try {
       await deleteUpperItemImage(imageId);
       setImages((prev) => prev.filter((img) => img.id !== imageId));
+      if (editItem?.id) onImagesChanged?.(editItem.id);
     } catch (err: any) {
       setError(err.message || '图片删除失败');
     }
@@ -207,6 +213,7 @@ export function AddItemModal({
     if (!editItem?.id && saved?.id && pendingImages.length > 0) {
       try {
         await Promise.all(pendingImages.map((img) => uploadUpperItemImage(saved.id, img.file)));
+        onImagesChanged?.(saved.id);
       } catch (err: any) {
         console.error('上层物品图片保存后上传失败:', err);
       }

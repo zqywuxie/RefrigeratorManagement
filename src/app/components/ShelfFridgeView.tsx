@@ -34,6 +34,7 @@ export function ShelfFridgeView({
   const [defaultRow, setDefaultRow] = useState(1);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [imagesVersion, setImagesVersion] = useState(0);
 
   // Box grid view state (precise mode)
   const [viewingBox, setViewingBox] = useState<Box | null>(null);
@@ -217,6 +218,7 @@ export function ShelfFridgeView({
         highlightedItemId={highlightedItemId}
         rowCount={SHELF_ROWS}
         title="四层大空间冰箱"
+        imagesVersion={imagesVersion}
       />
 
       <AddItemModal
@@ -228,6 +230,7 @@ export function ShelfFridgeView({
         onAddItemType={onAddItemType}
         onClose={() => { setShowItemModal(false); setEditItem(null); }}
         onSave={handleSaveItem}
+        onImagesChanged={() => setImagesVersion((v) => v + 1)}
       />
     </div>
   );

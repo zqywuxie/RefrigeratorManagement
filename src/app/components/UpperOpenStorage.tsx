@@ -18,6 +18,7 @@ interface UpperOpenStorageProps {
   highlightedItemId?: string | null;
   rowCount?: number;
   title?: string;
+  imagesVersion?: number;
 }
 
 export function UpperOpenStorage({
@@ -32,6 +33,7 @@ export function UpperOpenStorage({
   highlightedItemId,
   rowCount = 2,
   title = '上层开放存储',
+  imagesVersion = 0,
 }: UpperOpenStorageProps) {
   const [filterType, setFilterType] = useState<ItemType | 'all'>('all');
   const rows = Array.from({ length: rowCount }, (_, i) => i + 1);
@@ -212,6 +214,7 @@ export function UpperOpenStorage({
                       onClick={() => onItemClick(item.id)}
                       onDelete={onDeleteItem}
                       canDelete={!item.owner || item.owner === currentUser}
+                      imagesVersion={imagesVersion}
                     />
                   ))}
                   {rowItems.length === 0 && (

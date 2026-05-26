@@ -11,9 +11,10 @@ interface ItemCardProps {
   onClick: () => void;
   onDelete?: (id: string) => void;
   canDelete?: boolean;
+  imagesVersion?: number;
 }
 
-export function ItemCard({ item, isHighlighted, onClick, onDelete, canDelete = false }: ItemCardProps) {
+export function ItemCard({ item, isHighlighted, onClick, onDelete, canDelete = false, imagesVersion = 0 }: ItemCardProps) {
   const typeConfig = getItemTypeConfig(item.item_type);
   const [firstImage, setFirstImage] = useState<UpperItemImage | null>(null);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
@@ -24,7 +25,7 @@ export function ItemCard({ item, isHighlighted, onClick, onDelete, canDelete = f
         .then((imgs) => setFirstImage(imgs.length > 0 ? imgs[0] : null))
         .catch(() => setFirstImage(null));
     }
-  }, [item.id]);
+  }, [item.id, imagesVersion]);
 
   const [{ isDragging }, drag] = useDrag({
     type: 'UPPER_ITEM',

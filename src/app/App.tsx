@@ -282,6 +282,7 @@ function AppContent() {
     const q = searchQuery.toLowerCase();
     return allUpperItems.filter((item) =>
       item.name.toLowerCase().includes(q) ||
+      matchesBoxName(searchQuery.trim(), item.name) ||
       item.item_type.toLowerCase().includes(q) ||
       (item.owner || '').toLowerCase().includes(q)
     );
