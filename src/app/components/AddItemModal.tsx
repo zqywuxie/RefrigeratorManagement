@@ -113,28 +113,15 @@ export function AddItemModal({
   };
 
   const handleImageFiles = (files: File[]) => {
-    const itemId = editItem?.id;
-    if (!itemId) {
-      setPendingImages((prev) => [
-        ...prev,
-        ...files.map((file) => ({
-          id: generateTempId(`${file.name}-${file.lastModified}`),
-          file,
-          previewUrl: URL.createObjectURL(file),
-          originalName: file.name,
-        })),
-      ]);
-      return;
-    }
-
-    setUploading(true);
-    Promise.all(files.map((file) => uploadUpperItemImage(itemId, file)))
-      .then((uploaded) => {
-        setImages((prev) => [...prev, ...uploaded]);
-        onImagesChanged?.(itemId!);
-      })
-      .catch((err: any) => setError(err.message || '图片上传失败'))
-      .finally(() => setUploading(false));
+    setPendingImages((prev) => [
+      ...prev,
+      ...files.map((file) => ({
+        id: generateTempId(`${file.name}-${file.lastModified}`),
+        file,
+        previewUrl: URL.createObjectURL(file),
+        originalName: file.name,
+      })),
+    ]);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -210,10 +197,11 @@ export function AddItemModal({
 
     const saved = await onSave(data);
 
-    if (!editItem?.id && saved?.id && pendingImages.length > 0) {
+    const targetId = saved?.id || editItem?.id;
+    if (targetId && pendingImages.length > 0) {
       try {
-        await Promise.all(pendingImages.map((img) => uploadUpperItemImage(saved.id, img.file)));
-        onImagesChanged?.(saved.id);
+        await Promise.all(pendingImages.map((img) => uploadUpperItemImage(targetId, img.file)));
+        onImagesChanged?.(targetId);
       } catch (err: any) {
         console.error('上层物品图片保存后上传失败:', err);
       }
@@ -368,7 +356,7 @@ export function AddItemModal({
                 {uploading ? '上传中...' : '上传图片'}
                 <input type="file" accept="image/*" multiple onChange={handleImageUpload} disabled={uploading} className="hidden" />
               </label>
-              {!editItem?.id && pendingImages.length > 0 && (
+              {pendingImages.length > 0 && (
                 <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
                   保存后自动上传
                 </span>
@@ -447,7 +435,7 @@ export function AddItemModal({
               ) : (
                 <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--app-card-bg)', border: '1px dashed var(--app-border)', color: 'var(--app-muted)' }}>
                   <ImageIcon size={16} />
-                  <span className="text-[12px]">{editItem?.id ? '可上传或拖拽图片到此处' : '可先选择或拖拽图片，保存后自动上传'}</span>
+                  <span className="text-[12px]">可先选择或拖拽图片，保存后自动上传</span>
                 </div>
               )}
             </div>

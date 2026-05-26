@@ -132,10 +132,7 @@ export function AddBoxModal({
     e.stopPropagation();
     setDragOver(false);
     const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
-    if (files.length === 0) return;
-
-    const boxId = editBox?.id;
-    if (!boxId) {
+    if (files.length > 0) {
       setPendingImages((prev) => [
         ...prev,
         ...files.map((file) => ({
@@ -145,17 +142,7 @@ export function AddBoxModal({
           originalName: file.name,
         })),
       ]);
-      return;
     }
-
-    setUploading(true);
-    Promise.all(files.map((file) => uploadBoxImage(boxId, file)))
-      .then((uploaded) => {
-        setImages((prev) => [...prev, ...uploaded]);
-        onImagesChanged?.(boxId);
-      })
-      .catch((err: any) => setError(err.message || '图片上传失败'))
-      .finally(() => setUploading(false));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -186,53 +173,35 @@ export function AddBoxModal({
       data_path: dataPath || null,
       tags: editBox?.tags || [],
     });
-    if (!editBox?.id && saved?.id) {
+    if (saved?.id || editBox?.id) {
+      const targetId = saved?.id || editBox?.id!;
       handleClose();
       if (pendingImages.length > 0) {
         void (async () => {
           try {
-            await Promise.all(pendingImages.map((img) => uploadBoxImage(saved.id, img.file)));
-            onImagesChanged?.(saved.id);
+            await Promise.all(pendingImages.map((img) => uploadBoxImage(targetId, img.file)));
+            onImagesChanged?.(targetId);
           } catch (err: any) {
             console.error('Box image upload failed after save:', err);
           }
         })();
       }
-    } else if (editBox?.id) {
-      // Editing existing — close as before
-      handleClose();
     }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
-    const boxId = editBox?.id;
     if (selectedFiles.length === 0) return;
-    if (!boxId) {
-      setPendingImages((prev) => [
-        ...prev,
-        ...selectedFiles.map((file) => ({
-          id: generateTempId(`${file.name}-${file.lastModified}`),
-          file,
-          previewUrl: URL.createObjectURL(file),
-          originalName: file.name,
-        })),
-      ]);
-      e.target.value = '';
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const uploaded = await Promise.all(selectedFiles.map((file) => uploadBoxImage(boxId, file)));
-      setImages((prev) => [...prev, ...uploaded]);
-      onImagesChanged?.(boxId);
-    } catch (err: any) {
-      setError(err.message || '图片上传失败');
-    } finally {
-      setUploading(false);
-      e.target.value = '';
-    }
+    setPendingImages((prev) => [
+      ...prev,
+      ...selectedFiles.map((file) => ({
+        id: generateTempId(`${file.name}-${file.lastModified}`),
+        file,
+        previewUrl: URL.createObjectURL(file),
+        originalName: file.name,
+      })),
+    ]);
+    e.target.value = '';
   };
 
   const handleImageDelete = async (imageId: string) => {
@@ -462,7 +431,7 @@ export function AddBoxModal({
                 {uploading ? '上传中...' : '上传图片'}
                 <input type="file" accept="image/*" multiple onChange={handleImageUpload} disabled={uploading} className="hidden" />
               </label>
-              {!editBox?.id && pendingImages.length > 0 && (
+              {pendingImages.length > 0 && (
                 <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
                   保存后自动上传
                 </span>
@@ -541,7 +510,7 @@ export function AddBoxModal({
               ) : (
                 <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--app-card-bg)', border: '1px dashed var(--app-border)', color: 'var(--app-muted)' }}>
                   <ImageIcon size={16} />
-                  <span className="text-[12px]">{editBox?.id ? '可上传或拖拽图片到此处' : '可先选择或拖拽图片，保存盒子后自动上传'}</span>
+                  <span className="text-[12px]">可先选择或拖拽图片，保存后自动上传</span>
                 </div>
               )}
             </div>
