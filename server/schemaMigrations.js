@@ -307,6 +307,19 @@ export async function runSchemaMigrations() {
       FOREIGN KEY (box_id) REFERENCES boxes(id) ON DELETE CASCADE
     ) ENGINE=InnoDB
   `);
+  // ── Upper Item Images table ──
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS upper_item_images (
+      id VARCHAR(36) PRIMARY KEY,
+      item_id VARCHAR(36) NOT NULL,
+      image_path VARCHAR(500) NOT NULL,
+      original_name VARCHAR(255),
+      mime_type VARCHAR(50),
+      file_size INT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (item_id) REFERENCES upper_items(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB
+  `);
   await ensureColumn('drawers', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `created_at`');
   await ensureColumn('drawers', 'deleted_by', '`deleted_by` VARCHAR(50) NULL AFTER `deleted_at`');
   await ensureColumn('tubes', 'deleted_at', '`deleted_at` TIMESTAMP NULL AFTER `updated_at`');

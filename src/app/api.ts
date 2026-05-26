@@ -1,5 +1,5 @@
 import type { AuthUser } from './AuthContext';
-import type { UpperItem, Drawer, Box, BoxImage, BoxCell, SampleRecord, Tube } from './types';
+import type { UpperItem, Drawer, Box, BoxImage, UpperItemImage, BoxCell, SampleRecord, Tube } from './types';
 
 export interface RefrigeratorResponse {
   id: string;
@@ -330,6 +330,10 @@ export async function fetchAdminItemTypes(): Promise<AdminItemTypeInfo[]> {
 
 // ── Upper Items ──
 
+export async function fetchAllUpperItems(): Promise<UpperItem[]> {
+  return fetchJSON(`${BASE}/upper-items`);
+}
+
 export async function fetchUpperItems(fridgeId: string): Promise<UpperItem[]> {
   return fetchJSON(`${BASE}/refrigerators/${encodeURIComponent(fridgeId)}/upper-items`);
 }
@@ -350,6 +354,32 @@ export async function updateUpperItem(itemId: string, data: Partial<UpperItem>):
 
 export async function deleteUpperItem(itemId: string): Promise<void> {
   await fetchJSON(`${BASE}/upper-items/${encodeURIComponent(itemId)}`, { method: 'DELETE' });
+}
+
+// ── Upper Item Images ──
+
+export async function fetchUpperItemImages(itemId: string): Promise<UpperItemImage[]> {
+  return fetchJSON(`${BASE}/upper-items/${encodeURIComponent(itemId)}/images`);
+}
+
+export async function uploadUpperItemImage(itemId: string, file: File): Promise<UpperItemImage> {
+  const formData = new FormData();
+  formData.append('image', file);
+  const token = localStorage.getItem('biofridge_token');
+  const res = await fetch(`${BASE}/upper-items/${encodeURIComponent(itemId)}/images`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deleteUpperItemImage(imageId: string): Promise<void> {
+  await fetchJSON(`${BASE}/upper-items/images/${encodeURIComponent(imageId)}`, { method: 'DELETE' });
 }
 
 // ── Drawers ──

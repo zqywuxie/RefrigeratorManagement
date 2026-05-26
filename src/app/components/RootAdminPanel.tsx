@@ -1427,13 +1427,15 @@ export function RootAdminPanel({ currentUsername, onNotify }: RootAdminPanelProp
           }}
           onClose={() => setEditingUpperItem(null)}
           onSave={async (data) => {
-            if (!editingUpperItem) return;
+            if (!editingUpperItem) return undefined;
             try {
               await updateAdminUpperItem(editingUpperItem.id, data);
               setAdminUpperItems((prev) => prev.map((i) => i.id === editingUpperItem.id ? { ...i, ...data } : i));
               onNotify('物品已更新', 'success');
+              return { ...editingUpperItem, ...data } as UpperItem;
             } catch (err: any) {
               onNotify(err.message || '更新失败', 'error');
+              return undefined;
             }
           }}
         />

@@ -51,6 +51,26 @@ app.use('/api/drawers', drawersRouter);
 app.use('/api/boxes', boxesRouter);
 app.use('/api', tubesRouter);
 app.use('/api/refrigerators', upperItemsRouter);
+
+// GET /api/upper-items — list all upper items for global search (before the wildcard router mount)
+app.get('/api/upper-items', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT ui.*, r.name as fridge_name
+       FROM upper_items ui
+       JOIN refrigerators r ON r.id = ui.refrigerator_id
+       WHERE ui.deleted_at IS NULL AND r.deleted_at IS NULL
+       ORDER BY r.name, ui.row_number, ui.sort_order`
+    );
+    for (const row of rows) {
+      row.tags = typeof row.tags === 'string' ? JSON.parse(row.tags || '[]') : (row.tags || []);
+    }
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use('/api/upper-items', upperItemsRouter);
 app.use('/api/sample-records', sampleRecordsRouter);
 app.use('/api/import', importRouter);

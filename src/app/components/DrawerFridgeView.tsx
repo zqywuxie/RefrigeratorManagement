@@ -422,20 +422,24 @@ export function DrawerFridgeView({
     breadcrumbNodes.push({ label: selectedBox.name });
   }
 
-  const handleSaveItem = useCallback(async (data: Partial<UpperItem>) => {
+  const handleSaveItem = useCallback(async (data: Partial<UpperItem>): Promise<UpperItem | undefined> => {
     try {
+      let saved: UpperItem | undefined;
       if (data.id && editItem) {
         await updateUpperItem(data.id, data);
+        saved = { ...editItem, ...data };
       } else {
-        await createUpperItem(fridge.id, data);
+        saved = await createUpperItem(fridge.id, data);
       }
       const items = await fetchUpperItems(fridge.id);
       setUpperItems(items);
       onDataChanged?.();
+      return saved;
     } catch (err) {
       console.error('Failed to save item:', err);
+      return undefined;
     }
-  }, [fridge.id, editItem]);
+  }, [fridge.id, editItem, onDataChanged]);
 
   const handleItemClick = useCallback(async (itemId: string) => {
     const item = upperItems.find((i) => i.id === itemId) || null;

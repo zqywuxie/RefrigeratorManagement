@@ -121,21 +121,25 @@ export function ShelfFridgeView({
   }, [items]);
 
   const handleSaveItem = useCallback(
-    async (data: Partial<UpperItem>) => {
+    async (data: Partial<UpperItem>): Promise<UpperItem | undefined> => {
       try {
+        let saved: UpperItem | undefined;
         if (data.id && editItem) {
           await updateUpperItem(data.id, data);
+          saved = { ...editItem, ...data };
         } else {
-          await createUpperItem(fridge.id, data);
+          saved = await createUpperItem(fridge.id, data);
         }
         const nextItems = await fetchUpperItems(fridge.id);
         setItems(nextItems);
         onItemsChange?.(nextItems);
-      } catch (err) {
+        return saved;
+      } catch (err: any) {
         console.error('Failed to save shelf item:', err);
+        return undefined;
       }
     },
-    [fridge.id, editItem, onItemsChange],
+    [fridge.id, editItem, setItems, onItemsChange],
   );
 
   const handleDeleteItem = useCallback(async (id: string) => {

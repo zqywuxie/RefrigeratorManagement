@@ -149,6 +149,16 @@ export interface BoxImage {
   created_at: string;
 }
 
+export interface UpperItemImage {
+  id: string;
+  item_id: string;
+  image_path: string;
+  original_name: string | null;
+  mime_type: string | null;
+  file_size: number | null;
+  created_at: string;
+}
+
 export interface BoxCell {
   id: string;
   box_id: string;

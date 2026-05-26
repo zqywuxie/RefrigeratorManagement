@@ -60,6 +60,7 @@ import {
   createSampleType,
   fetchDrawers,
   fetchUpperItems,
+  fetchAllUpperItems,
 } from './api';
 import type { FridgeBoxInfo } from './api';
 import { FridgeSelector } from './components/FridgeSelector';
@@ -182,6 +183,7 @@ function AppContent() {
   const [drawerLayerCounts, setDrawerLayerCounts] = useState<Record<number, number>>({});
   const [upperItemsCount, setUpperItemsCount] = useState(0);
   const [upperItems, setUpperItems] = useState<UpperItem[]>([]);
+  const [allUpperItems, setAllUpperItems] = useState<UpperItem[]>([]);
 
   // Side map state
   const [showSideMap, setShowSideMap] = useState(false);
@@ -274,6 +276,17 @@ function AppContent() {
     return fridgeBoxes.filter((b) => b.name && matchesBoxName(q, b.name));
   }, [fridgeBoxes, searchQuery]);
 
+  // Global upper items filtered by searchQuery (for dropdown below search bar)
+  const globalFilteredUpperItems = React.useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return allUpperItems.filter((item) =>
+      item.name.toLowerCase().includes(q) ||
+      item.item_type.toLowerCase().includes(q) ||
+      (item.owner || '').toLowerCase().includes(q)
+    );
+  }, [allUpperItems, searchQuery]);
+
   const handleImportComplete = useCallback((newSamples: PendingImportSample[]) => {
     setPendingSamples((prev) => [...prev, ...newSamples]);
   }, []);
@@ -321,6 +334,7 @@ function AppContent() {
     // Load all sample records and boxes globally for search
     fetchSampleRecords({}).then(setSampleRecords).catch(() => {});
     fetchFridgeBoxes().then(setFridgeBoxes).catch(() => {});
+    fetchAllUpperItems().then(setAllUpperItems).catch(() => {});
   }, []);
 
   // Load sample records, drawers, upper items when fridge changes
@@ -980,7 +994,7 @@ function AppContent() {
               <PopoverContent align="end" className="w-72 p-4 text-[13px] leading-relaxed" style={{ background: 'var(--app-header-bg)', border: '1px solid var(--app-border)', color: 'var(--app-text)' }}>
                 <div className="font-medium text-[14px] mb-2">搜索规则</div>
                 <ul className="space-y-1.5 list-disc list-inside">
-                  <li>搜索范围：<b>患者姓名</b>、<b>样本编号</b>、<b>样本类型</b>、<b>盒子名称</b></li>
+                  <li>搜索范围：<b>患者姓名</b>、<b>样本编号</b>、<b>样本类型</b>、<b>盒子名称</b>、<b>上层物品</b></li>
                   <li>盒子范围匹配：搜索 <code className="px-1 rounded text-[11px]" style={{ background: 'var(--app-input-bg)', color: '#2563eb' }}>MLP 12</code> 可匹配盒子 <code className="px-1 rounded text-[11px]" style={{ background: 'var(--app-input-bg)', color: '#2563eb' }}>MLP 11-20</code></li>
                   <li>结果排序：<b>样本记录优先</b>，盒子其次</li>
                 </ul>
@@ -989,7 +1003,7 @@ function AppContent() {
             {searchQuery && (
               <div className="flex items-center gap-1">
                 <span className="text-[14px]" style={{ color: '#2563eb' }}>
-                  {globalFilteredRecords.length + globalFilteredBoxes.length} 个
+                  {globalFilteredRecords.length + globalFilteredBoxes.length + globalFilteredUpperItems.length} 个
                 </span>
                 <button
                   onClick={() => { setSearchQuery(''); setHighlightedBoxId(null); }}
@@ -1003,7 +1017,7 @@ function AppContent() {
           </div>
 
           {/* Global search results dropdown */}
-          {searchQuery.trim() && (globalFilteredRecords.length > 0 || globalFilteredBoxes.length > 0) && (
+          {searchQuery.trim() && (globalFilteredRecords.length > 0 || globalFilteredBoxes.length > 0 || globalFilteredUpperItems.length > 0) && (
             <div
               className="rounded-xl p-3 space-y-1 max-h-56 overflow-y-auto"
               style={{
@@ -1089,6 +1103,41 @@ function AppContent() {
                       </div>
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(34,211,238,0.15)', color: '#0891b2', border: '1px solid rgba(34,211,238,0.3)' }}>
                         盒子
+                      </span>
+                    </div>
+                  ))}
+                </>
+              )}
+              {globalFilteredUpperItems.length > 0 && (
+                <>
+                  <div className="text-[11px] px-1 mb-1 mt-1" style={{ color: 'var(--app-muted)' }}>
+                    上层物品匹配 · {globalFilteredUpperItems.length} 个
+                  </div>
+                  {globalFilteredUpperItems.slice(0, 8).map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:brightness-95"
+                      style={{
+                        background: 'rgba(34,197,94,0.08)',
+                        border: '1px solid rgba(34,197,94,0.2)',
+                      }}
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedFridgeId(item.refrigerator_id);
+                      }}
+                    >
+                      <Package size={14} style={{ color: '#22c55e' }} />
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>{item.name}</span>
+                        <span className="text-[11px] ml-2" style={{ color: 'var(--app-muted)' }}>{item.item_type}</span>
+                      </div>
+                      {item.owner && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--app-subtle-bg)', color: 'var(--app-subtle-text)' }}>
+                          {item.owner}
+                        </span>
+                      )}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(34,197,94,0.15)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.3)' }}>
+                        上层物品
                       </span>
                     </div>
                   ))}
@@ -1489,7 +1538,7 @@ function AppContent() {
                 <PopoverContent align="end" className="w-72 p-4 text-[13px] leading-relaxed" style={{ background: 'var(--app-header-bg)', border: '1px solid var(--app-border)', color: 'var(--app-text)' }}>
                   <div className="font-medium text-[14px] mb-2">搜索规则</div>
                   <ul className="space-y-1.5 list-disc list-inside">
-                    <li>搜索范围：<b>患者姓名</b>、<b>样本编号</b>、<b>样本类型</b>、<b>盒子名称</b></li>
+                    <li>搜索范围：<b>患者姓名</b>、<b>样本编号</b>、<b>样本类型</b>、<b>盒子名称</b>、<b>上层物品</b></li>
                     <li>盒子范围匹配：搜索 <code className="px-1 rounded text-[11px]" style={{ background: 'var(--app-input-bg)', color: '#2563eb' }}>MLP 12</code> 可匹配盒子 <code className="px-1 rounded text-[11px]" style={{ background: 'var(--app-input-bg)', color: '#2563eb' }}>MLP 11-20</code></li>
                     <li>结果排序：<b>样本记录优先</b>，盒子其次</li>
                   </ul>
@@ -1498,7 +1547,7 @@ function AppContent() {
               {searchQuery && (
                 <div className="flex items-center gap-1">
                   <span className="text-[14px]" style={{ color: '#2563eb' }}>
-                    {globalFilteredRecords.length + globalFilteredBoxes.length} 个匹配
+                    {globalFilteredRecords.length + globalFilteredBoxes.length + globalFilteredUpperItems.length} 个匹配
                   </span>
                   <button
                     onClick={() => { setSearchQuery(''); setHighlightedBoxId(null); }}
@@ -1512,7 +1561,7 @@ function AppContent() {
             </div>
 
             {/* Global search results dropdown */}
-            {searchQuery.trim() && (globalFilteredRecords.length > 0 || globalFilteredBoxes.length > 0) && (
+            {searchQuery.trim() && (globalFilteredRecords.length > 0 || globalFilteredBoxes.length > 0 || globalFilteredUpperItems.length > 0) && (
               <div
                 className="rounded-xl p-3 space-y-1 max-h-56 overflow-y-auto"
                 style={{
@@ -1604,6 +1653,41 @@ function AppContent() {
                         </div>
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(34,211,238,0.15)', color: '#0891b2', border: '1px solid rgba(34,211,238,0.3)' }}>
                           盒子
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {globalFilteredUpperItems.length > 0 && (
+                  <>
+                    <div className="text-[11px] px-1 mb-1 mt-1" style={{ color: 'var(--app-muted)' }}>
+                      上层物品匹配 · {globalFilteredUpperItems.length} 个
+                    </div>
+                    {globalFilteredUpperItems.slice(0, 8).map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer hover:brightness-95"
+                        style={{
+                          background: 'rgba(34,197,94,0.08)',
+                          border: '1px solid rgba(34,197,94,0.2)',
+                        }}
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSelectedFridgeId(item.refrigerator_id);
+                        }}
+                      >
+                        <Package size={14} style={{ color: '#22c55e' }} />
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[13px] font-medium" style={{ color: 'var(--app-text)' }}>{item.name}</span>
+                          <span className="text-[11px] ml-2" style={{ color: 'var(--app-muted)' }}>{item.item_type}</span>
+                        </div>
+                        {item.owner && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--app-subtle-bg)', color: 'var(--app-subtle-text)' }}>
+                            {item.owner}
+                          </span>
+                        )}
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(34,197,94,0.15)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.3)' }}>
+                          上层物品
                         </span>
                       </div>
                     ))}

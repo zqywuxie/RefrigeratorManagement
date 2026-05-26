@@ -72,6 +72,7 @@ export function AddBoxModal({
   const [pendingImages, setPendingImages] = useState<PendingBoxImage[]>([]);
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   const clearPendingImages = () => {
     setPendingImages((prev) => {
@@ -113,6 +114,49 @@ export function AddBoxModal({
       setImages([]);
     }
   }, [isOpen, editBox]);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+    if (files.length === 0) return;
+
+    const boxId = editBox?.id;
+    if (!boxId) {
+      setPendingImages((prev) => [
+        ...prev,
+        ...files.map((file) => ({
+          id: generateTempId(`${file.name}-${file.lastModified}`),
+          file,
+          previewUrl: URL.createObjectURL(file),
+          originalName: file.name,
+        })),
+      ]);
+      return;
+    }
+
+    setUploading(true);
+    Promise.all(files.map((file) => uploadBoxImage(boxId, file)))
+      .then((uploaded) => {
+        setImages((prev) => [...prev, ...uploaded]);
+        onImagesChanged?.(boxId);
+      })
+      .catch((err: any) => setError(err.message || '图片上传失败'))
+      .finally(() => setUploading(false));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -424,72 +468,83 @@ export function AddBoxModal({
                 </span>
               )}
             </div>
-            {images.length > 0 || pendingImages.length > 0 ? (
-              <div className="flex gap-2 flex-wrap">
-                {pendingImages.map((img) => (
-                  <div
-                    key={img.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setPreviewImage({ src: img.previewUrl, alt: img.originalName })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setPreviewImage({ src: img.previewUrl, alt: img.originalName });
-                      }
-                    }}
-                    className="relative group w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
-                    style={{ border: '1px solid var(--app-border)' }}>
-                    <img src={img.previewUrl} alt={img.originalName} className="w-full h-full object-cover" />
-                    <span className="absolute bottom-0 left-0 right-0 px-1 py-0.5 text-center text-[10px] text-white" style={{ background: 'rgba(15,23,42,0.72)' }}>
-                      待上传
-                    </span>
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
-                      <Maximize2 size={18} />
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handlePendingImageDelete(img.id); }}
-                      className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-                {images.map((img) => (
-                  <div
-                    key={img.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setPreviewImage({ src: `/${img.image_path}`, alt: img.original_name || '盒子图片' })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setPreviewImage({ src: `/${img.image_path}`, alt: img.original_name || '盒子图片' });
-                      }
-                    }}
-                    className="relative group w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
-                    style={{ border: '1px solid var(--app-border)' }}>
-                    <img src={`/${img.image_path}`} alt={img.original_name || ''} className="w-full h-full object-cover" />
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
-                      <Maximize2 size={18} />
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleImageDelete(img.id); }}
-                      className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--app-card-bg)', border: '1px dashed var(--app-border)', color: 'var(--app-muted)' }}>
-                <ImageIcon size={16} />
-                <span className="text-[12px]">{editBox?.id ? '可上传并查看缩略图' : '可先选择图片，保存盒子后自动上传'}</span>
-              </div>
-            )}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className="rounded-lg transition-colors"
+              style={{
+                border: dragOver ? '2px dashed #3b82f6' : '2px dashed transparent',
+                background: dragOver ? 'rgba(59,130,246,0.06)' : 'transparent',
+              }}
+            >
+              {images.length > 0 || pendingImages.length > 0 ? (
+                <div className="flex gap-2 flex-wrap p-1">
+                  {pendingImages.map((img) => (
+                    <div
+                      key={img.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setPreviewImage({ src: img.previewUrl, alt: img.originalName })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setPreviewImage({ src: img.previewUrl, alt: img.originalName });
+                        }
+                      }}
+                      className="relative group w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
+                      style={{ border: '1px solid var(--app-border)' }}>
+                      <img src={img.previewUrl} alt={img.originalName} className="w-full h-full object-cover" />
+                      <span className="absolute bottom-0 left-0 right-0 px-1 py-0.5 text-center text-[10px] text-white" style={{ background: 'rgba(15,23,42,0.72)' }}>
+                        待上传
+                      </span>
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
+                        <Maximize2 size={18} />
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handlePendingImageDelete(img.id); }}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  {images.map((img) => (
+                    <div
+                      key={img.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setPreviewImage({ src: `/${img.image_path}`, alt: img.original_name || '盒子图片' })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setPreviewImage({ src: `/${img.image_path}`, alt: img.original_name || '盒子图片' });
+                        }
+                      }}
+                      className="relative group w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
+                      style={{ border: '1px solid var(--app-border)' }}>
+                      <img src={`/${img.image_path}`} alt={img.original_name || ''} className="w-full h-full object-cover" />
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
+                        <Maximize2 size={18} />
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleImageDelete(img.id); }}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--app-card-bg)', border: '1px dashed var(--app-border)', color: 'var(--app-muted)' }}>
+                  <ImageIcon size={16} />
+                  <span className="text-[12px]">{editBox?.id ? '可上传或拖拽图片到此处' : '可先选择或拖拽图片，保存盒子后自动上传'}</span>
+                </div>
+              )}
+            </div>
           </div>
           {error && (
             <div className="text-[13px] px-3 py-2 rounded-lg" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>

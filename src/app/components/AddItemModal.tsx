@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
-import { UpperItem, ItemType, BoxMode, BOX_GRID_PRESETS } from '../types';
+import { Plus, Upload, X, ImageIcon, Maximize2 } from 'lucide-react';
+import { UpperItem, ItemType, BoxMode, BOX_GRID_PRESETS, UpperItemImage } from '../types';
+import { fetchUpperItemImages, uploadUpperItemImage, deleteUpperItemImage } from '../api';
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -9,6 +10,25 @@ import {
   ResponsiveDialogTitle,
   ResponsiveDialogDescription,
 } from './ui/responsive-dialog';
+
+type PendingItemImage = {
+  id: string;
+  file: File;
+  previewUrl: string;
+  originalName: string;
+};
+
+type PreviewImage = {
+  src: string;
+  alt: string;
+};
+
+const generateTempId = (prefix: string) => {
+  const cryptoObj = globalThis.crypto as Crypto | undefined;
+  const uuid = cryptoObj?.randomUUID?.();
+  if (uuid) return `${prefix}-${uuid}`;
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -19,7 +39,7 @@ interface AddItemModalProps {
   itemTypes: string[];
   onAddItemType: (name: string) => void;
   onClose: () => void;
-  onSave: (data: Partial<UpperItem>) => void;
+  onSave: (data: Partial<UpperItem>) => Promise<UpperItem | undefined>;
 }
 
 export function AddItemModal({
@@ -45,6 +65,11 @@ export function AddItemModal({
   const [customRows, setCustomRows] = useState(10);
   const [customCols, setCustomCols] = useState(10);
   const [error, setError] = useState('');
+  const [images, setImages] = useState<UpperItemImage[]>([]);
+  const [pendingImages, setPendingImages] = useState<PendingItemImage[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -62,7 +87,97 @@ export function AddItemModal({
     setCustomCols(editItem?.grid_cols || 10);
   }, [isOpen, editItem, defaultRow, currentUsername]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (isOpen && editItem?.id) {
+      fetchUpperItemImages(editItem.id).then(setImages).catch(() => setImages([]));
+    } else {
+      setImages([]);
+      setPendingImages([]);
+    }
+  }, [isOpen, editItem?.id]);
+
+  const clearPendingImages = () => {
+    setPendingImages((prev) => {
+      for (const img of prev) URL.revokeObjectURL(img.previewUrl);
+      return [];
+    });
+  };
+
+  const handleClose = () => {
+    setError('');
+    setPreviewImage(null);
+    clearPendingImages();
+    onClose();
+  };
+
+  const handleImageFiles = (files: File[]) => {
+    const itemId = editItem?.id;
+    if (!itemId) {
+      setPendingImages((prev) => [
+        ...prev,
+        ...files.map((file) => ({
+          id: generateTempId(`${file.name}-${file.lastModified}`),
+          file,
+          previewUrl: URL.createObjectURL(file),
+          originalName: file.name,
+        })),
+      ]);
+      return;
+    }
+
+    setUploading(true);
+    Promise.all(files.map((file) => uploadUpperItemImage(itemId, file)))
+      .then((uploaded) => setImages((prev) => [...prev, ...uploaded]))
+      .catch((err: any) => setError(err.message || '图片上传失败'))
+      .finally(() => setUploading(false));
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    if (selectedFiles.length > 0) handleImageFiles(selectedFiles);
+    e.target.value = '';
+  };
+
+  const handleImageDelete = async (imageId: string) => {
+    if (!window.confirm('确认删除这张图片吗？')) return;
+    try {
+      await deleteUpperItemImage(imageId);
+      setImages((prev) => prev.filter((img) => img.id !== imageId));
+    } catch (err: any) {
+      setError(err.message || '图片删除失败');
+    }
+  };
+
+  const handlePendingImageDelete = (imageId: string) => {
+    if (!window.confirm('确认删除这张待上传图片吗？')) return;
+    setPendingImages((prev) => {
+      const target = prev.find((img) => img.id === imageId);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((img) => img.id !== imageId);
+    });
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+    if (files.length > 0) handleImageFiles(files);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('请输入物品名称');
@@ -73,7 +188,7 @@ export function AddItemModal({
     const preset = BOX_GRID_PRESETS[gridPreset];
     const finalRows = isBox ? (preset.rows || customRows) : null;
     const finalCols = isBox ? (preset.cols || customCols) : null;
-    onSave({
+    const data: Partial<UpperItem> = {
       id: editItem?.id,
       name: name.trim(),
       item_type: itemType,
@@ -85,8 +200,19 @@ export function AddItemModal({
       note: note || null,
       row_number: rowNumber,
       tags: editItem?.tags || [],
-    });
-    onClose();
+    };
+
+    const saved = await onSave(data);
+
+    if (!editItem?.id && saved?.id && pendingImages.length > 0) {
+      try {
+        await Promise.all(pendingImages.map((img) => uploadUpperItemImage(saved.id, img.file)));
+      } catch (err: any) {
+        console.error('上层物品图片保存后上传失败:', err);
+      }
+    }
+    clearPendingImages();
+    handleClose();
   };
 
   const fieldStyle: React.CSSProperties = {
@@ -96,7 +222,7 @@ export function AddItemModal({
   };
 
   return (
-    <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) { setError(''); onClose(); } }}>
+    <ResponsiveDialog open={isOpen} onOpenChange={(open) => { if (!open) { setError(''); handleClose(); } }}>
       <ResponsiveDialogContent className="max-w-md">
         <form onSubmit={handleSubmit} className="space-y-4">
           <ResponsiveDialogHeader>
@@ -226,6 +352,100 @@ export function AddItemModal({
             style={fieldStyle}
           />
 
+          <div className="space-y-2 rounded-xl p-3" style={{ background: 'var(--app-input-bg)', border: '1px solid var(--app-input-border)' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-[13px]" style={{ color: 'var(--app-muted)' }}>物品图片</span>
+              <label className="cursor-pointer inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] min-h-[36px]"
+                style={{ background: '#2563eb', color: '#fff' }}>
+                <Upload size={14} />
+                {uploading ? '上传中...' : '上传图片'}
+                <input type="file" accept="image/*" multiple onChange={handleImageUpload} disabled={uploading} className="hidden" />
+              </label>
+              {!editItem?.id && pendingImages.length > 0 && (
+                <span className="text-[11px]" style={{ color: 'var(--app-muted)' }}>
+                  保存后自动上传
+                </span>
+              )}
+            </div>
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className="rounded-lg transition-colors"
+              style={{
+                border: dragOver ? '2px dashed #3b82f6' : '2px dashed transparent',
+                background: dragOver ? 'rgba(59,130,246,0.06)' : 'transparent',
+              }}
+            >
+              {images.length > 0 || pendingImages.length > 0 ? (
+                <div className="flex gap-2 flex-wrap p-1">
+                  {pendingImages.map((img) => (
+                    <div
+                      key={img.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setPreviewImage({ src: img.previewUrl, alt: img.originalName })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setPreviewImage({ src: img.previewUrl, alt: img.originalName });
+                        }
+                      }}
+                      className="relative group w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
+                      style={{ border: '1px solid var(--app-border)' }}>
+                      <img src={img.previewUrl} alt={img.originalName} className="w-full h-full object-cover" />
+                      <span className="absolute bottom-0 left-0 right-0 px-1 py-0.5 text-center text-[10px] text-white" style={{ background: 'rgba(15,23,42,0.72)' }}>
+                        待上传
+                      </span>
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
+                        <Maximize2 size={18} />
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handlePendingImageDelete(img.id); }}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  {images.map((img) => (
+                    <div
+                      key={img.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setPreviewImage({ src: `/${img.image_path}`, alt: img.original_name || '物品图片' })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setPreviewImage({ src: `/${img.image_path}`, alt: img.original_name || '物品图片' });
+                        }
+                      }}
+                      className="relative group w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
+                      style={{ border: '1px solid var(--app-border)' }}>
+                      <img src={`/${img.image_path}`} alt={img.original_name || ''} className="w-full h-full object-cover" />
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
+                        <Maximize2 size={18} />
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleImageDelete(img.id); }}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--app-card-bg)', border: '1px dashed var(--app-border)', color: 'var(--app-muted)' }}>
+                  <ImageIcon size={16} />
+                  <span className="text-[12px]">{editItem?.id ? '可上传或拖拽图片到此处' : '可先选择或拖拽图片，保存后自动上传'}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="border-t pt-3" style={{ borderColor: 'var(--app-border)' }}>
             <label className="text-[12px] block mb-2" style={{ color: 'var(--app-muted)' }}>
               盒模式（可选）— 启用后可在上层大空间中使用盒子孔位管理
@@ -284,7 +504,7 @@ export function AddItemModal({
           <ResponsiveDialogFooter>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 rounded-lg text-[14px] min-h-[44px]"
               style={{ background: 'var(--app-panel-bg)', color: 'var(--app-muted)', border: '1px solid var(--app-border)' }}
             >取消</button>
@@ -296,6 +516,28 @@ export function AddItemModal({
           </ResponsiveDialogFooter>
         </form>
       </ResponsiveDialogContent>
+        {previewImage && (
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4"
+            onClick={() => setPreviewImage(null)}
+          >
+            <button
+              type="button"
+              aria-label="关闭图片预览"
+              className="absolute right-4 top-4 rounded-full p-2 text-white"
+              style={{ background: 'rgba(15,23,42,0.72)' }}
+              onClick={() => setPreviewImage(null)}
+            >
+              <X size={20} />
+            </button>
+            <img
+              src={previewImage.src}
+              alt={previewImage.alt}
+              className="max-w-full max-h-full object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
     </ResponsiveDialog>
   );
 }
