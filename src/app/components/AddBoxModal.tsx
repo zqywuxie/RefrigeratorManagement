@@ -508,9 +508,10 @@ export function AddBoxModal({
                   ))}
                 </div>
               ) : (
-                <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--app-card-bg)', border: '1px dashed var(--app-border)', color: 'var(--app-muted)' }}>
-                  <ImageIcon size={16} />
-                  <span className="text-[12px]">可先选择或拖拽图片，保存后自动上传</span>
+                <div className="flex flex-col items-center justify-center gap-2 rounded-lg px-3 py-6 min-h-[100px]" style={{ background: 'var(--app-card-bg)', border: '2px dashed var(--app-border)', color: 'var(--app-muted)' }}>
+                  <ImageIcon size={22} />
+                  <span className="text-[13px]">拖拽图片到此处，或点击上方按钮选择</span>
+                  <span className="text-[11px]">保存后自动上传</span>
                 </div>
               )}
             </div>
