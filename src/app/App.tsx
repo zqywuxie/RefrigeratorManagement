@@ -186,7 +186,7 @@ function AppContent() {
   const [allUpperItems, setAllUpperItems] = useState<UpperItem[]>([]);
 
   // Side map state
-  const [showSideMap, setShowSideMap] = useState(false);
+  const [showSideMap, setShowSideMap] = useState(true);
   const [sideMapNavTarget, setSideMapNavTarget] = useState<{ drawerId: string; drawerLabel: string } | null>(null);
   const [sideMapRefreshKey, setSideMapRefreshKey] = useState(0);
   const [boxViewTubes, setBoxViewTubes] = useState<Tube[]>([]);
@@ -811,7 +811,7 @@ function AppContent() {
                       }}
                     >
                       <PanelLeft size={16} />
-                      {showSideMap ? '隐藏冰箱图' : '显示冰箱图'}
+                      {showSideMap ? '隐藏缩略图' : '显示缩略图'}
                     </button>
                     {isRoot && (
                       <button
@@ -887,15 +887,16 @@ function AppContent() {
             <button
               type="button"
               onClick={() => setShowSideMap((v) => !v)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
+              className="flex h-8 flex-shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[12px] transition-colors"
               style={{
                 background: showSideMap ? '#2563eb15' : 'var(--app-panel-bg)',
                 border: showSideMap ? '1px solid #3b82f680' : '1px solid var(--app-border)',
-                color: showSideMap ? '#2563eb' : 'var(--app-muted)',
+                color: showSideMap ? '#2563eb' : 'var(--app-text)',
               }}
-              title={showSideMap ? '隐藏冰箱图' : '显示冰箱图'}
+              title={showSideMap ? '隐藏缩略图' : '显示缩略图'}
             >
               <PanelLeft size={16} />
+              <span>缩略图</span>
             </button>
           </div>
 
@@ -1278,6 +1279,8 @@ function AppContent() {
               <button
                 onClick={() => setMobileSideMapOpen(true)}
                 className="rounded-full flex items-center justify-center shadow-lg"
+                title="打开冰箱缩略图"
+                aria-label="打开冰箱缩略图"
                 style={{
                   width: '48px',
                   height: '48px',
@@ -1309,7 +1312,7 @@ function AppContent() {
             <Sheet open={mobileSideMapOpen} onOpenChange={setMobileSideMapOpen}>
               <SheetContent side="left" className="w-[85vw] max-w-[360px] p-0 overflow-y-auto">
                 <SheetHeader className="px-4 py-3 border-b" style={{ borderColor: 'var(--app-border)' }}>
-                  <SheetTitle className="text-[15px]" style={{ color: 'var(--app-text)' }}>冰箱图</SheetTitle>
+                  <SheetTitle className="text-[15px]" style={{ color: 'var(--app-text)' }}>冰箱缩略图</SheetTitle>
                 </SheetHeader>
                 <div className="p-3">
                   <FridgeSideMap
