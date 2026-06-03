@@ -10,6 +10,7 @@ interface BoxPositionSlotProps {
   box?: Box;
   onAddBox: (position: number) => void;
   onBoxClick: (boxId: string) => void;
+  onMoveBoxLocation: (box: Box) => void;
   onDeleteBox: (boxId: string) => void;
   onDropBox: (boxId: string, targetPosition: number) => void;
   images?: BoxImage[];
@@ -22,6 +23,7 @@ function BoxPositionSlot({
   box,
   onAddBox,
   onBoxClick,
+  onMoveBoxLocation,
   onDeleteBox,
   onDropBox,
   images,
@@ -57,8 +59,10 @@ function BoxPositionSlot({
           box={box}
           onClick={() => onBoxClick(box.id)}
           onDelete={onDeleteBox}
+          onMove={onMoveBoxLocation}
           images={images}
           canDelete={canDelete}
+          canMove={canDelete}
           isHighlighted={isHighlighted}
         />
       ) : (
@@ -92,6 +96,7 @@ interface BoxViewProps {
   isRoot: boolean;
   onBack: () => void;
   onBoxClick: (boxId: string) => void;
+  onMoveBoxLocation: (box: Box) => void;
   onAddBox: (position: number) => void;
   onAddPosition: (insertAt: number) => void;
   onMoveBox: (boxId: string, targetPosition: number) => void;
@@ -108,6 +113,7 @@ export function BoxView({
   isRoot,
   onBack,
   onBoxClick,
+  onMoveBoxLocation,
   onAddBox,
   onAddPosition,
   onMoveBox,
@@ -210,6 +216,7 @@ export function BoxView({
                 box={box}
                 onAddBox={onAddBox}
                 onBoxClick={onBoxClick}
+                onMoveBoxLocation={onMoveBoxLocation}
                 onDeleteBox={onDeleteBox}
                 onDropBox={onMoveBox}
                 images={box ? boxImagesById?.[box.id] : undefined}

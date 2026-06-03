@@ -162,6 +162,99 @@ router.put('/:boxId', authenticate, requireResourceOwner('boxes', 'boxId', 'owne
   }
 });
 
+// PATCH /api/boxes/:boxId/location — move a drawer box to an exact drawer position.
+// If the target position is occupied, swap the two boxes.
+router.patch('/:boxId/location', authenticate, requireResourceOwner('boxes', 'boxId', 'owner'), async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const { targetDrawerId, target_drawer_id, targetPosition, target_position } = req.body;
+    const finalDrawerId = targetDrawerId ?? target_drawer_id;
+    const finalPosition = Number(targetPosition ?? target_position);
+
+    if (!finalDrawerId) return res.status(400).json({ error: 'targetDrawerId is required' });
+    if (!Number.isInteger(finalPosition) || finalPosition < 0) {
+      return res.status(400).json({ error: 'targetPosition must be a non-negative integer' });
+    }
+
+    await conn.beginTransaction();
+
+    const [[moving]] = await conn.query(
+      `SELECT b.*, d.refrigerator_id AS fridge_id
+       FROM boxes b
+       LEFT JOIN drawers d ON d.id = b.drawer_id
+       WHERE b.id = ? AND b.deleted_at IS NULL
+       FOR UPDATE`,
+      [req.params.boxId],
+    );
+    if (!moving) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Box not found' });
+    }
+    if (!moving.drawer_id) {
+      await conn.rollback();
+      return res.status(409).json({ error: 'upper item boxes cannot be moved to drawers' });
+    }
+
+    const [[targetDrawer]] = await conn.query(
+      `SELECT id, refrigerator_id, max_boxes
+       FROM drawers
+       WHERE id = ? AND deleted_at IS NULL
+       FOR UPDATE`,
+      [finalDrawerId],
+    );
+    if (!targetDrawer) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Target drawer not found' });
+    }
+    if (targetDrawer.refrigerator_id !== moving.fridge_id) {
+      await conn.rollback();
+      return res.status(409).json({ error: 'boxes can only move within the same refrigerator' });
+    }
+    if (finalPosition >= Number(targetDrawer.max_boxes || 0)) {
+      await conn.rollback();
+      return res.status(409).json({ error: 'target position is outside drawer capacity' });
+    }
+    if (moving.drawer_id === finalDrawerId && Number(moving.position) === finalPosition) {
+      await conn.commit();
+      return res.json(moving);
+    }
+
+    const [[occupying]] = await conn.query(
+      `SELECT *
+       FROM boxes
+       WHERE drawer_id = ? AND position = ? AND deleted_at IS NULL AND id <> ?
+       FOR UPDATE`,
+      [finalDrawerId, finalPosition, req.params.boxId],
+    );
+
+    if (occupying) {
+      if (req.user?.role !== 'root' && occupying.owner && occupying.owner !== req.user?.username) {
+        await conn.rollback();
+        return res.status(403).json({ error: '只有目标盒子的创建者可以交换此位置' });
+      }
+      await conn.query(
+        'UPDATE boxes SET drawer_id = ?, position = ? WHERE id = ?',
+        [moving.drawer_id, moving.position, occupying.id],
+      );
+    }
+    await conn.query(
+      'UPDATE boxes SET drawer_id = ?, position = ? WHERE id = ?',
+      [finalDrawerId, finalPosition, moving.id],
+    );
+
+    await conn.commit();
+    const [[box]] = await pool.query('SELECT * FROM boxes WHERE id = ?', [moving.id]);
+    res.json(box);
+  } catch (err) {
+    try {
+      await conn.rollback();
+    } catch {}
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
 // DELETE /api/boxes/:boxId (soft delete)
 router.delete('/:boxId', authenticate, requireResourceOwner('boxes', 'boxId', 'owner'), async (req, res) => {
   try {

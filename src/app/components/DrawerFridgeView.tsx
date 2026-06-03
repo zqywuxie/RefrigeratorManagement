@@ -4,7 +4,7 @@ import { Refrigerator, UpperItem, Drawer, Box, BoxImage, BoxCell, Tube, SampleRe
 import {
   fetchUpperItems, createUpperItem, updateUpperItem, deleteUpperItem,
   fetchDrawers, updateDrawer,
-  fetchBoxes, createBox, createStandaloneBox, updateBox, deleteBox,
+  fetchBoxes, createBox, createStandaloneBox, updateBox, moveBoxLocation, deleteBox,
   fetchBoxCells, createBoxCell, updateBoxCell, deleteBoxCell,
   fetchBoxTubes, createSampleRecord, updateSampleRecord, deleteSampleRecord,
   addTubesToSample, deleteTube, updateTube, batchUpdateSampleRecords,
@@ -24,6 +24,7 @@ import { AddSampleRecordModal } from './AddSampleRecordModal';
 import { ExcelImportModal } from './ExcelImportModal';
 import { PendingSamplesPanel } from './PendingSamplesPanel';
 import { BatchEditModal } from './BatchEditModal';
+import { MoveBoxModal } from './MoveBoxModal';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 type ViewLevel = 'fridge' | 'drawer' | 'box';
@@ -121,6 +122,7 @@ export function DrawerFridgeView({
   const [imagesVersion, setImagesVersion] = useState(0);
   const [showBoxModal, setShowBoxModal] = useState(false);
   const [editBox, setEditBox] = useState<Box | null>(null);
+  const [moveBox, setMoveBox] = useState<Box | null>(null);
   const [targetBoxPosition, setTargetBoxPosition] = useState<number | null>(null);
   const [showCellModal, setShowCellModal] = useState(false);
   const [targetCellPosition, setTargetCellPosition] = useState<number | null>(null);
@@ -938,6 +940,21 @@ export function DrawerFridgeView({
     }
   }, [boxes, selectedDrawerId]);
 
+  const handleMoveBoxLocation = useCallback(async (
+    boxId: string,
+    targetDrawerId: string,
+    targetPosition: number,
+  ) => {
+    await moveBoxLocation(boxId, { targetDrawerId, targetPosition });
+    if (selectedDrawerId) {
+      const updatedBoxes = await fetchBoxes(selectedDrawerId);
+      setBoxes(updatedBoxes);
+    }
+    const drawerData = await fetchDrawers(fridge.id);
+    setDrawers(drawerData);
+    onDataChanged?.();
+  }, [fridge.id, selectedDrawerId, onDataChanged]);
+
   const layer1Drawers = drawers.filter((d) => d.layer === 1);
   const layer2Drawers = drawers.filter((d) => d.layer === 2);
   const selectedDrawer = drawers.find((d) => d.id === selectedDrawerId) || null;
@@ -1080,6 +1097,7 @@ export function DrawerFridgeView({
                 boxImagesById={boxImagesById}
                 onBack={handleBackToFridge}
                 onBoxClick={handleBoxClick}
+                onMoveBoxLocation={setMoveBox}
                 onAddBox={handleAddBoxAtPosition}
                 onAddPosition={handleAddInternalPosition}
                 onMoveBox={handleMoveBox}
@@ -1485,6 +1503,14 @@ export function DrawerFridgeView({
         onClose={() => { setShowBoxModal(false); setEditBox(null); setTargetBoxPosition(null); }}
         onSave={handleSaveBox}
         onImagesChanged={handleBoxImagesChanged}
+      />
+      <MoveBoxModal
+        isOpen={!!moveBox}
+        box={moveBox}
+        drawers={drawers}
+        currentDrawerId={selectedDrawerId}
+        onClose={() => setMoveBox(null)}
+        onMove={handleMoveBoxLocation}
       />
       <AddBoxCellModal
         isOpen={showCellModal}

@@ -3,19 +3,21 @@ import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import { useDrag } from 'react-dnd';
 import { toast } from 'sonner';
-import { Box as BoxIcon, User, Calendar, Grid3X3, FolderOpen, Copy, Trash2, MapPinned, Maximize2, X } from 'lucide-react';
+import { Box as BoxIcon, User, Calendar, Grid3X3, FolderOpen, Copy, Trash2, MapPinned, Maximize2, X, ArrowRightLeft } from 'lucide-react';
 import { Box, BoxImage, boxPositionToLabel, formatChineseShortDate } from '../types';
 
 interface BoxCardProps {
   box: Box;
   onClick: () => void;
   onDelete: (id: string) => void;
+  onMove?: (box: Box) => void;
   canDelete?: boolean;
+  canMove?: boolean;
   isHighlighted?: boolean;
   images?: BoxImage[];
 }
 
-export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighted = false, images }: BoxCardProps) {
+export function BoxCard({ box, onClick, onDelete, onMove, canDelete = true, canMove = true, isHighlighted = false, images }: BoxCardProps) {
   const isPrecise = box.mode === 'precise';
   const gridLabel = isPrecise && box.grid_rows && box.grid_cols
     ? `${box.grid_rows}×${box.grid_cols}`
@@ -109,16 +111,30 @@ export function BoxCard({ box, onClick, onDelete, canDelete = true, isHighlighte
             </span>
           )}
         </div>
-        {canDelete && (
+        {(canMove || canDelete) && (
           <div className="flex gap-0.5 flex-shrink-0">
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete(box.id); }}
-              className="w-7 h-7 min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors"
-              style={{ color: '#f87171' }}
-              title="删除盒子"
-            >
-              <Trash2 size={14} />
-            </button>
+            {canMove && onMove && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onMove(box); }}
+                className="w-7 h-7 min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center transition-colors hover:bg-blue-50"
+                style={{ color: '#2563eb' }}
+                title="移动盒子"
+                aria-label="移动盒子"
+              >
+                <ArrowRightLeft size={14} />
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(box.id); }}
+                className="w-7 h-7 min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors"
+                style={{ color: '#f87171' }}
+                title="删除盒子"
+                aria-label="删除盒子"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
           </div>
         )}
       </div>

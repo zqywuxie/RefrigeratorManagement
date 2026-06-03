@@ -451,6 +451,16 @@ export async function updateBox(boxId: string, data: Partial<Box>): Promise<Box>
   });
 }
 
+export async function moveBoxLocation(
+  boxId: string,
+  data: { targetDrawerId: string; targetPosition: number },
+): Promise<Box> {
+  return fetchJSON(`${BASE}/boxes/${encodeURIComponent(boxId)}/location`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function deleteBox(boxId: string): Promise<void> {
   await fetchJSON(`${BASE}/boxes/${encodeURIComponent(boxId)}`, { method: 'DELETE' });
 }
